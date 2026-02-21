@@ -5,6 +5,7 @@ import MenuOutlinedIcon from '@mui/icons-material/MenuOutlined';
 import { NavItem } from './base/NavItem';
 import { NAVBAR_HEIGHT } from '../constants/global';
 import type { ReactNode } from 'react';
+import  { Logo } from './icons/logo';
 
 
 interface NavItemDetails {
@@ -50,7 +51,7 @@ export default function Navbar({ sidebarExpanded, onSidebarToggle }: NavbarProps
         <NavItem key={'sidebar-expand-collaps-btn'} label={sidebarExpanded ? 'Collapse sidebar' : 'Expand sidebar'} onClick={onSidebarToggle}>
           <MenuOutlinedIcon sx={{ fontSize: 18, color: 'white', opacity: sidebarExpanded ? '' : '0.7' }} />
         </NavItem>
-        <h1 className="text-xl font-semibold tracking-tight text-white m-0">deltax</h1>
+        <Logo size={80} primaryColor='#FFFFFF' secondaryColor='#182F41' />
       </div>
 
       <div className="flex items-center gap-2">
