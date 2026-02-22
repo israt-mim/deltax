@@ -1,0 +1,7 @@
+<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+<!-- Curvy δ in blue -->
+<text x="40%" y="98" text-anchor="middle" font-family="Pacifico, cursive" font-size="130" fill="#326080">δ</text>
+ 
+  <!-- Curvy x in white near delta -->
+<text x="55" y="90" font-family="Pacifico, cursive" font-size="70" fill="#CC5500">x</text>
+</svg>

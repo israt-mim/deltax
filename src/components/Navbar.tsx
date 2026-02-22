@@ -51,7 +51,7 @@ export default function Navbar({ sidebarExpanded, onSidebarToggle }: NavbarProps
         <NavItem key={'sidebar-expand-collaps-btn'} label={sidebarExpanded ? 'Collapse sidebar' : 'Expand sidebar'} onClick={onSidebarToggle}>
           <MenuOutlinedIcon sx={{ fontSize: 18, color: 'white', opacity: sidebarExpanded ? '' : '0.7' }} />
         </NavItem>
-        <Logo size={80} primaryColor='#FFFFFF' secondaryColor='#182F41' />
+        <Logo size={80} primaryColor='#FFFFFF' secondaryColor='#CC5500' />
       </div>
 
       <div className="flex items-center gap-2">

@@ -1,5 +1,6 @@
 import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 import { EXPANDED_SIDEBAR_WIDTH, SIDEBAR_WIDTH } from '../constants/global';
+import { motion } from "framer-motion";
 
 const SidebarItems = [
   { icon: <HomeOutlinedIcon sx={{ fontSize: 20 }} />, label: 'Dashboard', href: '#' },
@@ -11,9 +12,16 @@ interface SidebarProps {
 
 export default function Sidebar({ expanded }: SidebarProps) {
   return (
-    <aside
-      className={`fixed top-11 left-0 bottom-0 flex flex-col bg-primary-500 border-r border-primary-400 z-[90] overflow-hidden transition-[width] duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]`}
-      style={{ width: expanded ? EXPANDED_SIDEBAR_WIDTH : SIDEBAR_WIDTH }}
+    <motion.aside
+      className={`fixed top-11 left-0 bottom-0 flex flex-col bg-primary-500 border-r z-[90] overflow-hidden border-none`}
+      initial={false}
+      animate={{
+        width: expanded ? EXPANDED_SIDEBAR_WIDTH : SIDEBAR_WIDTH
+      }}
+      transition={{
+        duration: 0.3,
+        ease: 'linear'
+      }}
     >
       <nav className="flex-1 py-3 px-2 overflow-y-auto">
         {SidebarItems.map((item) => (
@@ -30,6 +38,6 @@ export default function Sidebar({ expanded }: SidebarProps) {
           </a>
         ))}
       </nav>
-    </aside>
+    </motion.aside>
   )
 }
