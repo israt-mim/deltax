@@ -28,7 +28,6 @@ export const AppLayout = () => {
 				}}
 			/>
 			<motion.main
-				className={`bg-white`}
 				style={{ paddingTop: NAVBAR_HEIGHT }}
 				initial={false}
 				animate={{
@@ -39,9 +38,7 @@ export const AppLayout = () => {
 					ease: 'linear'
 				}}
 			>
-				<div className='p-6'>
 					<Outlet />
-				</div>
 			</motion.main>
 		</div>
 	)

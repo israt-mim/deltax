@@ -1,9 +1,11 @@
 import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
+import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import { EXPANDED_SIDEBAR_WIDTH, SIDEBAR_WIDTH } from '../constants/global';
 import { motion } from "framer-motion";
 
 const SidebarItems = [
-  { icon: <HomeOutlinedIcon sx={{ fontSize: 20 }} />, label: 'Dashboard', href: '#' },
+  { icon: <HomeOutlinedIcon sx={{ fontSize: 20 }} />, label: 'Dashboard', href: '/' },
+  { icon: <SettingsOutlinedIcon sx={{ fontSize: 20 }} />, label: 'Configure', href: '/configure' }
 ]
 
 interface SidebarProps {

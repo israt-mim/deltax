@@ -1,0 +1,15 @@
+import type { ReactNode } from "react";
+import cn from 'classnames'
+import { NAVBAR_HEIGHT } from "../../constants/global";
+
+export interface CardMainProps {
+	className?: string;
+	children: ReactNode;
+}
+export const CardMain = ({ className, children }: CardMainProps) => {
+	return (
+		<div className={cn('p-6 bg-neutral-50 dark:bg-black-700', className)} style={{ minHeight: `calc(100vh - ${NAVBAR_HEIGHT}px)` }}>
+			{children}
+		</div>
+	)
+}
