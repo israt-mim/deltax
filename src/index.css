@@ -4,7 +4,7 @@
 
 body {
   @apply min-h-screen min-w-[320px] m-0;
-  font-family: Tahoma, Verdana, sans-serif;
+  font-family: Inter, sans-serif !important;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;

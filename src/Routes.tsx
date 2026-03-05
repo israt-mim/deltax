@@ -3,6 +3,7 @@ import { Route, Routes as ReactRoutes } from "react-router";
 import { AppLayout } from "./layouts/AppLayout";
 import { Home } from "./pages/Home";
 import { Configure } from "./pages/Configure";
+import { Settings } from "./pages/Settings";
 
 export const Routes = () => {
 	return (
@@ -10,6 +11,7 @@ export const Routes = () => {
 			<Route element={<AppLayout />}>
 				<Route index element={<Home />} />
 				<Route path="/configure" element={<Configure />} />
+				<Route path="/settings" element={<Settings />} />
 			</Route>
 		</ReactRoutes>
 	)

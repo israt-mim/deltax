@@ -13,7 +13,7 @@ export const Configure = () => {
 
 			<div className="flex gap-3 items-center">
 				{ConfigDashboardCountAPIData.map(item => (
-					<Card key={item.name} className='p-3 max-w-60 flex flex-row gap-3'>
+					<Card key={item.name} className='!p-3 cursor-pointer max-w-60 flex flex-row gap-3 transition-all hover:shadow-200 hover:scale-[1.02]'>
 						<div className='flex items-center justify-center bg-primary-50 p-2 rounded border border-primary-100'>
 							{item.icon}
 						</div>
