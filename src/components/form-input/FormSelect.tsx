@@ -1,0 +1,15 @@
+import { Select, type SelectProps } from "antd";
+import { FormField } from "./FormField";
+
+export interface FormSelectProps extends SelectProps {
+	label?: string;
+	error?: string;
+	helperText?: string;
+	required?: boolean;
+}
+
+export const FormSelect = ({ label, error, helperText, required, className, ...rest }: FormSelectProps) => (
+	<FormField label={label} error={error} helperText={helperText} required={required} className={className}>
+		<Select status={error ? "error" : undefined} {...rest} />
+	</FormField>
+);
