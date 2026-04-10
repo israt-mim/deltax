@@ -18,6 +18,8 @@ export interface ColumnConfig<TData> {
 	cell?: (info: CellContext<TData, unknown>) => React.ReactNode;
 	/** Whether the column is visible. Defaults to true. */
 	visible?: boolean;
+	/** Show a sort indicator chevron next to the header */
+	sortable?: boolean;
 	/** Sticky column to the right. Multiple sticky columns stack from the rightmost edge. */
 	isSticky?: boolean;
 }
@@ -26,6 +28,7 @@ export interface StickyColumnMeta {
 	isSticky: boolean;
 	stickyRight: number;
 	isFirstSticky: boolean;
+	sortable: boolean;
 }
 
 export function useColumns<TData>(configs: ColumnConfig<TData>[]): ColumnDef<TData, unknown>[] {
@@ -48,6 +51,7 @@ export function useColumns<TData>(configs: ColumnConfig<TData>[]): ColumnDef<TDa
 				isSticky: col.isSticky === true,
 				stickyRight: stickyRightOffsets.get(col.key) ?? 0,
 				isFirstSticky: col.key === firstStickyKey,
+				sortable: col.sortable === true,
 			};
 
 			const def: ColumnDef<TData, unknown> = {

@@ -16,7 +16,7 @@ import type { StickyColumnMeta } from "../../hooks/useColumns";
 export interface InfiniteTableProps<TData> {
 	data: TData[];
 	columns: ColumnDef<TData, unknown>[];
-	height?: number;
+	height?: number | string;
 	rowHeight?: number;
 	onLoadMore?: () => void;
 	isLoading?: boolean;
@@ -24,6 +24,7 @@ export interface InfiniteTableProps<TData> {
 	loadMoreThreshold?: number;
 	columnResizeMode?: ColumnResizeMode;
 	className?: string;
+	enableRowSelection?: boolean;
 }
 
 function getStickyMeta(col: { columnDef: { meta?: unknown } }): StickyColumnMeta | null {
@@ -41,7 +42,7 @@ function stickyStyle(meta: StickyColumnMeta): CSSProperties {
 
 export function InfiniteTable<TData>({
 	data,
-	columns,
+	columns: columnsProp,
 	height = 360,
 	rowHeight = 40,
 	onLoadMore,
@@ -50,13 +51,44 @@ export function InfiniteTable<TData>({
 	loadMoreThreshold = 200,
 	columnResizeMode = "onChange",
 	className,
+	enableRowSelection = false,
 }: InfiniteTableProps<TData>) {
 	const scrollRef = useRef<HTMLDivElement>(null);
+
+	const columns: ColumnDef<TData, unknown>[] = enableRowSelection
+		? [
+				{
+					id: "_select",
+					size: 40,
+					minSize: 40,
+					maxSize: 40,
+					enableResizing: false,
+					header: ({ table: t }) => (
+						<input
+							type="checkbox"
+							className="accent-success-500 w-4 h-4 cursor-pointer rounded"
+							checked={t.getIsAllRowsSelected()}
+							onChange={t.getToggleAllRowsSelectedHandler()}
+						/>
+					),
+					cell: ({ row }) => (
+						<input
+							type="checkbox"
+							className="accent-success-500 w-4 h-4 cursor-pointer rounded"
+							checked={row.getIsSelected()}
+							onChange={row.getToggleSelectedHandler()}
+						/>
+					),
+				},
+				...columnsProp,
+			]
+		: columnsProp;
 
 	const table = useReactTable({
 		data,
 		columns,
 		columnResizeMode,
+		enableRowSelection,
 		getCoreRowModel: getCoreRowModel(),
 		getFilteredRowModel: getFilteredRowModel(),
 	});
@@ -111,7 +143,7 @@ export function InfiniteTable<TData>({
 	const getHeaderClassName = (header: Header<TData, unknown>) => {
 		const meta = getStickyMeta(header.column);
 		return cn(
-			"relative text-left text-xs font-medium uppercase tracking-[0.02em] leading-[18px] text-neutral-500 dark:text-neutral-400 px-4 py-2.5 bg-neutral-50 dark:bg-black-800 border-b border-neutral-100 dark:border-black-600",
+			"relative text-left text-xs font-medium tracking-[0.02em] leading-[18px] text-neutral-500 dark:text-neutral-400 px-4 py-2.5 bg-neutral-50 dark:bg-black-800 border-b border-neutral-100 dark:border-black-600",
 			meta?.isFirstSticky && "shadow-[-4px_0_8px_-2px_rgba(16,24,40,0.08)]"
 		);
 	};
@@ -119,7 +151,7 @@ export function InfiniteTable<TData>({
 	const getCellClassName = (cell: Cell<TData, unknown>) => {
 		const meta = getStickyMeta(cell.column);
 		return cn(
-			"pl-4 pr-6 py-4 text-sm font-medium leading-5 text-neutral-500 dark:text-neutral-300 whitespace-nowrap overflow-hidden text-ellipsis border-b border-neutral-200 dark:border-black-600",
+			"px-4 py-2.5 text-sm leading-5 text-neutral-600 dark:text-neutral-300 whitespace-nowrap overflow-hidden text-ellipsis border-b border-neutral-100 dark:border-black-600",
 			meta?.isSticky && "bg-white dark:bg-black-800",
 			meta?.isFirstSticky && "shadow-[-4px_0_8px_-2px_rgba(16,24,40,0.08)]"
 		);
@@ -154,9 +186,18 @@ export function InfiniteTable<TData>({
 										className={getHeaderClassName(header)}
 										style={getHeaderStyles(header)}
 									>
-										{header.isPlaceholder
-											? null
-											: flexRender(header.column.columnDef.header, header.getContext())}
+									{header.isPlaceholder
+										? null
+										: (
+											<span className="inline-flex items-center gap-1">
+												{flexRender(header.column.columnDef.header, header.getContext())}
+												{(header.column.columnDef.meta as StickyColumnMeta | undefined)?.sortable && (
+													<svg width="10" height="10" viewBox="0 0 10 10" className="text-neutral-400 shrink-0">
+														<path d="M2 4L5 7L8 4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+													</svg>
+												)}
+											</span>
+										)}
 
 										{header.column.columnDef.enableResizing !== false && (
 											<div

@@ -8,19 +8,13 @@ import { useColumns, type ColumnConfig } from "../hooks/useColumns"
 import { ConfigDashboardCountAPIData } from "../dummy-data/configure/dashboard"
 import { fetchFieldsPage, type FieldRow } from "../dummy-data/configure/fields"
 import { useNavigate } from "react-router-dom"
+import { Tabs } from "../components/base/Tabs"
 
 const fieldColumnConfigs: ColumnConfig<FieldRow>[] = [
-	{ key: "id", name: "ID", width: 60, minWidth: 40, maxWidth: 100 },
 	{ key: "name", name: "Name", width: 180 },
+	{ key: "group", name: "Group", width: 180 },
 	{ key: "type", name: "Type", width: 140 },
-	{ key: "agreement", name: "Agreement", width: 200 },
-	{
-		key: "required",
-		name: "Required",
-		width: 120,
-		cell: ({ getValue }) => (getValue() ? "Yes" : "No"),
-	},
-	{ key: "createdAt", name: "Created", width: 160, isSticky: true },
+	{ key: "context", name: "Context", width: 200 },
 ]
 
 export const Configure = () => {
@@ -28,8 +22,13 @@ export const Configure = () => {
 	const columns = useColumns(fieldColumnConfigs)
 	const [fields, setFields] = useState<FieldRow[]>([])
 	const [page, setPage] = useState(0)
+	const [activeTab, setActiveTab] = useState("fields")
 	const [hasMore, setHasMore] = useState(true)
 	const [isLoading, setIsLoading] = useState(false)
+
+	const handleViewAll = useCallback(() => {
+		navigate(`/configure/${activeTab}`)
+	}, [activeTab])
 
 	const loadMore = useCallback(() => {
 		if (isLoading || !hasMore) return
@@ -54,7 +53,7 @@ export const Configure = () => {
 
 			<div className="flex gap-3 items-center">
 				{ConfigDashboardCountAPIData.map(item => (
-					<Card key={item.name} className='!p-3 cursor-pointer max-w-60 flex flex-row gap-3 transition-all hover:shadow-200 hover:scale-[1.02]' onClick={() => navigate(item.to!)}>
+					<Card key={item.name} className='cursor-pointer max-w-60 flex flex-row gap-3 transition-all hover:shadow-200 hover:scale-[1.02]' onClick={() => navigate(item.to!)}>
 						<div className='flex items-center justify-center bg-primary-50 p-2 rounded border border-primary-100'>
 							{item.icon}
 						</div>
@@ -70,13 +69,31 @@ export const Configure = () => {
 				))}
 			</div>
 
-			<InfiniteTable
-				data={fields}
-				columns={columns}
-				onLoadMore={loadMore}
-				isLoading={isLoading}
-				hasMore={hasMore}
-			/>
+			<Card className="flex flex-col gap-3">
+				<div className="flex flex-row gap-2 justify-between items-center">
+				<Typography size="medium" variant="semibold" appearance="custom" className="text-neutral-800 dark:text-neutral-200">
+					Most Recent
+				</Typography>
+
+				<div className="text-sm text-primary-500 cursor-pointer" onClick={handleViewAll}>
+					View All
+				</div>
+				</div>
+
+				<Tabs items={[
+					{ key: "agreements", label: "Agreements" },
+					{ key: "fields", label: "Fields" },
+				]} activeKey={activeTab} onChange={setActiveTab} size="sm" variant="pill" />
+
+				<InfiniteTable
+					data={fields}
+					height="calc(100vh - 330px)"
+					columns={columns}
+					onLoadMore={loadMore}
+					isLoading={isLoading}
+					hasMore={hasMore}
+				/>
+			</Card>
 		</CardMain>
 	)
 }

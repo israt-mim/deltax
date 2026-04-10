@@ -1,14 +1,42 @@
 export interface FieldRow {
 	id: number;
 	name: string;
+	group: string;
+	groupTechnicalName: string;
+	context: string;
 	type: string;
-	agreement: string;
-	required: boolean;
-	createdAt: string;
+	dataType: string;
+	tags: string[];
 }
 
-const FIELD_TYPES = ["Text", "Number", "Date", "Dropdown", "Checkbox", "Email", "Currency", "Percentage", "Textarea", "Phone"];
-const AGREEMENTS = ["Master Agreement", "Service Agreement", "NDA", "SLA", "Purchase Order", "Lease Agreement"];
+const FIELD_NAMES = [
+	"Modification Number", "Spring", "test", "Masterdata field", "other master field",
+	"Required test 2", "Required test", "Expense Reimbursement Budget",
+	"Estimated Expense Amount", "Expense Type", "Hourly Rate", "Estimated Hours",
+	"Labor Category", "Contract Value", "Period of Performance", "Award Date",
+	"Vendor Name", "Invoice Number", "Payment Terms", "Billing Address",
+];
+
+const GROUPS = [
+	"Modification Number", "Division", "Master Contract Number", "Master Contract Category",
+	"Customer Contract Number", "Sales Document Type", "Expense Reimbursement Budget",
+	"Estimated Expense Amount", "Expense Type", "Hourly Rate", "Estimated Hours", "Labor Category",
+];
+
+const TECH_NAMES = [
+	"modification_number", "division", "master_contract_number", "master_contract_category",
+	"customer_contract_number", "sales_document_type", "expense_reimbursement_budget",
+	"estimated_expense_amount", "expense_type", "hourly_rate", "estimated_hours", "labor_category",
+];
+
+const CONTEXTS = [
+	"Sales - Contracts - Sales - Cont...", "Global",
+	"Public Sector - Projects - Task ...",
+];
+
+const TYPES = ["Header", "Generic", "Line-Item"];
+const DATA_TYPES = ["S", "C", "N"];
+const TAGS_POOL = ["YOLOBS", "REQUIRED", "CUSTOM", "SYSTEM"];
 
 function randomItem<T>(arr: T[]): T {
 	return arr[Math.floor(Math.random() * arr.length)];
@@ -17,13 +45,18 @@ function randomItem<T>(arr: T[]): T {
 function generateFields(count: number, startId = 1): FieldRow[] {
 	return Array.from({ length: count }, (_, i) => {
 		const id = startId + i;
+		const nameIdx = i % FIELD_NAMES.length;
+		const groupIdx = i % GROUPS.length;
+		const hasTags = Math.random() > 0.8;
 		return {
 			id,
-			name: `Field ${id}`,
-			type: randomItem(FIELD_TYPES),
-			agreement: randomItem(AGREEMENTS),
-			required: Math.random() > 0.5,
-			createdAt: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toLocaleDateString(),
+			name: FIELD_NAMES[nameIdx],
+			group: GROUPS[groupIdx],
+			groupTechnicalName: TECH_NAMES[groupIdx],
+			context: randomItem(CONTEXTS),
+			type: randomItem(TYPES),
+			dataType: randomItem(DATA_TYPES),
+			tags: hasTags ? [randomItem(TAGS_POOL)] : [],
 		};
 	});
 }

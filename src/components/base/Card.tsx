@@ -9,7 +9,7 @@ export interface CardProps {
 
 export const Card = ({ className, children, onClick }: CardProps) => {
 	return (
-		<div className={cn(`bg-white dark:bg-black-800 border border-neutal-200 dark-border-black-600 rounded-lg shadow-100 w-full p-base`, className)} onClick={onClick}>
+		<div className={cn(`bg-white dark:bg-black-800 border border-neutal-200 dark-border-black-600 rounded-lg shadow-100 w-full p-3`, className)} onClick={onClick}>
 			{children}
 		</div>
 	);
