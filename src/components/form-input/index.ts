@@ -4,6 +4,7 @@ export { FormPassword } from "./FormPassword";
 export { FormNumber } from "./FormNumber";
 export { FormTextarea } from "./FormTextarea";
 export { FormSelect } from "./FormSelect";
+export { FormCreatableSelect } from "./FormCreatableSelect";
 export { FormMultiSelect } from "./FormMultiSelect";
 export { FormCheckbox } from "./FormCheckbox";
 export { FormRadioGroup } from "./FormRadioGroup";

@@ -13,6 +13,7 @@ import { InfiniteTable } from "../components/base/InfiniteTable";
 import { useColumns, type ColumnConfig } from "../hooks/useColumns";
 import { fetchFieldsPage, type FieldRow } from "../dummy-data/configure/fields";
 import { Card } from "../components/base/Card";
+import { useNavigate } from "react-router-dom";
 
 const fieldColumnConfigs: ColumnConfig<FieldRow>[] = [
     {
@@ -92,6 +93,7 @@ const IconButton = ({ children, onClick }: { children: React.ReactNode; onClick?
 );
 
 export const FieldConfiguration = () => {
+    const navigate = useNavigate();
     const columns = useColumns(fieldColumnConfigs);
     const [fields, setFields] = useState<FieldRow[]>([]);
     const [page, setPage] = useState(0);
@@ -118,7 +120,7 @@ export const FieldConfiguration = () => {
         <CardMain className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
                 <Title>Fields</Title>
-                <Button size='md'>
+                <Button size='md' onClick={() => navigate("/configure/fields/create")}>
                     <AddOutlinedIcon sx={{ fontSize: 14 }} />
                     New
                 </Button>
