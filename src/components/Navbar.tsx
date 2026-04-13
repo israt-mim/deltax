@@ -2,10 +2,13 @@ import FullscreenOutlinedIcon from '@mui/icons-material/FullscreenOutlined';
 import NotificationsOutlinedIcon from '@mui/icons-material/NotificationsOutlined';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import MenuOutlinedIcon from '@mui/icons-material/MenuOutlined';
+import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
+import { useNavigate } from 'react-router';
 import { NavItem } from './base/NavItem';
 import { NAVBAR_HEIGHT } from '../constants/global';
 import type { ReactNode } from 'react';
-import  { Logo } from './icons/logo';
+import { Logo } from './icons/logo';
+import { useAuth } from '../auth/AuthContext';
 
 
 interface NavItemDetails {
@@ -20,6 +23,8 @@ interface NavbarProps {
 }
 
 export default function Navbar({ sidebarExpanded, onSidebarToggle }: NavbarProps) {
+  const navigate = useNavigate();
+  const { logout } = useAuth();
 
   const NAVBAR_ITEMS: NavItemDetails[] = [
     {
@@ -41,6 +46,16 @@ export default function Navbar({ sidebarExpanded, onSidebarToggle }: NavbarProps
       label: 'Fullscreen',
       onClick: () => {
         console.log('Fullscreen');
+      }
+    },
+    {
+      icon: <LogoutOutlinedIcon sx={{ fontSize: 20 }} />,
+      label: 'Sign out',
+      onClick: () => {
+        void (async () => {
+          await logout();
+          navigate('/login', { replace: true });
+        })();
       }
     }
   ];

@@ -1,15 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
-import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
-import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
-import FilterListOutlinedIcon from "@mui/icons-material/FilterListOutlined";
-import SwapVertOutlinedIcon from "@mui/icons-material/SwapVertOutlined";
-import FileDownloadOutlinedIcon from "@mui/icons-material/FileDownloadOutlined";
+import { toast } from "react-toastify";
 import MoreVertOutlinedIcon from "@mui/icons-material/MoreVertOutlined";
 import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
 import { Button } from "../components/base/Button";
 import { CardMain } from "../components/base/CardMain";
 import { Title } from "../components/base/Title";
 import { InfiniteTable } from "../components/base/InfiniteTable";
+import { FloatingBar } from "../components/base/FloatingBar";
 import { useColumns, type ColumnConfig } from "../hooks/useColumns";
 import { fetchFieldsPage, type FieldRow } from "../dummy-data/configure/fields";
 import { Card } from "../components/base/Card";
@@ -83,15 +80,6 @@ const fieldColumnConfigs: ColumnConfig<FieldRow>[] = [
     },
 ];
 
-const IconButton = ({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) => (
-    <button
-        onClick={onClick}
-        className="p-1.5 rounded-md text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-black-600 transition-colors"
-    >
-        {children}
-    </button>
-);
-
 export const FieldConfiguration = () => {
     const navigate = useNavigate();
     const columns = useColumns(fieldColumnConfigs);
@@ -99,7 +87,7 @@ export const FieldConfiguration = () => {
     const [page, setPage] = useState(0);
     const [hasMore, setHasMore] = useState(true);
     const [isLoading, setIsLoading] = useState(false);
-    const [search, setSearch] = useState("");
+    const [checkedIds, setCheckedIds] = useState<Set<string>>(() => new Set());
 
     const loadMore = useCallback(() => {
         if (isLoading || !hasMore) return;
@@ -116,6 +104,10 @@ export const FieldConfiguration = () => {
         loadMore();
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+    const clearSelection = useCallback(() => {
+        setCheckedIds(new Set());
+    }, []);
+
     return (
         <CardMain className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
@@ -127,6 +119,14 @@ export const FieldConfiguration = () => {
             </div>
 
             <Card className="flex flex-col gap-3">
+                <FloatingBar
+                    open={checkedIds.size > 0}
+                    selectedCount={checkedIds.size}
+                    onClearSelection={clearSelection}
+                    onDelete={() => {
+                        toast.info(`Delete ${checkedIds.size} field(s) — hook up your API here.`);
+                    }}
+                />
 
                 {/* <div className="flex items-center justify-between bg-white dark:bg-black-800 border border-neutral-200 dark:border-black-600 rounded-t-lg px-3 py-2">
                     <div className="flex items-center gap-1">
@@ -180,7 +180,11 @@ export const FieldConfiguration = () => {
                     onLoadMore={loadMore}
                     isLoading={isLoading}
                     hasMore={hasMore}
-                    enableRowSelection
+                    checkboxConfig={{
+                        getRowId: (row) => String(row.id),
+                        checkedIds,
+                        setCheckedIds,
+                    }}
                 />
             </Card>
         </CardMain>

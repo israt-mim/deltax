@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { toast } from "react-toastify";
 import MoreVertOutlinedIcon from "@mui/icons-material/MoreVertOutlined";
 import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
 import { Button } from "../components/base/Button";
@@ -6,6 +7,7 @@ import { CardMain } from "../components/base/CardMain";
 import { Title } from "../components/base/Title";
 import { Card } from "../components/base/Card";
 import { InfiniteTable } from "../components/base/InfiniteTable";
+import { FloatingBar } from "../components/base/FloatingBar";
 import { useColumns, type ColumnConfig } from "../hooks/useColumns";
 import { fetchAgreementsPage, type AgreementRow } from "../dummy-data/configure/agreements";
 
@@ -99,6 +101,7 @@ export const AgreementConfiguration = () => {
 	const [page, setPage] = useState(0);
 	const [hasMore, setHasMore] = useState(true);
 	const [isLoading, setIsLoading] = useState(false);
+	const [checkedIds, setCheckedIds] = useState<Set<string>>(() => new Set());
 
 	const loadMore = useCallback(() => {
 		if (isLoading || !hasMore) return;
@@ -115,6 +118,10 @@ export const AgreementConfiguration = () => {
 		loadMore();
 	}, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+	const clearSelection = useCallback(() => {
+		setCheckedIds(new Set());
+	}, []);
+
 	return (
 		<CardMain className="flex flex-col gap-4">
 			<div className="flex items-center justify-between">
@@ -126,6 +133,14 @@ export const AgreementConfiguration = () => {
 			</div>
 
 			<Card className="flex flex-col gap-3">
+				<FloatingBar
+					open={checkedIds.size > 0}
+					selectedCount={checkedIds.size}
+					onClearSelection={clearSelection}
+					onDelete={() => {
+						toast.info(`Delete ${checkedIds.size} agreement(s) — hook up your API here.`);
+					}}
+				/>
 				<InfiniteTable
 					data={agreements}
 					columns={[
@@ -148,7 +163,11 @@ export const AgreementConfiguration = () => {
 					onLoadMore={loadMore}
 					isLoading={isLoading}
 					hasMore={hasMore}
-					enableRowSelection
+					checkboxConfig={{
+						getRowId: (row) => String(row.id),
+						checkedIds,
+						setCheckedIds,
+					}}
 				/>
 			</Card>
 		</CardMain>

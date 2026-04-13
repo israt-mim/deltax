@@ -64,3 +64,52 @@ button:focus-visible {
 .scrollbar-hidden::-webkit-scrollbar {
   display: none;
 }
+
+/* Ant Design Dropdown menu shrinks `.ant-dropdown-menu-item-icon`; bump MUI icons to match design */
+.actions-dropdown-icon .ant-dropdown-menu-item-icon {
+  font-size: 18px !important;
+  line-height: 1 !important;
+  width: 18px !important;
+  min-width: 18px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.actions-dropdown-icon .ant-dropdown-menu-item-icon svg {
+  width: 18px !important;
+  height: 18px !important;
+  font-size: 18px !important;
+}
+
+/* InfiniteTable — primary fill + white mark (checked / indeterminate); unchecked neutral border */
+@layer components {
+  .infinite-table-checkbox {
+    @apply h-4 w-4 shrink-0 cursor-pointer rounded border border-neutral-300 bg-white align-middle dark:border-neutral-600 dark:bg-black-800;
+    appearance: none;
+    -webkit-appearance: none;
+    display: inline-block;
+    vertical-align: middle;
+  }
+
+  .infinite-table-checkbox:checked {
+    @apply border-primary-500 bg-primary-500;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpolyline points='3.5 8.2 6.8 11.5 12.5 4.8' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 11px 11px;
+  }
+
+  .infinite-table-checkbox:indeterminate {
+    @apply border-primary-500 bg-primary-500;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cline x1='4' y1='8' x2='12' y2='8' stroke='%23ffffff' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 11px 11px;
+  }
+
+  .infinite-table-checkbox:focus-visible {
+    outline: 2px solid theme("colors.primary.500");
+    outline-offset: 2px;
+  }
+}

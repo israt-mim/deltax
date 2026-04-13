@@ -1,4 +1,4 @@
-import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from "react";
+import { forwardRef, type ButtonHTMLAttributes } from "react";
 import cn from "classnames";
 
 type ButtonSize = "xl" | "lg" | "md" | "sm" | "xs";

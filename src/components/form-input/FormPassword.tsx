@@ -1,4 +1,4 @@
-import { Input, type InputProps } from "antd";
+import { Input } from "antd";
 import { FormField } from "./FormField";
 
 type PasswordProps = React.ComponentProps<typeof Input.Password>;

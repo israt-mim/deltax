@@ -26,7 +26,10 @@ export interface ColumnConfig<TData> {
 
 export interface StickyColumnMeta {
 	isSticky: boolean;
+	/** Sticky offset from the right edge (actions column). */
 	stickyRight: number;
+	/** When set with `isSticky`, the column sticks to the left instead of the right. */
+	stickyLeft?: number;
 	isFirstSticky: boolean;
 	sortable: boolean;
 }
