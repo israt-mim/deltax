@@ -8,7 +8,15 @@ import {
 	type ReactNode,
 } from "react";
 import { Navigate, Outlet, useLocation } from "react-router";
-import { authLogin, authLogout, fetchAuthMe, type AuthUser } from "../api/services/auth";
+import { BrandPageLoader } from "../components/base/BrandPageLoader";
+import { NAVBAR_HEIGHT } from "../constants/global";
+import {
+	authChangePassword,
+	authLogin,
+	authLogout,
+	fetchAuthMe,
+	type AuthUser,
+} from "../api/services/auth";
 
 export type { AuthUser };
 
@@ -17,10 +25,12 @@ export type AuthContextValue = {
 	isAuthResolved: boolean;
 	isAuthenticated: boolean;
 	user: AuthUser | null;
-	login: (credentials: { login: string; password: string }) => Promise<void>;
+	login: (credentials: { login: string; password: string }) => Promise<AuthUser>;
 	logout: () => Promise<void>;
 	/** Re-fetch session from the server (e.g. after profile updates). */
 	refreshUser: () => Promise<void>;
+	/** After forced password change; updates session user from API response. */
+	changePassword: (newPassword: string, confirmNewPassword: string) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -46,6 +56,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 	const login = useCallback(async (credentials: { login: string; password: string }) => {
 		const u = await authLogin(credentials);
 		setUser(u);
+		return u;
+	}, []);
+
+	const changePassword = useCallback(async (newPassword: string, confirmNewPassword: string) => {
+		const u = await authChangePassword({
+			newPassword,
+			confirmNewPassword,
+			mustChangePassword: false,
+		});
+		setUser(u);
 	}, []);
 
 	const logout = useCallback(async () => {
@@ -70,8 +90,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 			login,
 			logout,
 			refreshUser,
+			changePassword,
 		}),
-		[isAuthResolved, user, login, logout, refreshUser]
+		[isAuthResolved, user, login, logout, refreshUser, changePassword]
 	);
 
 	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -83,22 +104,35 @@ export function useAuth(): AuthContextValue {
 	return ctx;
 }
 
-function AuthLoadingScreen() {
-	return (
-		<div className="flex min-h-screen items-center justify-center bg-neutral-50 text-neutral-600 dark:bg-black-900 dark:text-neutral-300">
-			<p className="text-sm">Loading…</p>
-		</div>
-	);
-}
-
 /** Wrap routes that require a session; unauthenticated users go to `/login`. */
 export function RequireAuth() {
 	const { isAuthResolved, isAuthenticated } = useAuth();
 	const location = useLocation();
 
-	if (!isAuthResolved) return <AuthLoadingScreen />;
+	if (!isAuthResolved) {
+		return (
+			<div
+				className="flex w-full items-center justify-center bg-neutral-50 dark:bg-black-900"
+				style={{ minHeight: `calc(100vh - ${NAVBAR_HEIGHT}px)` }}
+			>
+				<BrandPageLoader variant="light" mode="embedded" />
+			</div>
+		);
+	}
 	if (!isAuthenticated) {
 		return <Navigate to="/login" replace state={{ from: location }} />;
+	}
+
+	return <Outlet />;
+}
+
+/** Blocks app shell routes until `mustChangePassword` is cleared (redirects to `/change-password`). */
+export function RequirePasswordResetComplete() {
+	const { user } = useAuth();
+	const location = useLocation();
+
+	if (user?.mustChangePassword === true) {
+		return <Navigate to="/change-password" replace state={{ from: location }} />;
 	}
 
 	return <Outlet />;

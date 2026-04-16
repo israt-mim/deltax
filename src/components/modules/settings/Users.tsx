@@ -363,7 +363,6 @@ export const Users = ({ search, onSearchChange }: SettingsUsersProps) => {
 								email: editUser.email,
 								groupId: editUser.groupId ?? "",
 								teamIds: editUser.teamIds ?? [],
-								mustChangePassword: false,
 							}
 						: undefined
 				}
@@ -382,7 +381,6 @@ export const Users = ({ search, onSearchChange }: SettingsUsersProps) => {
 								email,
 								group,
 								teams,
-								mustChangePassword,
 							});
 							toast.success("User updated");
 						} else {
@@ -392,7 +390,7 @@ export const Users = ({ search, onSearchChange }: SettingsUsersProps) => {
 								email,
 								group,
 								teams,
-								mustChangePassword,
+								mustChangePassword: mustChangePassword ?? true,
 							});
 							toast.success("User created");
 							AntdModal.success({

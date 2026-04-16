@@ -19,6 +19,23 @@ export async function authLogin(body: { login: string; password: string }): Prom
 	return res.user;
 }
 
+/**
+ * Sets a new password for the **current session user**.
+ * The backend identifies the user from the authenticated session (e.g. cookie / session id sent
+ * automatically because `fetch` uses `credentials: "include"`); no user id is required in the body.
+ */
+export interface AuthChangePasswordBody {
+	newPassword: string;
+	confirmNewPassword: string;
+	/** Client sends `false` so the server can persist the flag when updating the user. */
+	mustChangePassword: false;
+}
+
+export async function authChangePassword(body: AuthChangePasswordBody): Promise<AuthUser> {
+	const res = await post<{ user: AuthUser }>("/api/auth/change-password", body);
+	return res.user;
+}
+
 export async function authLogout(): Promise<void> {
 	await post<{ message: string }>("/api/auth/logout");
 }

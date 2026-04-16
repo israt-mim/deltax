@@ -13,6 +13,7 @@ import PendingOutlinedIcon from "@mui/icons-material/PendingOutlined";
 import ShieldOutlinedIcon from "@mui/icons-material/ShieldOutlined";
 import BoltOutlinedIcon from "@mui/icons-material/BoltOutlined";
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
+import { BrandPageLoader } from "../components/base/BrandPageLoader";
 import { Logo } from "../components/icons/logo";
 
 function FloatingDocs() {
@@ -64,7 +65,7 @@ function WorkflowCard() {
 }
 
 export const Login = () => {
-	const { isAuthResolved, isAuthenticated, login } = useAuth();
+	const { isAuthResolved, isAuthenticated, user, login } = useAuth();
 	const navigate = useNavigate();
 	const location = useLocation();
 	const from =
@@ -84,9 +85,13 @@ export const Login = () => {
 		}
 		setSubmitting(true);
 		try {
-			await login({ login: identifier.trim(), password });
+			const sessionUser = await login({ login: identifier.trim(), password });
 			toast.success("Signed in");
-			navigate(from, { replace: true });
+			if (sessionUser.mustChangePassword) {
+				navigate("/change-password", { replace: true });
+			} else {
+				navigate(from, { replace: true });
+			}
 		} catch (err) {
 			toast.error(formatUserFacingError(err, "Could not sign in."));
 		} finally {
@@ -95,15 +100,11 @@ export const Login = () => {
 	};
 
 	if (!isAuthResolved) {
-		return (
-			<div className="flex min-h-screen items-center justify-center bg-[#050810] text-slate-400">
-				<p className="text-sm">Checking session…</p>
-			</div>
-		);
+		return <BrandPageLoader variant="dark" />;
 	}
 
 	if (isAuthenticated) {
-		return <Navigate to={from} replace />;
+		return <Navigate to={user?.mustChangePassword ? "/change-password" : from} replace />;
 	}
 
 	return (

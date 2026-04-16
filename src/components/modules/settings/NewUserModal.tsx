@@ -21,8 +21,8 @@ export interface NewUserPayload {
 	email: string;
 	group: string;
 	teams: string[];
-	/** JSON boolean sent as `mustChangePassword` on POST /api/users. */
-	mustChangePassword: boolean;
+	/** JSON boolean sent as `mustChangePassword` on POST /api/users (create only). */
+	mustChangePassword?: boolean;
 }
 
 export interface NewUserModalProps {
@@ -35,7 +35,6 @@ export interface NewUserModalProps {
 		email: string;
 		groupId: string;
 		teamIds: string[];
-		mustChangePassword: boolean;
 	};
 	onClose: () => void;
 	onSubmit?: (payload: NewUserPayload) => void | Promise<void>;
@@ -69,9 +68,7 @@ export const NewUserModal = ({
 	const [teamIds, setTeamIds] = useState<string[]>(
 		() => (variant === "edit" && initialValues?.teamIds ? [...initialValues.teamIds] : [])
 	);
-	const [mustChangePassword, setMustChangePassword] = useState(
-		() => (variant === "edit" && initialValues ? initialValues.mustChangePassword : true)
-	);
+	const [mustChangePassword, setMustChangePassword] = useState(true);
 
 	const [firstNameError, setFirstNameError] = useState<string | undefined>();
 	const [lastNameError, setLastNameError] = useState<string | undefined>();
@@ -125,7 +122,7 @@ export const NewUserModal = ({
 				email: em,
 				group: groupId,
 				teams: teamIds,
-				mustChangePassword,
+				...(variant === "create" ? { mustChangePassword } : {}),
 			});
 			onClose();
 		} catch {
@@ -236,11 +233,13 @@ export const NewUserModal = ({
 					disabled={optionsLoading || teamOptions.length === 0}
 					style={{ width: "100%" }}
 				/>
-				<FormCheckbox
-					checked={mustChangePassword}
-					onChange={(e) => setMustChangePassword(e.target.checked)}
-					label="Ask user to change their password on next login"
-				/>
+				{variant === "create" ? (
+					<FormCheckbox
+						checked={mustChangePassword}
+						onChange={(e) => setMustChangePassword(e.target.checked)}
+						label="Ask user to change their password on next login"
+					/>
+				) : null}
 			</form>
 		</Modal>
 	);
