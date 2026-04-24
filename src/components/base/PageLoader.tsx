@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 
 const LOGO_SRC = new URL("../../assets/logo.svg", import.meta.url).href;
 
-export interface BrandPageLoaderProps {
+export interface PageLoaderProps {
 	/** Light screen (default) or match dark surfaces (e.g. login). */
 	variant?: "light" | "dark";
 	/** Full viewport splash vs. content area under navbar/sidebar. */
@@ -13,7 +13,7 @@ export interface BrandPageLoaderProps {
 /**
  * Centered DeltaX logo with a thin indeterminate progress bar (splash / session bootstrap).
  */
-export function BrandPageLoader({ variant = "light", mode = "fullscreen", className }: BrandPageLoaderProps) {
+export function PageLoader({ variant = "light", mode = "fullscreen", className }: PageLoaderProps) {
 	const isLight = variant === "light";
 	const embedded = mode === "embedded";
 
@@ -28,8 +28,8 @@ export function BrandPageLoader({ variant = "light", mode = "fullscreen", classN
 			<img
 				src={LOGO_SRC}
 				alt=""
-				width={72}
-				height={72}
+				width={50}
+				height={50}
 				className="h-14 w-14 shrink-0 object-contain sm:h-16 sm:w-16"
 				decoding="async"
 			/>

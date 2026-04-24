@@ -1,6 +1,7 @@
 import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import AdminPanelSettingsOutlined from '@mui/icons-material/AdminPanelSettingsOutlined';
+import { NavLink } from 'react-router-dom';
 import { EXPANDED_SIDEBAR_WIDTH, SIDEBAR_WIDTH } from '../constants/global';
 import { motion } from "framer-motion";
 
@@ -29,17 +30,22 @@ export default function Sidebar({ expanded }: SidebarProps) {
     >
       <nav className="flex-1 py-3 px-2 overflow-y-auto">
         {SidebarItems.map((item) => (
-          <a
+          <NavLink
             key={item.label}
-            href={item.href}
-            className={`flex items-center gap-3 text-white/70 no-underline rounded transition-colors hover:text-white hover:bg-white/20 ${expanded ? 'py-1.5 px-2 my-1.5' : 'justify-center py-1.5 px-2 my-1.5'}`}
+            to={item.href}
+            end={item.href === '/'}
             title={!expanded ? item.label : undefined}
+            className={({ isActive }) =>
+              `flex items-center gap-3 no-underline rounded transition-colors ${expanded ? 'py-1.5 px-2 my-1.5' : 'justify-center py-1.5 px-2 my-1.5'} ${
+                isActive ? 'text-white bg-white/20' : 'text-white/70 hover:text-white hover:bg-white/20'
+              }`
+            }
           >
             <span className="flex items-center justify-center shrink-0">
               {item.icon}
             </span>
             {expanded && <span className="whitespace-nowrap text-sm">{item.label}</span>}
-          </a>
+          </NavLink>
         ))}
       </nav>
     </motion.aside>

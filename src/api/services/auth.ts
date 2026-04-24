@@ -1,6 +1,6 @@
 import { ApiError, get, post } from "../client/http";
 
-/** Current user from `POST /api/auth/login` or `GET /api/auth/me` (no password). */
+/** Current user from `POST /api/auth/login` or `GET /api/auth/user` (no password). */
 export interface AuthUser {
 	_id: string;
 	firstName?: string;
@@ -41,13 +41,13 @@ export async function authLogout(): Promise<void> {
 }
 
 /** Returns the session user, or `null` if not authenticated (401) or on recoverable errors. */
-export async function fetchAuthMe(): Promise<AuthUser | null> {
+export async function fetchAuthUser(): Promise<AuthUser | null> {
 	try {
-		const res = await get<{ user: AuthUser }>("/api/auth/me");
+		const res = await get<{ user: AuthUser }>("/api/auth/user");
 		return res.user;
 	} catch (e) {
 		if (e instanceof ApiError && e.status === 401) return null;
-		console.warn("[auth] GET /api/auth/me failed", e);
+		console.warn("[auth] GET /api/auth/user failed", e);
 		return null;
 	}
 }

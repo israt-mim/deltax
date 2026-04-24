@@ -8,20 +8,20 @@ import {
 	type ReactNode,
 } from "react";
 import { Navigate, Outlet, useLocation } from "react-router";
-import { BrandPageLoader } from "../components/base/BrandPageLoader";
+import { PageLoader } from "../components/base/PageLoader";
 import { NAVBAR_HEIGHT } from "../constants/global";
 import {
 	authChangePassword,
 	authLogin,
 	authLogout,
-	fetchAuthMe,
+	fetchAuthUser,
 	type AuthUser,
 } from "../api/services/auth";
 
 export type { AuthUser };
 
 export type AuthContextValue = {
-	/** `false` until the initial `GET /api/auth/me` completes. */
+	/** `false` until the initial `GET /api/auth/user` completes. */
 	isAuthResolved: boolean;
 	isAuthenticated: boolean;
 	user: AuthUser | null;
@@ -42,7 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 	useEffect(() => {
 		let cancelled = false;
 		(async () => {
-			const u = await fetchAuthMe();
+			const u = await fetchAuthUser();
 			if (!cancelled) {
 				setUser(u);
 				setAuthResolved(true);
@@ -54,18 +54,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 	}, []);
 
 	const login = useCallback(async (credentials: { login: string; password: string }) => {
-		const u = await authLogin(credentials);
-		setUser(u);
-		return u;
+		const _user = await authLogin(credentials);
+		setUser(_user);
+		return _user;
 	}, []);
 
 	const changePassword = useCallback(async (newPassword: string, confirmNewPassword: string) => {
-		const u = await authChangePassword({
+		const _user = await authChangePassword({
 			newPassword,
 			confirmNewPassword,
 			mustChangePassword: false,
 		});
-		setUser(u);
+		setUser(_user);
 	}, []);
 
 	const logout = useCallback(async () => {
@@ -78,8 +78,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 	}, []);
 
 	const refreshUser = useCallback(async () => {
-		const u = await fetchAuthMe();
-		setUser(u);
+		const _user = await fetchAuthUser();
+		setUser(_user);
 	}, []);
 
 	const value = useMemo<AuthContextValue>(
@@ -115,7 +115,7 @@ export function RequireAuth() {
 				className="flex w-full items-center justify-center bg-neutral-50 dark:bg-black-900"
 				style={{ minHeight: `calc(100vh - ${NAVBAR_HEIGHT}px)` }}
 			>
-				<BrandPageLoader variant="light" mode="embedded" />
+				<PageLoader variant="light" mode="embedded" />
 			</div>
 		);
 	}

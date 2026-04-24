@@ -6,7 +6,7 @@ import { formatUserFacingError } from "../lib/formatUserFacingError";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import VisibilityOffOutlinedIcon from "@mui/icons-material/VisibilityOffOutlined";
-import { BrandPageLoader } from "../components/base/BrandPageLoader";
+import { PageLoader } from "../components/base/PageLoader";
 import { Logo } from "../components/icons/logo";
 
 const MIN_PASSWORD_LEN = 8;
@@ -24,7 +24,7 @@ export const ForcePasswordChange = () => {
 	const [submitting, setSubmitting] = useState(false);
 
 	if (!isAuthResolved) {
-		return <BrandPageLoader variant="dark" />;
+		return <PageLoader variant="dark" />;
 	}
 
 	if (!user?.mustChangePassword) {

@@ -1,4 +1,4 @@
-export { authChangePassword, authLogin, authLogout, fetchAuthMe } from "./services/auth";
+export { authChangePassword, authLogin, authLogout, fetchAuthUser } from "./services/auth";
 export type { AuthChangePasswordBody, AuthUser } from "./services/auth";
 
 export { ApiError, get, post, patch, put, del, request } from "./client/http";

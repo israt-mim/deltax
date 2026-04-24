@@ -13,7 +13,7 @@ import PendingOutlinedIcon from "@mui/icons-material/PendingOutlined";
 import ShieldOutlinedIcon from "@mui/icons-material/ShieldOutlined";
 import BoltOutlinedIcon from "@mui/icons-material/BoltOutlined";
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
-import { BrandPageLoader } from "../components/base/BrandPageLoader";
+import { PageLoader } from "../components/base/PageLoader";
 import { Logo } from "../components/icons/logo";
 
 function FloatingDocs() {
@@ -100,7 +100,7 @@ export const Login = () => {
 	};
 
 	if (!isAuthResolved) {
-		return <BrandPageLoader variant="dark" />;
+		return <PageLoader variant="dark" />;
 	}
 
 	if (isAuthenticated) {
