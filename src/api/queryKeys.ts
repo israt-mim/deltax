@@ -8,4 +8,7 @@ export const queryKeys = {
 	users: {
 		all: ["users"] as const,
 	},
+	fields: {
+		all: ["fields"] as const,
+	},
 } as const;

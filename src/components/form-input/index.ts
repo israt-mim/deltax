@@ -9,6 +9,8 @@ export { FormMultiSelect } from "./FormMultiSelect";
 export { FormCheckbox } from "./FormCheckbox";
 export { FormRadioGroup } from "./FormRadioGroup";
 export { FormSwitch } from "./FormSwitch";
+export { FormToggleField } from "./FormToggleField";
+export type { FormToggleFieldProps } from "./FormToggleField";
 export { FormDatePicker } from "./FormDatePicker";
 export { FormRangePicker } from "./FormRangePicker";
 export { FormTimePicker } from "./FormTimePicker";

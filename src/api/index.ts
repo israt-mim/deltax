@@ -72,3 +72,33 @@ export {
 	useUpdateUserMutation,
 	useUsersInfiniteList,
 } from "./hooks/users";
+
+export {
+	bulkDeleteFields,
+	buildFieldConfigurationCreateBody,
+	createField,
+	deleteField,
+	fieldDocToRow,
+	getFieldById,
+	listFields,
+	updateField,
+} from "./services/fields";
+export type {
+	CreateFieldBody,
+	FieldConfigurationApiDocument,
+	FieldDetails,
+	FieldTypePayload,
+	ListFieldsParams,
+	UpdateFieldBody,
+} from "./services/fields";
+export { FIELD_TYPES, DATA_TYPES } from "./services/fields";
+export type { FieldDataTypeValue, FieldTypeValue } from "./services/fields";
+
+export {
+	useBulkDeleteFieldsMutation,
+	useCreateFieldMutation,
+	useDeleteFieldMutation,
+	useFieldsInfiniteList,
+	useFieldsTotalCount,
+	useUpdateFieldMutation,
+} from "./hooks/fields";

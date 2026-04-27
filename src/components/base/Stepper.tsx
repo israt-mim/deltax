@@ -25,8 +25,8 @@ export const Stepper = ({ steps, activeStep, className }: StepperProps) => {
 							<div
 								className={cn(
 									"w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold transition-colors",
-									isCompleted && "bg-success-500 text-white",
-									isActive && "bg-success-500 text-white",
+									isCompleted && "bg-primary-500 text-white",
+									isActive && "bg-primary-500 text-white",
 									!isCompleted && !isActive && "bg-neutral-200 dark:bg-black-500 text-neutral-500 dark:text-neutral-400"
 								)}
 							>
@@ -42,7 +42,7 @@ export const Stepper = ({ steps, activeStep, className }: StepperProps) => {
 								className={cn(
 									"text-sm font-medium whitespace-nowrap",
 									(isActive || isCompleted)
-										? "text-success-600 dark:text-success-400"
+										? "text-primary-600 dark:text-primary-300"
 										: "text-neutral-500 dark:text-neutral-400"
 								)}
 							>
@@ -55,7 +55,7 @@ export const Stepper = ({ steps, activeStep, className }: StepperProps) => {
 								className={cn(
 									"h-0.5 flex-1 mx-3 rounded-full transition-colors",
 									i < activeStep
-										? "bg-success-500"
+										? "bg-primary-500"
 										: "bg-neutral-200 dark:bg-black-500"
 								)}
 							/>

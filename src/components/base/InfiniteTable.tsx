@@ -1,4 +1,12 @@
-import { useRef, useCallback, useEffect, useMemo, type UIEvent, type CSSProperties } from "react";
+import {
+	useRef,
+	useCallback,
+	useEffect,
+	useMemo,
+	type UIEvent,
+	type CSSProperties,
+	type MouseEvent as ReactMouseEvent,
+} from "react";
 import {
 	useReactTable,
 	getCoreRowModel,
@@ -34,6 +42,8 @@ export interface InfiniteTableProps<TData> {
 	 * Incompatible with `enableRowSelection` (TanStack built-in); prefer this for controlled selection.
 	 */
 	checkboxConfig?: InfiniteTableCheckboxConfig<TData>;
+	/** Whole-row click (ignored for checkbox/button/input and elements matching `data-row-click-ignore`). */
+	onRowClick?: (row: TData, event: ReactMouseEvent<HTMLTableRowElement>) => void;
 }
 
 function getStickyMeta(col: { columnDef: { meta?: unknown } }): StickyColumnMeta | null {
@@ -124,8 +134,22 @@ export function InfiniteTable<TData>({
 	isInitialLoading = false,
 	skeletonRowCount = 10,
 	checkboxConfig,
+	onRowClick,
 }: InfiniteTableProps<TData>) {
 	const scrollRef = useRef<HTMLDivElement>(null);
+
+	const handleRowClick = useCallback(
+		(row: TData, event: ReactMouseEvent<HTMLTableRowElement>) => {
+			if (!onRowClick) return;
+			const t = event.target as HTMLElement | null;
+			if (!t) return;
+			if (t.closest("input, button, textarea, select, a, [data-row-click-ignore], [role='menuitem']")) {
+				return;
+			}
+			onRowClick(row, event);
+		},
+		[onRowClick]
+	);
 
 	const checkboxColumn: ColumnDef<TData, unknown> | null = useMemo(() => {
 		if (!checkboxConfig) return null;
@@ -153,7 +177,7 @@ export function InfiniteTable<TData>({
 				/>
 			),
 			cell: ({ row }) => (
-				<div className="flex w-full min-w-0 items-center justify-center">
+				<div data-row-click-ignore className="flex w-full min-w-0 items-center justify-center">
 					<input
 						type="checkbox"
 						className="infinite-table-checkbox"
@@ -426,8 +450,12 @@ export function InfiniteTable<TData>({
 									return (
 										<tr
 											key={row.id}
-											className="group bg-white dark:bg-black-800 hover:bg-neutral-50 dark:hover:bg-black-700 transition-colors"
+											className={cn(
+												"group bg-white dark:bg-black-800 hover:bg-neutral-50 dark:hover:bg-black-700 transition-colors",
+												onRowClick && "cursor-pointer"
+											)}
 											style={{ height: rowHeight }}
+											onClick={onRowClick ? (e) => handleRowClick(row.original, e) : undefined}
 										>
 											{row.getVisibleCells().map((cell) => (
 												<td
