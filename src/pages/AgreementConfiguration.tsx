@@ -10,6 +10,7 @@ import { InfiniteTable } from "../components/base/InfiniteTable";
 import { FloatingBar } from "../components/base/FloatingBar";
 import { useColumns, type ColumnConfig } from "../hooks/useColumns";
 import { fetchAgreementsPage, type AgreementRow } from "../dummy-data/configure/agreements";
+import { NewAgreementConfigurationModal } from "./agreementConfiguration/NewAgreementConfigurationModal";
 
 const STATUS_COLORS: Record<string, string> = {
 	Active: "bg-success-100 text-success-700 dark:bg-success-900 dark:text-success-300",
@@ -97,6 +98,7 @@ const agreementColumnConfigs: ColumnConfig<AgreementRow>[] = [
 
 export const AgreementConfiguration = () => {
 	const columns = useColumns(agreementColumnConfigs);
+	const [newAgreementModalOpen, setNewAgreementModalOpen] = useState(false);
 	const [agreements, setAgreements] = useState<AgreementRow[]>([]);
 	const [page, setPage] = useState(0);
 	const [hasMore, setHasMore] = useState(true);
@@ -126,7 +128,7 @@ export const AgreementConfiguration = () => {
 		<CardMain className="flex flex-col gap-4">
 			<div className="flex items-center justify-between">
 				<Title>Agreements</Title>
-				<Button size="md">
+				<Button size="md" onClick={() => setNewAgreementModalOpen(true)}>
 					<AddOutlinedIcon sx={{ fontSize: 14 }} />
 					New
 				</Button>
@@ -170,6 +172,11 @@ export const AgreementConfiguration = () => {
 					}}
 				/>
 			</Card>
+
+			<NewAgreementConfigurationModal
+				open={newAgreementModalOpen}
+				onClose={() => setNewAgreementModalOpen(false)}
+			/>
 		</CardMain>
 	);
 };

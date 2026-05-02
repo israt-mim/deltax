@@ -3,6 +3,7 @@ import { RequireAuth, RequirePasswordResetComplete } from "./auth/AuthContext";
 import { AppLayout } from "./layouts/AppLayout";
 import { Home, Configure, Settings, AgreementConfiguration, FieldConfiguration } from "./pages/index";
 import CreateFieldConfiguration from "./pages/CreateFieldConfiguration";
+import CreateAgreementConfiguration from "./pages/CreateAgreementConfiguration";
 import { FieldDetailPage } from "./pages/FieldDetailPage";
 import { Login } from "./pages/Login";
 import { ForcePasswordChange } from "./pages/ForcePasswordChange";
@@ -22,6 +23,7 @@ export const Routes = () => {
 							<Route path="fields/create" element={<CreateFieldConfiguration />} />
 							<Route path="fields/:id" element={<FieldDetailPage />} />
 							<Route path="agreements" element={<AgreementConfiguration />} />
+							<Route path="agreements/create/:id" element={<CreateAgreementConfiguration />} />
 						</Route>
 						<Route path="/settings" element={<Settings />} />
 					</Route>

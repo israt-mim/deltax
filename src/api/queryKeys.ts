@@ -11,4 +11,10 @@ export const queryKeys = {
 	fields: {
 		all: ["fields"] as const,
 	},
+	agreementCatalog: {
+		all: ["agreement-catalog"] as const,
+	},
+	agreementConfigs: {
+		all: ["agreement-configs"] as const,
+	},
 } as const;
