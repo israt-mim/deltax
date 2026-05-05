@@ -132,11 +132,37 @@ export {
 	useAgreementTypesQuery,
 } from "./hooks/agreementCatalog";
 
-export { createAgreementConfig, getAgreementConfigById } from "./services/agreementConfigs";
+export {
+	bulkDeleteAgreementConfigs,
+	configureAgreementConfig,
+	createAgreementConfig,
+	deleteAgreementConfig,
+	getAgreementConfigById,
+	listAgreementConfigs,
+} from "./services/agreementConfigs";
 export type {
 	AgreementCatalogFieldInput,
 	AgreementConfigApi,
+	AgreementConfigListConfiguredSection,
+	AgreementConfigListConfiguredStep,
+	AgreementConfigListItem,
+	AgreementConfigsListParams,
+	AgreementConfiguredSection,
+	AgreementConfiguredStep,
+	AgreementConfigureRequestBody,
+	AgreementConfigureSectionRequest,
+	AgreementConfigureStepRequest,
 	CreateAgreementConfigBody,
+	BulkDeleteAgreementConfigsResponse,
+	DeleteAgreementConfigResponse,
 } from "./services/agreementConfigs";
 
-export { useAgreementConfigQuery, useCreateAgreementConfigMutation } from "./hooks/agreementConfigs";
+export {
+	useAgreementConfigQuery,
+	useAgreementConfigsInfiniteList,
+	useBulkDeleteAgreementConfigsMutation,
+	useConfigureAgreementConfigMutation,
+	useCreateAgreementConfigMutation,
+	useDeleteAgreementConfigMutation,
+} from "./hooks/agreementConfigs";
+export type { AgreementConfigsListFilters } from "./hooks/agreementConfigs";

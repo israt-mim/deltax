@@ -26,7 +26,8 @@ export function useFieldsTotalCount(options: { sort?: string } = {}) {
 	});
 }
 
-export function useFieldsInfiniteList(options: { q: string; sort: string }) {
+export function useFieldsInfiniteList(options: { q: string; sort: string; enabled?: boolean }) {
+	const enabled = options.enabled !== false;
 	return useInfiniteQuery({
 		queryKey: [...queryKeys.fields.all, "list", { q: options.q, sort: options.sort, limit: FIELDS_PAGE_SIZE }] as const,
 		queryFn: ({ pageParam }) =>
@@ -41,6 +42,7 @@ export function useFieldsInfiniteList(options: { q: string; sort: string }) {
 			})),
 		initialPageParam: 1,
 		getNextPageParam: (last) => (last.pagination.hasNextPage ? last.pagination.page + 1 : undefined),
+		enabled,
 	});
 }
 

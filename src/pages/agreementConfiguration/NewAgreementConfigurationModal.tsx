@@ -125,7 +125,7 @@ export const NewAgreementConfigurationModal = ({ open, onClose }: NewAgreementCo
 		}
 
 		try {
-			const created = await createMutation.mutateAsync({
+			await createMutation.mutateAsync({
 				agreement_category: category.trim(),
 				agreement_domain: domain.trim(),
 				agreement_type: agreementType.trim(),
@@ -133,7 +133,7 @@ export const NewAgreementConfigurationModal = ({ open, onClose }: NewAgreementCo
 				steps,
 			});
 			onClose();
-			void navigate(`/configure/agreements/create/${encodeURIComponent(created._id)}`);
+			void navigate("/configure/agreements");
 		} catch (err) {
 			setStartButtonTooltip(formatUserFacingError(err, "Could not create agreement configuration."));
 		}
