@@ -17,8 +17,14 @@ export interface TabsProps {
 	className?: string;
 	/** underline only: active tab text classes (defaults to blue) */
 	underlineActiveClassName?: string;
+	/** underline only: inactive tab text classes */
+	underlineInactiveClassName?: string;
 	/** underline only: sliding indicator bar classes (defaults to blue) */
 	underlineIndicatorClassName?: string;
+	/** pill only: sliding pill background (defaults to white / dark card) */
+	pillIndicatorClassName?: string;
+	/** pill only: active tab label text classes (defaults to neutral emphasis) */
+	pillActiveTextClassName?: string;
 }
 
 const PILL_SIZE_CLASSES = {
@@ -48,7 +54,10 @@ export const Tabs = ({
 	size = "md",
 	className,
 	underlineActiveClassName,
+	underlineInactiveClassName,
 	underlineIndicatorClassName,
+	pillIndicatorClassName,
+	pillActiveTextClassName,
 }: TabsProps) => {
 	const [internalKey, setInternalKey] = useState(
 		defaultActiveKey ?? items[0]?.key ?? ""
@@ -101,7 +110,10 @@ export const Tabs = ({
 				)}
 			>
 				<div
-					className="absolute rounded-md bg-white dark:bg-black-500 shadow-sm transition-all duration-200 ease-out"
+					className={cn(
+						"absolute z-0 rounded-md transition-all duration-200 ease-out",
+						pillIndicatorClassName ?? "bg-white shadow-sm dark:bg-black-500"
+					)}
 					style={indicatorStyle}
 				/>
 
@@ -116,7 +128,7 @@ export const Tabs = ({
 							"relative z-[1] font-medium rounded-md transition-colors duration-200",
 							PILL_SIZE_CLASSES[size],
 							activeKey === item.key
-								? "text-neutral-900 dark:text-white"
+								? pillActiveTextClassName ?? "text-neutral-900 dark:text-white"
 								: "text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300",
 							item.disabled && "opacity-40 cursor-not-allowed"
 						)}
@@ -130,10 +142,10 @@ export const Tabs = ({
 	}
 
 	return (
-		<div className={cn("relative", className)}>
+		<div className={cn("relative w-full", className)}>
 			<div
 				ref={tabsRef}
-				className="flex items-center gap-1 border-b border-neutral-200 dark:border-black-600"
+				className="flex w-full min-w-0 items-center gap-1 border-b border-neutral-200 dark:border-black-600"
 			>
 				{items.map((item) => (
 					<button
@@ -147,7 +159,8 @@ export const Tabs = ({
 							UNDERLINE_SIZE_CLASSES[size],
 							activeKey === item.key
 								? underlineActiveClassName ?? "text-blue-600 dark:text-blue-400"
-								: "text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300",
+								: underlineInactiveClassName ??
+										"text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300",
 							item.disabled && "opacity-40 cursor-not-allowed"
 						)}
 						disabled={item.disabled}

@@ -4,7 +4,10 @@ import { AppLayout } from "./layouts/AppLayout";
 import { Home, Configure, Settings, AgreementConfiguration, FieldConfiguration } from "./pages/index";
 import CreateFieldConfiguration from "./pages/CreateFieldConfiguration";
 import CreateAgreementConfiguration from "./pages/CreateAgreementConfiguration";
+import { AgreementConfigurationDetailsPage } from "./pages/AgreementConfigurationDetailsPage";
 import { FieldDetailPage } from "./pages/FieldDetailPage";
+import { ClausesPage } from "./pages/ClausesPage";
+import { ClauseDetailPage } from "./pages/ClauseDetailPage";
 import { Login } from "./pages/Login";
 import { ForcePasswordChange } from "./pages/ForcePasswordChange";
 
@@ -24,7 +27,10 @@ export const Routes = () => {
 							<Route path="fields/:id" element={<FieldDetailPage />} />
 							<Route path="agreements" element={<AgreementConfiguration />} />
 							<Route path="agreements/create/:id" element={<CreateAgreementConfiguration />} />
+							<Route path="agreements/:id" element={<AgreementConfigurationDetailsPage />} />
 						</Route>
+						<Route path="/clauses" element={<ClausesPage />} />
+						<Route path="/clauses/:id" element={<ClauseDetailPage />} />
 						<Route path="/settings" element={<Settings />} />
 					</Route>
 				</Route>

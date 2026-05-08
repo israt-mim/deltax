@@ -20,6 +20,10 @@ import { formatUserFacingError } from "../../lib/formatUserFacingError";
 
 const STEP_LABELS = ["Configuration Type", "Additional Steps"] as const;
 
+function isHeaderWizardStepName(name: string | undefined): boolean {
+	return name?.trim().toLowerCase() === "header";
+}
+
 type Step0Errors = Partial<{
 	category: string;
 	domain: string;
@@ -69,8 +73,18 @@ export const NewAgreementConfigurationModal = ({ open, onClose }: NewAgreementCo
 		() => subtypesQuery.data?.data.map((s) => ({ value: s._id, label: s.name })) ?? [],
 		[subtypesQuery.data]
 	);
+	const headerStepIdFromCatalog = useMemo(() => {
+		const rows = stepsQuery.data?.data ?? [];
+		const h = rows.find((s) => isHeaderWizardStepName(s.name));
+		const id = h?._id?.trim();
+		return id && isMongoObjectIdString(id) ? id : undefined;
+	}, [stepsQuery.data]);
+
 	const stepOptions = useMemo(
-		() => stepsQuery.data?.data.map((s) => ({ value: s._id, label: s.name })) ?? [],
+		() =>
+			stepsQuery.data?.data
+				.filter((s) => !isHeaderWizardStepName(s.name))
+				.map((s) => ({ value: s._id, label: s.name })) ?? [],
 		[stepsQuery.data]
 	);
 
@@ -114,26 +128,38 @@ export const NewAgreementConfigurationModal = ({ open, onClose }: NewAgreementCo
 
 	const handleStart = useCallback(async () => {
 		setStartButtonTooltip(null);
-		if (!additionalStepsEnabled) {
-			setStartButtonTooltip('Turn on "Additional steps" and select at least one step.');
-			return;
-		}
-		const steps = [...new Set(selectedStepIds)].filter(isMongoObjectIdString);
-		if (steps.length === 0) {
-			setStartButtonTooltip("Select at least one agreement step.");
+		if (!headerStepIdFromCatalog) {
+			setStartButtonTooltip(
+				"The default Header step could not be loaded. Check agreement steps or try again."
+			);
 			return;
 		}
 
+		let stepsPayload: string[];
+		if (!additionalStepsEnabled) {
+			stepsPayload = [headerStepIdFromCatalog];
+		} else {
+			const selected = [...new Set(selectedStepIds)].filter(isMongoObjectIdString);
+			if (selected.length === 0) {
+				setStartButtonTooltip("Select at least one step.");
+				return;
+			}
+			stepsPayload = [
+				headerStepIdFromCatalog,
+				...selected.filter((stepId) => stepId !== headerStepIdFromCatalog),
+			];
+		}
+
 		try {
-			await createMutation.mutateAsync({
+			const created = await createMutation.mutateAsync({
 				agreement_category: category.trim(),
 				agreement_domain: domain.trim(),
 				agreement_type: agreementType.trim(),
 				agreement_subtype: agreementSubtype.trim(),
-				steps,
+				steps: stepsPayload,
 			});
 			onClose();
-			void navigate("/configure/agreements");
+			void navigate(`/configure/agreements/create/${encodeURIComponent(created._id)}`);
 		} catch (err) {
 			setStartButtonTooltip(formatUserFacingError(err, "Could not create agreement configuration."));
 		}
@@ -144,6 +170,7 @@ export const NewAgreementConfigurationModal = ({ open, onClose }: NewAgreementCo
 		category,
 		createMutation,
 		domain,
+		headerStepIdFromCatalog,
 		navigate,
 		onClose,
 		selectedStepIds,
@@ -348,6 +375,11 @@ export const NewAgreementConfigurationModal = ({ open, onClose }: NewAgreementCo
 							checked={additionalStepsEnabled}
 							onChange={setAdditionalStepsEnabled}
 						/>
+						{!additionalStepsEnabled && (
+							<p className="text-sm text-neutral-600 dark:text-neutral-400">
+								Configurations always include the default Header step. Turn this on to add more wizard steps.
+							</p>
+						)}
 						{additionalStepsEnabled && (
 							<FormSelect
 								label="Add Step"

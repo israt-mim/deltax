@@ -6,6 +6,8 @@ export type ConfigureDraftSection = { id: string; name: string; fields: string[]
 export type ConfigureFieldOverrides = {
 	addedBySectionKey: Record<string, string[]>;
 	removedFieldIdBySectionKey: Record<string, string[]>;
+	/** Optional display renames for section row keys (`api-{stepId}-{i}` / `draft-{uuid}`). */
+	sectionNameBySectionKey?: Record<string, string>;
 };
 
 function mergeFieldsForSectionKey(
@@ -53,7 +55,7 @@ function buildSectionRowsForAgreementStep(
 
 	return rows
 		.map((r) => ({
-			name: r.name.trim(),
+			name: (overrides.sectionNameBySectionKey?.[r.key] ?? r.name).trim(),
 			fields: mergeFieldsForSectionKey(r.key, r.fields, overrides),
 		}))
 		.filter((s) => s.name.length > 0);

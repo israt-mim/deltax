@@ -1,34 +1,30 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useQueries } from "@tanstack/react-query";
 import { toast } from "react-toastify";
-import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
-import CloseOutlinedIcon from "@mui/icons-material/CloseOutlined";
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
-import DragIndicatorOutlinedIcon from "@mui/icons-material/DragIndicatorOutlined";
-import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
-import ExpandMoreOutlinedIcon from "@mui/icons-material/ExpandMoreOutlined";
 import {
 	ApiError,
-	getFieldById,
 	type AgreementConfigApi,
-	type FieldConfigurationApiDocument,
 	useAgreementConfigQuery,
 	useConfigureAgreementConfigMutation,
 	useDeleteAgreementConfigMutation,
 } from "../api";
-import { queryKeys } from "../api/queryKeys";
 import { formatUserFacingError } from "../lib/formatUserFacingError";
 import { Button } from "../components/base/Button";
 import { ConfirmModal } from "../components/base/ConfirmModal";
-import { Card } from "../components/base/Card";
 import { CardMain } from "../components/base/CardMain";
+import { PageLoader } from "../components/base/PageLoader";
 import { Modal } from "../components/base/Modal";
 import { Stepper, type StepperStep } from "../components/base/Stepper";
 import { Typography } from "../components/base/Typography";
 import { FormInput } from "../components/form-input/FormInput";
 import { AddFieldsModal } from "./agreementConfiguration/AddFieldsModal";
-import { buildConfigureAgreementPayload } from "./agreementConfiguration/buildConfigureAgreementPayload";
+import { AgreementStepLayoutPanel, mergeSectionFieldIds } from "./agreementConfiguration/AgreementStepLayoutPanel";
+import {
+	buildConfigureAgreementPayload,
+	type ConfigureDraftSection,
+	type ConfigureFieldOverrides,
+} from "./agreementConfiguration/buildConfigureAgreementPayload";
 
 function statusBadgeClass(isActive: boolean | undefined) {
 	if (isActive) {
@@ -53,177 +49,7 @@ function buildBreadcrumb(config: AgreementConfigApi): string {
 	return parts.join(" → ");
 }
 
-function fieldCardLabel(fieldId: string, doc: FieldConfigurationApiDocument | undefined): string {
-	if (!doc?.details) return `Field ${fieldId.slice(0, 8)}…`;
-	const name = doc.details.name?.trim() || "—";
-	const tech = doc.details.groupTechnicalName?.trim() || fieldId;
-	return `${name} (${tech})`;
-}
-
-export type DraftSection = {
-	id: string;
-	name: string;
-	fields: string[];
-};
-
-type DisplaySectionRow = { key: string; name: string; fields: string[] };
-
-type FieldLayoutOverrides = {
-	addedBySectionKey: Record<string, string[]>;
-	removedFieldIdBySectionKey: Record<string, string[]>;
-};
-
-function mergeSectionFieldIds(section: DisplaySectionRow, overrides: FieldLayoutOverrides): string[] {
-	const removed = new Set(overrides.removedFieldIdBySectionKey[section.key] ?? []);
-	const base = (section.fields ?? []).filter((id) => !removed.has(id));
-	const added = overrides.addedBySectionKey[section.key] ?? [];
-	return [...new Set([...base, ...added])];
-}
-
-function FieldTile({
-	fieldId,
-	doc,
-	loading,
-	onEdit,
-	onRemove,
-}: {
-	fieldId: string;
-	doc: FieldConfigurationApiDocument | undefined;
-	loading: boolean;
-	onEdit?: () => void;
-	onRemove?: () => void;
-}) {
-	return (
-		<Card className="group flex items-start gap-2 border border-neutral-200 bg-white px-3 py-3 shadow-sm dark:border-black-500 dark:bg-black-700">
-			<DragIndicatorOutlinedIcon sx={{ fontSize: 18 }} className="mt-0.5 shrink-0 text-neutral-400" />
-			<span className="min-w-0 flex-1 text-sm font-medium text-neutral-900 dark:text-neutral-100">
-				{loading ? "Loading…" : fieldCardLabel(fieldId, doc)}
-			</span>
-			{(onEdit || onRemove) && (
-				<div className="flex shrink-0 gap-0.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100">
-					{onEdit && (
-						<button
-							type="button"
-							aria-label="Edit field"
-							className="rounded p-1 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-800 dark:hover:bg-black-600 dark:hover:text-neutral-100"
-							onClick={onEdit}
-						>
-							<EditOutlinedIcon sx={{ fontSize: 18 }} />
-						</button>
-					)}
-					{onRemove && (
-						<button
-							type="button"
-							aria-label="Remove field"
-							className="rounded p-1 text-neutral-500 transition-colors hover:bg-error-50 hover:text-error-600 dark:hover:bg-error-950/40 dark:hover:text-error-400"
-							onClick={onRemove}
-						>
-							<CloseOutlinedIcon sx={{ fontSize: 18 }} />
-						</button>
-					)}
-				</div>
-			)}
-		</Card>
-	);
-}
-
-function StepLayoutPanel({
-	displaySections,
-	onOpenAddSection,
-	onOpenAddField,
-	onRemoveFieldFromSection,
-}: {
-	displaySections: DisplaySectionRow[];
-	onOpenAddSection: () => void;
-	onOpenAddField: (sectionKey: string) => void;
-	onRemoveFieldFromSection: (sectionKey: string, fieldId: string) => void;
-}) {
-	const fieldIds = useMemo(() => {
-		const ids = displaySections.flatMap((s) => s.fields ?? []);
-		return [...new Set(ids.filter(Boolean))];
-	}, [displaySections]);
-
-	const fieldQueries = useQueries({
-		queries: fieldIds.map((fid) => ({
-			queryKey: [...queryKeys.fields.all, "detail", fid] as const,
-			queryFn: () => getFieldById(fid),
-			enabled: Boolean(fid),
-			staleTime: 60_000,
-		})),
-	});
-
-	if (displaySections.length === 0) {
-		return (
-			<div className="flex flex-col items-center justify-center gap-4 rounded-lg border border-dashed border-neutral-200 bg-neutral-50/80 py-16 dark:border-black-500 dark:bg-black-800/40">
-				<Typography size="medium" variant="semibold" className="text-neutral-700 dark:text-neutral-200">
-					No layout for this step yet
-				</Typography>
-				<button
-					type="button"
-					className="inline-flex items-center gap-1.5 rounded-lg border border-primary-200 bg-primary-50 px-4 py-2 text-sm font-medium text-primary-700 transition-colors hover:bg-primary-100 dark:border-primary-800 dark:bg-primary-950/50 dark:text-primary-200 dark:hover:bg-primary-900/60"
-					onClick={onOpenAddSection}
-				>
-					<AddOutlinedIcon sx={{ fontSize: 18 }} />
-					New Section
-				</button>
-			</div>
-		);
-	}
-
-	return (
-		<div className="flex flex-col gap-4">
-			{displaySections.map((section) => (
-				<div
-					key={section.key}
-					className="flex flex-col gap-3 overflow-hidden rounded-lg border border-neutral-200 dark:border-black-500"
-				>
-					<div className="flex items-center justify-between gap-2 bg-neutral-100 px-3 py-2.5 dark:bg-black-600">
-						<div className="flex min-w-0 items-center gap-2">
-							<DragIndicatorOutlinedIcon sx={{ fontSize: 18 }} className="shrink-0 text-neutral-400" />
-							<span className="truncate text-sm font-medium text-neutral-800 dark:text-neutral-100">
-								{section.name}
-							</span>
-						</div>
-						<ExpandMoreOutlinedIcon sx={{ fontSize: 20 }} className="shrink-0 text-neutral-400" />
-					</div>
-					<div className="flex flex-col gap-3 px-3 pb-3">
-						<div className="flex flex-wrap gap-2">
-							{(section.fields ?? []).map((fid) => {
-								const idx = fieldIds.indexOf(fid);
-								const q = idx >= 0 ? fieldQueries[idx] : undefined;
-								return (
-									<FieldTile
-										key={`${section.key}-${fid}`}
-										fieldId={fid}
-										doc={q?.data}
-										loading={Boolean(q?.isPending || q?.isFetching)}
-										onEdit={() => toast.info("Field editing opens from Fields configuration.")}
-										onRemove={() => onRemoveFieldFromSection(section.key, fid)}
-									/>
-								);
-							})}
-						</div>
-						<button
-							type="button"
-							className="self-start text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
-							onClick={() => onOpenAddField(section.key)}
-						>
-							+ Add Field
-						</button>
-					</div>
-				</div>
-			))}
-			<button
-				type="button"
-				className="mx-auto inline-flex items-center gap-1.5 rounded-lg border border-primary-200 bg-primary-50 px-4 py-2 text-sm font-medium text-primary-700 transition-colors hover:bg-primary-100 dark:border-primary-800 dark:bg-primary-950/50 dark:text-primary-200 dark:hover:bg-primary-900/60"
-				onClick={onOpenAddSection}
-			>
-				<AddOutlinedIcon sx={{ fontSize: 18 }} />
-				New Section
-			</button>
-		</div>
-	);
-}
+type DraftSection = ConfigureDraftSection;
 
 const CreateAgreementConfiguration = () => {
 	const { id } = useParams<{ id: string }>();
@@ -236,9 +62,10 @@ const CreateAgreementConfiguration = () => {
 	const [addSectionOpen, setAddSectionOpen] = useState(false);
 	const [newSectionName, setNewSectionName] = useState("");
 	const [newSectionError, setNewSectionError] = useState<string | undefined>();
-	const [fieldOverrides, setFieldOverrides] = useState<FieldLayoutOverrides>({
+	const [fieldOverrides, setFieldOverrides] = useState<ConfigureFieldOverrides>({
 		addedBySectionKey: {},
 		removedFieldIdBySectionKey: {},
+		sectionNameBySectionKey: {},
 	});
 	const [addFieldModalOpen, setAddFieldModalOpen] = useState(false);
 	const [addFieldTargetSectionKey, setAddFieldTargetSectionKey] = useState<string | null>(null);
@@ -277,7 +104,7 @@ const CreateAgreementConfiguration = () => {
 		return config.configuredSteps.find((c) => c.id === activeWizardStep._id);
 	}, [config?.configuredSteps, activeWizardStep]);
 
-	const displaySections: DisplaySectionRow[] = useMemo(() => {
+	const displaySections = useMemo(() => {
 		if (!activeWizardStep) return [];
 		const stepId = activeWizardStep._id;
 		const apiSections = layoutForActiveStep?.sections ?? [];
@@ -295,10 +122,11 @@ const CreateAgreementConfiguration = () => {
 		return [...apiRows, ...draftRows];
 	}, [activeWizardStep, layoutForActiveStep, draftSectionsByStepId]);
 
-	const panelSections: DisplaySectionRow[] = useMemo(
+	const panelSections = useMemo(
 		() =>
 			displaySections.map((s) => ({
 				...s,
+				name: fieldOverrides.sectionNameBySectionKey?.[s.key] ?? s.name,
 				fields: mergeSectionFieldIds(s, fieldOverrides),
 			})),
 		[displaySections, fieldOverrides]
@@ -353,11 +181,11 @@ const CreateAgreementConfiguration = () => {
 
 	const handleConfirmAddFields = useCallback((ids: string[], sectionKey: string) => {
 		setFieldOverrides((p) => ({
+			...p,
 			addedBySectionKey: {
 				...p.addedBySectionKey,
 				[sectionKey]: [...new Set([...(p.addedBySectionKey[sectionKey] ?? []), ...ids])],
 			},
-			removedFieldIdBySectionKey: p.removedFieldIdBySectionKey,
 		}));
 	}, []);
 
@@ -371,8 +199,22 @@ const CreateAgreementConfiguration = () => {
 			} else {
 				removed[sectionKey] = [...new Set([...(removed[sectionKey] ?? []), fieldId])];
 			}
-			return { addedBySectionKey: added, removedFieldIdBySectionKey: removed };
+			return {
+				...p,
+				addedBySectionKey: added,
+				removedFieldIdBySectionKey: removed,
+			};
 		});
+	}, []);
+
+	const handleRenameSection = useCallback((sectionKey: string, name: string) => {
+		setFieldOverrides((p) => ({
+			...p,
+			sectionNameBySectionKey: {
+				...(p.sectionNameBySectionKey ?? {}),
+				[sectionKey]: name.trim(),
+			},
+		}));
 	}, []);
 
 	const handleCompleteConfigure = useCallback(async () => {
@@ -385,10 +227,11 @@ const CreateAgreementConfiguration = () => {
 			const body = buildConfigureAgreementPayload(config, draftSectionsByStepId, fieldOverrides);
 			await configureMutation.mutateAsync({ id: id.trim(), body });
 			toast.success("Agreement configuration saved.");
+			void navigate("/configure/agreements");
 		} catch (e) {
 			toast.error(formatUserFacingError(e, "Could not save agreement configuration."));
 		}
-	}, [config, id, draftSectionsByStepId, fieldOverrides, configureMutation]);
+	}, [config, id, draftSectionsByStepId, fieldOverrides, configureMutation, navigate]);
 
 	const handleConfirmDiscard = useCallback(async () => {
 		const configId = id?.trim();
@@ -427,10 +270,10 @@ const CreateAgreementConfiguration = () => {
 		);
 	}
 
-	if (configQuery.isLoading) {
+	if (configQuery.isPending) {
 		return (
-			<CardMain className="flex flex-col gap-4">
-				<p className="text-sm text-neutral-500 dark:text-neutral-400">Loading configuration…</p>
+			<CardMain className="flex min-h-[min(360px,calc(100vh-200px))] flex-1 items-center justify-center">
+				<PageLoader mode="embedded" />
 			</CardMain>
 		);
 	}
@@ -475,11 +318,12 @@ const CreateAgreementConfiguration = () => {
 
 			<div className="min-h-0 flex-1 overflow-auto py-4">
 				{stepperSteps.length > 0 && activeWizardStep ? (
-					<StepLayoutPanel
+					<AgreementStepLayoutPanel
 						displaySections={panelSections}
 						onOpenAddSection={handleOpenAddSection}
 						onOpenAddField={handleOpenAddField}
 						onRemoveFieldFromSection={handleRemoveFieldFromSection}
+						onRenameSection={handleRenameSection}
 					/>
 				) : (
 					<p className="text-sm text-neutral-500 dark:text-neutral-400">No steps on this configuration.</p>

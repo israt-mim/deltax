@@ -12,6 +12,7 @@ import { formatUserFacingError } from "../lib/formatUserFacingError";
 import { formatUsDateTime } from "../lib/formatDateTime";
 import { Card } from "../components/base/Card";
 import { CardMain } from "../components/base/CardMain";
+import { PageLoader } from "../components/base/PageLoader";
 import { Title } from "../components/base/Title";
 import { Typography } from "../components/base/Typography";
 import { Button } from "../components/base/Button";
@@ -247,8 +248,8 @@ export const FieldDetailPage = () => {
 
 	if (fieldQuery.isPending) {
 		return (
-			<CardMain className="flex h-full items-center justify-center">
-				<div className="text-sm text-neutral-500 dark:text-neutral-400">Loading field configuration...</div>
+			<CardMain className="flex min-h-[min(360px,calc(100vh-200px))] flex-1 items-center justify-center">
+				<PageLoader mode="embedded" />
 			</CardMain>
 		);
 	}

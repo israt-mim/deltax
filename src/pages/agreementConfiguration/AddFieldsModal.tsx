@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Input } from "antd";
 import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
-import FilterListOutlinedIcon from "@mui/icons-material/FilterListOutlined";
-import SwapVertOutlinedIcon from "@mui/icons-material/SwapVertOutlined";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { Modal } from "../../components/base/Modal";
@@ -154,34 +152,14 @@ export const AddFieldsModal = ({ open, sectionKey, excludeFieldIds = [], onClose
 			aria-labelledby={titleId}
 		>
 			<div className="flex flex-col gap-3">
-				<div className="flex flex-wrap items-center justify-end gap-2">
-					<div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
-						<Input
-							allowClear
-							prefix={<SearchOutlinedIcon className="text-neutral-400" />}
-							placeholder="Search (use * as a wildcard)"
-							value={searchInput}
-							onChange={(e) => setSearchInput(e.target.value)}
-							className="max-w-md min-w-[12rem] flex-1"
-						/>
-						<button
-							type="button"
-							className="rounded-md p-2 text-neutral-500 transition-colors hover:bg-neutral-100 dark:hover:bg-black-600"
-							aria-label="Filter"
-							onClick={() => toast.info("Filters are not available yet.")}
-						>
-							<FilterListOutlinedIcon sx={{ fontSize: 20 }} />
-						</button>
-						<button
-							type="button"
-							className="rounded-md p-2 text-neutral-500 transition-colors hover:bg-neutral-100 dark:hover:bg-black-600"
-							aria-label="Sort"
-							onClick={() => toast.info("Sort from the column headers.")}
-						>
-							<SwapVertOutlinedIcon sx={{ fontSize: 20 }} />
-						</button>
-					</div>
-				</div>
+				<Input
+					allowClear
+					prefix={<SearchOutlinedIcon className="text-neutral-400" />}
+					placeholder="Search (use * as a wildcard)"
+					value={searchInput}
+					onChange={(e) => setSearchInput(e.target.value)}
+					className="w-full max-w-md min-w-[12rem]"
+				/>
 				<InfiniteTable<FieldRow>
 					data={visibleRows}
 					columns={columns}

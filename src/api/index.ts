@@ -133,16 +133,23 @@ export {
 } from "./hooks/agreementCatalog";
 
 export {
+	buildAgreementRelevantTeamsPayload,
 	bulkDeleteAgreementConfigs,
 	configureAgreementConfig,
 	createAgreementConfig,
 	deleteAgreementConfig,
 	getAgreementConfigById,
 	listAgreementConfigs,
+	patchAgreementConfigActivation,
+	patchAgreementConfigCatalog,
+	resolveAgreementRelevantTeamId,
 } from "./services/agreementConfigs";
 export type {
 	AgreementCatalogFieldInput,
+	AgreementCatalogUpdateBody,
 	AgreementConfigApi,
+	AgreementRelevantTeamEntry,
+	AgreementRelevantTeamRef,
 	AgreementConfigListConfiguredSection,
 	AgreementConfigListConfiguredStep,
 	AgreementConfigListItem,
@@ -160,9 +167,25 @@ export type {
 export {
 	useAgreementConfigQuery,
 	useAgreementConfigsInfiniteList,
+	useAgreementConfigsTotalCount,
 	useBulkDeleteAgreementConfigsMutation,
 	useConfigureAgreementConfigMutation,
 	useCreateAgreementConfigMutation,
 	useDeleteAgreementConfigMutation,
+	usePatchAgreementConfigActivationMutation,
+	usePatchAgreementConfigCatalogMutation,
 } from "./hooks/agreementConfigs";
 export type { AgreementConfigsListFilters } from "./hooks/agreementConfigs";
+
+export { getClauseById, listClauses } from "./services/clauses";
+export type {
+	ClauseDetailApi,
+	ClauseDetailSection,
+	ClauseListItem,
+	ClauseSectionFields,
+	ClauseSectionName,
+	ClausesListParams,
+} from "./services/clauses";
+
+export { useClauseDetailQuery, useClausesInfiniteList } from "./hooks/clauses";
+export type { ClausesListFilters } from "./hooks/clauses";

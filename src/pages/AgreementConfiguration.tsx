@@ -1,128 +1,99 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import MoreVertOutlinedIcon from "@mui/icons-material/MoreVertOutlined";
 import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
+import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import { Button } from "../components/base/Button";
 import { CardMain } from "../components/base/CardMain";
 import { Title } from "../components/base/Title";
 import { Card } from "../components/base/Card";
 import { InfiniteTable } from "../components/base/InfiniteTable";
 import { FloatingBar } from "../components/base/FloatingBar";
-import { useColumns, type ColumnConfig } from "../hooks/useColumns";
-import { fetchAgreementsPage, type AgreementRow } from "../dummy-data/configure/agreements";
+import { useColumns } from "../hooks/useColumns";
+import { createStickyActionsColumn } from "../components/modules/settings/stickyActionsColumn";
 import { NewAgreementConfigurationModal } from "./agreementConfiguration/NewAgreementConfigurationModal";
+import {
+	agreementConfigToTableRow,
+	agreementListScrollableColumnConfigs,
+	agreementStatusColumnDef,
+	type AgreementConfigTableRow,
+} from "./agreementConfiguration/agreementListTableShared";
+import { useAgreementConfigsInfiniteList, useBulkDeleteAgreementConfigsMutation } from "../api";
+import { formatUserFacingError } from "../lib/formatUserFacingError";
+import { FormInput } from "../components/form-input/FormInput";
 
-const STATUS_COLORS: Record<string, string> = {
-	Active: "bg-success-100 text-success-700 dark:bg-success-900 dark:text-success-300",
-	Draft: "bg-neutral-100 text-neutral-600 dark:bg-black-600 dark:text-neutral-300",
-	Expired: "bg-error-100 text-error-700 dark:bg-error-900 dark:text-error-300",
-	"Under Review": "bg-warning-100 text-warning-700 dark:bg-warning-900 dark:text-warning-300",
-	"Pending Approval": "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
-};
+export type { AgreementConfigTableRow } from "./agreementConfiguration/agreementListTableShared";
 
-const agreementColumnConfigs: ColumnConfig<AgreementRow>[] = [
-	{
-		key: "name",
-		name: "Name",
-		width: 220,
-		minWidth: 140,
-		sortable: true,
-	},
-	{
-		key: "category",
-		name: "Category",
-		width: 140,
-		minWidth: 100,
-		sortable: true,
-	},
-	{
-		key: "status",
-		name: "Status",
-		width: 140,
-		minWidth: 100,
-		sortable: true,
-		cell: ({ getValue }) => {
-			const status = getValue() as string;
-			return (
-				<span className={`px-2 py-0.5 text-xs font-medium rounded ${STATUS_COLORS[status] ?? ""}`}>
-					{status}
-				</span>
-			);
-		},
-	},
-	{
-		key: "owner",
-		name: "Owner",
-		width: 160,
-		minWidth: 100,
-		sortable: true,
-	},
-	{
-		key: "createdDate",
-		name: "Created",
-		width: 140,
-		minWidth: 100,
-		sortable: true,
-	},
-	{
-		key: "expiryDate",
-		name: "Expiry",
-		width: 140,
-		minWidth: 100,
-		sortable: true,
-	},
-	{
-		key: "tags",
-		name: "Tags",
-		width: 120,
-		minWidth: 80,
-		sortable: true,
-		cell: ({ getValue }) => {
-			const tags = getValue() as string[];
-			if (!tags?.length) return null;
-			return (
-				<div className="flex gap-1">
-					{tags.map((tag) => (
-						<span
-							key={tag}
-							className="px-2 py-0.5 text-xs font-medium rounded bg-warning-100 text-warning-700 dark:bg-warning-900 dark:text-warning-300"
-						>
-							{tag}
-						</span>
-					))}
-				</div>
-			);
-		},
-	},
-];
+const AGREEMENT_ACTIONS_COL_WIDTH = 44;
 
 export const AgreementConfiguration = () => {
-	const columns = useColumns(agreementColumnConfigs);
+	const navigate = useNavigate();
+	const scrollableColumns = useColumns(agreementListScrollableColumnConfigs);
+	const columns = useMemo(
+		() => [
+			...scrollableColumns,
+			agreementStatusColumnDef("before-actions", AGREEMENT_ACTIONS_COL_WIDTH),
+			createStickyActionsColumn<AgreementConfigTableRow>(),
+		],
+		[scrollableColumns]
+	);
 	const [newAgreementModalOpen, setNewAgreementModalOpen] = useState(false);
-	const [agreements, setAgreements] = useState<AgreementRow[]>([]);
-	const [page, setPage] = useState(0);
-	const [hasMore, setHasMore] = useState(true);
-	const [isLoading, setIsLoading] = useState(false);
-	const [checkedIds, setCheckedIds] = useState<Set<string>>(() => new Set());
-
-	const loadMore = useCallback(() => {
-		if (isLoading || !hasMore) return;
-		setIsLoading(true);
-		fetchAgreementsPage(page).then(({ data, hasMore: more }) => {
-			setAgreements((prev) => [...prev, ...data]);
-			setPage((prev) => prev + 1);
-			setHasMore(more);
-			setIsLoading(false);
-		});
-	}, [page, isLoading, hasMore]);
+	const [searchInput, setSearchInput] = useState("");
+	const [debouncedSearch, setDebouncedSearch] = useState("");
 
 	useEffect(() => {
-		loadMore();
-	}, []); // eslint-disable-line react-hooks/exhaustive-deps
+		const t = window.setTimeout(() => setDebouncedSearch(searchInput.trim()), 400);
+		return () => window.clearTimeout(t);
+	}, [searchInput]);
+
+	const listQuery = useAgreementConfigsInfiniteList({
+		search: debouncedSearch || undefined,
+		sort: "-createdAt",
+	});
+	const bulkDeleteMutation = useBulkDeleteAgreementConfigsMutation();
+
+	const rows = useMemo(
+		() => listQuery.data?.pages.flatMap((p) => p.data.map(agreementConfigToTableRow)) ?? [],
+		[listQuery.data]
+	);
+
+	const loadMore = useCallback(() => {
+		if (listQuery.hasNextPage && !listQuery.isFetchingNextPage) {
+			void listQuery.fetchNextPage();
+		}
+	}, [listQuery.hasNextPage, listQuery.isFetchingNextPage, listQuery.fetchNextPage]);
+
+	const [checkedIds, setCheckedIds] = useState<Set<string>>(() => new Set());
 
 	const clearSelection = useCallback(() => {
 		setCheckedIds(new Set());
 	}, []);
+
+	const handleBulkDelete = useCallback(async () => {
+		const ids = [...checkedIds];
+		if (!ids.length || bulkDeleteMutation.isPending) return;
+		try {
+			const res = await bulkDeleteMutation.mutateAsync(ids);
+			if (res.deletedCount === 0) {
+				toast.info(res.message?.trim() || "No agreement configurations were deleted.");
+				return;
+			}
+			if (res.deletedCount === res.requestedCount) {
+				toast.success(
+					`${res.deletedCount} agreement configuration${res.deletedCount === 1 ? "" : "s"} deleted.`
+				);
+			} else {
+				toast.success(`${res.deletedCount} of ${res.requestedCount} agreement configurations deleted.`);
+			}
+			clearSelection();
+		} catch (e) {
+			toast.error(formatUserFacingError(e, "Could not delete agreement configurations."));
+		}
+	}, [checkedIds, bulkDeleteMutation, clearSelection]);
+
+	const isInitialLoading = listQuery.isLoading && !listQuery.data;
+	const isLoadingMore = listQuery.isFetchingNextPage;
+	const hasMore = Boolean(listQuery.hasNextPage);
 
 	return (
 		<CardMain className="flex flex-col gap-4">
@@ -134,39 +105,54 @@ export const AgreementConfiguration = () => {
 				</Button>
 			</div>
 
+			{listQuery.isError && (
+				<p className="text-sm text-error-500">
+					{formatUserFacingError(listQuery.error, "Could not load agreements.")}{" "}
+					<button
+						type="button"
+						className="font-medium text-primary-600 underline dark:text-primary-400"
+						onClick={() => void listQuery.refetch()}
+					>
+						Retry
+					</button>
+				</p>
+			)}
+
 			<Card className="flex flex-col gap-3">
+				<FormInput
+					placeholder="Search by display ID…"
+					value={searchInput}
+					onChange={(e) => setSearchInput(e.target.value)}
+					className="max-w-md"
+				/>
+
 				<FloatingBar
 					open={checkedIds.size > 0}
 					selectedCount={checkedIds.size}
 					onClearSelection={clearSelection}
-					onDelete={() => {
-						toast.info(`Delete ${checkedIds.size} agreement(s) — hook up your API here.`);
-					}}
+					items={
+						<button
+							type="button"
+							disabled={bulkDeleteMutation.isPending}
+							onClick={() => void handleBulkDelete()}
+							className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium text-red-200 transition-colors hover:bg-white/10 hover:text-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 disabled:pointer-events-none disabled:opacity-50"
+						>
+							<DeleteOutlineOutlinedIcon sx={{ fontSize: 18 }} />
+							{bulkDeleteMutation.isPending ? "Deleting…" : "Delete"}
+						</button>
+					}
 				/>
 				<InfiniteTable
-					data={agreements}
-					columns={[
-						...columns,
-						{
-							id: "actions",
-							header: "",
-							size: 44,
-							minSize: 44,
-							maxSize: 44,
-							enableResizing: false,
-							cell: () => (
-								<div className="flex items-center justify-center">
-									<MoreVertOutlinedIcon sx={{ fontSize: 18 }} className="text-neutral-400" />
-								</div>
-							),
-						},
-					]}
-					height="calc(100vh - 200px)"
+					data={rows}
+					columns={columns}
+					height="calc(100vh - 260px)"
 					onLoadMore={loadMore}
-					isLoading={isLoading}
+					isLoading={isLoadingMore}
+					isInitialLoading={isInitialLoading}
 					hasMore={hasMore}
+					onRowClick={(row) => void navigate(`/configure/agreements/${encodeURIComponent(row._id)}`)}
 					checkboxConfig={{
-						getRowId: (row) => String(row.id),
+						getRowId: (row) => row._id,
 						checkedIds,
 						setCheckedIds,
 					}}

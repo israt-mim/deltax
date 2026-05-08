@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "../components/base/Card";
 import { CardMain } from "../components/base/CardMain";
@@ -7,9 +7,14 @@ import { Title } from "../components/base/Title";
 import { Typography } from "../components/base/Typography";
 import { useColumns, type ColumnConfig } from "../hooks/useColumns";
 import { configureDashboardCards } from "../dummy-data/configure/dashboard";
-import { allAgreementRows, fetchAgreementsPage, type AgreementRow } from "../dummy-data/configure/agreements";
-import { useFieldsInfiniteList, useFieldsTotalCount } from "../api/hooks/fields";
+import { useAgreementConfigsInfiniteList, useAgreementConfigsTotalCount, useFieldsInfiniteList, useFieldsTotalCount } from "../api";
 import type { FieldRow } from "../schemas/fieldConfiguration";
+import {
+	agreementConfigToTableRow,
+	agreementListScrollableColumnConfigs,
+	agreementStatusColumnDef,
+	type AgreementConfigTableRow,
+} from "./agreementConfiguration/agreementListTableShared";
 import { Tabs } from "../components/base/Tabs";
 import { formatUserFacingError } from "../lib/formatUserFacingError";
 
@@ -20,13 +25,6 @@ const fieldColumnConfigs: ColumnConfig<FieldRow>[] = [
 	{ key: "context", name: "Context", width: 200 },
 ];
 
-const agreementPreviewColumnConfigs: ColumnConfig<AgreementRow>[] = [
-	{ key: "name", name: "Name", width: 220, minWidth: 140 },
-	{ key: "category", name: "Category", width: 140, minWidth: 100 },
-	{ key: "status", name: "Status", width: 140, minWidth: 100 },
-	{ key: "owner", name: "Owner", width: 160, minWidth: 100 },
-];
-
 function formatCount(n: number | undefined, loading: boolean): string {
 	if (loading) return "…";
 	if (n === undefined) return "—";
@@ -35,13 +33,26 @@ function formatCount(n: number | undefined, loading: boolean): string {
 
 export const Configure = () => {
 	const navigate = useNavigate();
-	const [activeTab, setActiveTab] = useState<"fields" | "agreements">("fields");
+	const [activeTab, setActiveTab] = useState<"fields" | "agreements">("agreements");
 
 	const fieldsTotalQuery = useFieldsTotalCount({ sort: "-createdAt" });
-	const fieldsListQuery = useFieldsInfiniteList({ q: "", sort: "-createdAt" });
+	const fieldsListQuery = useFieldsInfiniteList({
+		q: "",
+		sort: "-createdAt",
+		enabled: activeTab === "fields",
+	});
+	const agreementsTotalQuery = useAgreementConfigsTotalCount({ sort: "-createdAt" });
+	const agreementsListQuery = useAgreementConfigsInfiniteList({
+		sort: "-createdAt",
+		enabled: activeTab === "agreements",
+	});
 
 	const fieldColumns = useColumns(fieldColumnConfigs);
-	const agreementColumns = useColumns(agreementPreviewColumnConfigs);
+	const agreementScrollableColumns = useColumns(agreementListScrollableColumnConfigs);
+	const agreementColumns = useMemo(
+		() => [...agreementScrollableColumns, agreementStatusColumnDef("standalone")],
+		[agreementScrollableColumns]
+	);
 
 	const fieldRows = useMemo(
 		() => fieldsListQuery.data?.pages.flatMap((p) => p.data) ?? [],
@@ -54,47 +65,44 @@ export const Configure = () => {
 		}
 	}, [fieldsListQuery.hasNextPage, fieldsListQuery.isFetchingNextPage, fieldsListQuery.fetchNextPage]);
 
-	const [agreements, setAgreements] = useState<AgreementRow[]>([]);
-	const [agreementPage, setAgreementPage] = useState(0);
-	const [agreementsHasMore, setAgreementsHasMore] = useState(true);
-	const [agreementsLoading, setAgreementsLoading] = useState(false);
+	const agreementRows = useMemo(
+		() => agreementsListQuery.data?.pages.flatMap((p) => p.data.map(agreementConfigToTableRow)) ?? [],
+		[agreementsListQuery.data]
+	);
 
 	const loadMoreAgreements = useCallback(() => {
-		if (agreementsLoading || !agreementsHasMore) return;
-		setAgreementsLoading(true);
-		fetchAgreementsPage(agreementPage).then(({ data, hasMore: more }) => {
-			setAgreements((prev) => [...prev, ...data]);
-			setAgreementPage((p) => p + 1);
-			setAgreementsHasMore(more);
-			setAgreementsLoading(false);
-		});
-	}, [agreementPage, agreementsLoading, agreementsHasMore]);
-
-	useEffect(() => {
-		if (activeTab !== "agreements") return;
-		if (agreements.length > 0) return;
-		if (agreementsLoading) return;
-		void loadMoreAgreements();
-	}, [activeTab, agreements.length, agreementsLoading, loadMoreAgreements]);
+		if (agreementsListQuery.hasNextPage && !agreementsListQuery.isFetchingNextPage) {
+			void agreementsListQuery.fetchNextPage();
+		}
+	}, [
+		agreementsListQuery.hasNextPage,
+		agreementsListQuery.isFetchingNextPage,
+		agreementsListQuery.fetchNextPage,
+	]);
 
 	const handleViewAll = useCallback(() => {
 		void navigate(`/configure/${activeTab}`);
 	}, [activeTab, navigate]);
 
 	const dashboardItems = useMemo(() => {
-		const agreementCount = allAgreementRows.length;
 		const fieldCount = fieldsTotalQuery.data;
+		const agreementCount = agreementsTotalQuery.data;
 		return configureDashboardCards.map((item) => ({
 			...item,
 			count:
 				item.name === "Field"
 					? formatCount(fieldCount, fieldsTotalQuery.isPending)
-					: formatCount(agreementCount, false),
+					: formatCount(agreementCount, agreementsTotalQuery.isPending),
 		}));
-	}, [fieldsTotalQuery.data, fieldsTotalQuery.isPending]);
+	}, [
+		fieldsTotalQuery.data,
+		fieldsTotalQuery.isPending,
+		agreementsTotalQuery.data,
+		agreementsTotalQuery.isPending,
+	]);
 
 	const fieldsInitialLoading = fieldsListQuery.isPending && fieldRows.length === 0;
-	const agreementsInitialLoading = agreementsLoading && agreements.length === 0;
+	const agreementsInitialLoading = agreementsListQuery.isPending && agreementRows.length === 0;
 
 	return (
 		<CardMain className="flex flex-col gap-3">
@@ -107,6 +115,19 @@ export const Configure = () => {
 						type="button"
 						className="font-medium text-primary-600 underline dark:text-primary-400"
 						onClick={() => void fieldsListQuery.refetch()}
+					>
+						Retry
+					</button>
+				</p>
+			)}
+
+			{agreementsListQuery.isError && activeTab === "agreements" && (
+				<p className="text-sm text-error-500">
+					{formatUserFacingError(agreementsListQuery.error, "Could not load agreements.")}{" "}
+					<button
+						type="button"
+						className="font-medium text-primary-600 underline dark:text-primary-400"
+						onClick={() => void agreementsListQuery.refetch()}
 					>
 						Retry
 					</button>
@@ -188,14 +209,15 @@ export const Configure = () => {
 						onRowClick={(row) => void navigate(`/configure/fields/${row.id}`)}
 					/>
 				) : (
-					<InfiniteTable<AgreementRow>
-						data={agreements}
+					<InfiniteTable<AgreementConfigTableRow>
+						data={agreementRows}
 						height="calc(100vh - 330px)"
 						columns={agreementColumns}
 						onLoadMore={loadMoreAgreements}
-						isLoading={agreementsLoading}
-						hasMore={agreementsHasMore}
+						isLoading={agreementsListQuery.isFetchingNextPage}
+						hasMore={Boolean(agreementsListQuery.hasNextPage)}
 						isInitialLoading={agreementsInitialLoading}
+						onRowClick={(row) => void navigate(`/configure/agreements/${encodeURIComponent(row._id)}`)}
 					/>
 				)}
 			</Card>

@@ -44,6 +44,8 @@ export interface InfiniteTableProps<TData> {
 	checkboxConfig?: InfiniteTableCheckboxConfig<TData>;
 	/** Whole-row click (ignored for checkbox/button/input and elements matching `data-row-click-ignore`). */
 	onRowClick?: (row: TData, event: ReactMouseEvent<HTMLTableRowElement>) => void;
+	/** Optional empty-state text rendered inside table body when there are no rows. */
+	emptyMessage?: string;
 }
 
 function getStickyMeta(col: { columnDef: { meta?: unknown } }): StickyColumnMeta | null {
@@ -135,6 +137,7 @@ export function InfiniteTable<TData>({
 	skeletonRowCount = 10,
 	checkboxConfig,
 	onRowClick,
+	emptyMessage,
 }: InfiniteTableProps<TData>) {
 	const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -242,6 +245,7 @@ export function InfiniteTable<TData>({
 	});
 
 	const { rows } = table.getRowModel();
+	const showEmptyRow = !isInitialLoading && rows.length === 0 && Boolean(emptyMessage);
 
 	const isSkeletonBody = Boolean(isInitialLoading) && data.length === 0;
 	const bodyRowCount = isSkeletonBody ? skeletonRowCount : rows.length;
@@ -361,10 +365,12 @@ export function InfiniteTable<TData>({
 				aria-busy={isSkeletonBody || undefined}
 			>
 				<table
-					className="min-w-full border-collapse"
+					className="table-fixed border-collapse"
 					style={{
 						...columnSizeVars,
-						width: table.getTotalSize(),
+						/* At least fill the scroll viewport so header/cell backgrounds span full width; never
+				   shrink below column sum so horizontal scroll still works when columns are wider. */
+						width: `max(100%, ${table.getTotalSize()}px)`,
 					}}
 				>
 					<thead className="sticky top-0 z-10">
@@ -469,6 +475,16 @@ export function InfiniteTable<TData>({
 										</tr>
 									);
 								})}
+								{showEmptyRow && (
+									<tr className="bg-white dark:bg-black-800">
+										<td
+											colSpan={headerGroup.headers.length}
+											className="px-4 py-6 text-center text-sm text-neutral-500 dark:text-neutral-400 border-b border-neutral-100 dark:border-black-600"
+										>
+											{emptyMessage}
+										</td>
+									</tr>
+								)}
 								{paddingBottom > 0 && (
 									<tr><td style={{ height: paddingBottom }} /></tr>
 								)}

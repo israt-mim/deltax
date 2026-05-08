@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Dropdown } from "antd";
 import type { MenuProps } from "antd";
 import { Modal as AntdModal } from "antd";
@@ -7,9 +7,6 @@ import { useQuery } from "@tanstack/react-query";
 import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
 import ModeEditOutlinedIcon from "@mui/icons-material/ModeEditOutlined";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
-import FilterListOutlinedIcon from "@mui/icons-material/FilterListOutlined";
-import SwapVertOutlinedIcon from "@mui/icons-material/SwapVertOutlined";
-import FileDownloadOutlinedIcon from "@mui/icons-material/FileDownloadOutlined";
 import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
 import MoreVertOutlinedIcon from "@mui/icons-material/MoreVertOutlined";
 import { Card } from "../../base/Card";
@@ -104,17 +101,6 @@ function UserRowMenu({
 	);
 }
 
-const IconButton = ({ children, onClick, title }: { children: ReactNode; onClick?: () => void; title?: string }) => (
-	<button
-		type="button"
-		title={title}
-		onClick={onClick}
-		className="p-1.5 rounded-md text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-black-600 transition-colors"
-	>
-		{children}
-	</button>
-);
-
 export interface SettingsUsersProps {
 	search: string;
 	onSearchChange: (v: string) => void;
@@ -131,10 +117,9 @@ export const Users = ({ search, onSearchChange }: SettingsUsersProps) => {
 	const [userPendingDelete, setUserPendingDelete] = useState<SettingsUserListRow | null>(null);
 	const [checkedIds, setCheckedIds] = useState<Set<string>>(() => new Set());
 	const [bulkDeleteIds, setBulkDeleteIds] = useState<string[] | null>(null);
-	const [sort, setSort] = useState("-createdAt");
 	const debouncedSearch = useDebouncedValue(search, 500);
 
-	const listQuery = useUsersInfiniteList({ q: debouncedSearch, sort });
+	const listQuery = useUsersInfiniteList({ q: debouncedSearch, sort: "-createdAt" });
 
 	const rows = useMemo(() => listQuery.data?.pages.flatMap((p) => p.data) ?? [], [listQuery.data]);
 
@@ -212,10 +197,6 @@ export const Users = ({ search, onSearchChange }: SettingsUsersProps) => {
 
 	const columns = useMemo(() => [...baseColumns, actionsColumn], [baseColumns, actionsColumn]);
 
-	const toggleSort = () => {
-		setSort((s) => (s === "-createdAt" ? "createdAt" : "-createdAt"));
-	};
-
 	const showInitialLoading = listQuery.isPending && rows.length === 0;
 
 	useEffect(() => {
@@ -253,15 +234,6 @@ export const Users = ({ search, onSearchChange }: SettingsUsersProps) => {
 							className="min-w-0 flex-1 bg-transparent text-sm text-neutral-800 outline-none placeholder:text-neutral-400 dark:text-neutral-200 dark:placeholder:text-neutral-500"
 						/>
 					</div>
-					<IconButton title="Filters (coming soon)">
-						<FilterListOutlinedIcon sx={{ fontSize: 20 }} />
-					</IconButton>
-					<IconButton title="Sort by created date (toggle)" onClick={toggleSort}>
-						<SwapVertOutlinedIcon sx={{ fontSize: 20 }} />
-					</IconButton>
-					<IconButton title="Export (coming soon)">
-						<FileDownloadOutlinedIcon sx={{ fontSize: 20 }} />
-					</IconButton>
 				</div>
 				<Button
 					type="button"
