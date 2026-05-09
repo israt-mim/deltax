@@ -189,3 +189,14 @@ export type {
 
 export { useClauseDetailQuery, useClausesInfiniteList } from "./hooks/clauses";
 export type { ClausesListFilters } from "./hooks/clauses";
+
+export { getAgreementDetails } from "./services/agreementDetails";
+export type {
+	AgreementDetailsCategoryApi,
+	AgreementDetailsDomainApi,
+	AgreementDetailsResponse,
+	AgreementDetailsStepApi,
+	AgreementDetailsSubtypeApi,
+	AgreementDetailsTypeApi,
+	GetAgreementDetailsParams,
+} from "./services/agreementDetails";

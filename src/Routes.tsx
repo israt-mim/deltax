@@ -10,6 +10,7 @@ import { ClausesPage } from "./pages/ClausesPage";
 import { ClauseDetailPage } from "./pages/ClauseDetailPage";
 import { Login } from "./pages/Login";
 import { ForcePasswordChange } from "./pages/ForcePasswordChange";
+import { AgreementListPage } from "./pages/AgreementListPage";
 
 export const Routes = () => {
 	return (
@@ -20,6 +21,9 @@ export const Routes = () => {
 				<Route element={<AppLayout />}>
 					<Route element={<RequirePasswordResetComplete />}>
 						<Route index element={<Home />} />
+						<Route path="/agreements">
+							<Route path=":categoryId/:domainId" element={<AgreementListPage />} />
+						</Route>
 						<Route path="/configure">
 							<Route index element={<Configure />} />
 							<Route path="fields" element={<FieldConfiguration />} />

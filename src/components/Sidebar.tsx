@@ -5,13 +5,17 @@ import AcUnitOutlinedIcon from '@mui/icons-material/AcUnitOutlined';
 import { NavLink } from 'react-router-dom';
 import { EXPANDED_SIDEBAR_WIDTH, SIDEBAR_WIDTH } from '../constants/global';
 import { motion } from "framer-motion";
+import { AgreementSidebarNavRow } from './AgreementSidebarNavRow';
 
-const SidebarItems = [
+const SidebarItemsBeforeAgreement = [
   { icon: <HomeOutlinedIcon sx={{ fontSize: 20 }} />, label: 'Dashboard', href: '/' },
   { icon: <AcUnitOutlinedIcon sx={{ fontSize: 20 }} />, label: 'Clause', href: '/clauses' },
+];
+
+const SidebarItemsAfterAgreement = [
   { icon: <SettingsOutlinedIcon sx={{ fontSize: 20 }} />, label: 'Configure', href: '/configure' },
-  { icon: <AdminPanelSettingsOutlined sx={{ fontSize: 20 }} />, label: 'Settings', href: '/settings' }
-]
+  { icon: <AdminPanelSettingsOutlined sx={{ fontSize: 20 }} />, label: 'Settings', href: '/settings' },
+];
 
 interface SidebarProps {
   expanded: boolean
@@ -31,7 +35,26 @@ export default function Sidebar({ expanded }: SidebarProps) {
       }}
     >
       <nav className="flex-1 py-3 px-2 overflow-y-auto">
-        {SidebarItems.map((item) => (
+        {SidebarItemsBeforeAgreement.map((item) => (
+          <NavLink
+            key={item.label}
+            to={item.href}
+            end={item.href === '/'}
+            title={!expanded ? item.label : undefined}
+            className={({ isActive }) =>
+              `flex items-center gap-3 no-underline rounded transition-colors ${expanded ? 'py-1.5 px-2 my-1.5' : 'justify-center py-1.5 px-2 my-1.5'} ${
+                isActive ? 'text-white bg-white/20' : 'text-white/70 hover:text-white hover:bg-white/20'
+              }`
+            }
+          >
+            <span className="flex items-center justify-center shrink-0">
+              {item.icon}
+            </span>
+            {expanded && <span className="whitespace-nowrap text-sm">{item.label}</span>}
+          </NavLink>
+        ))}
+        <AgreementSidebarNavRow expanded={expanded} />
+        {SidebarItemsAfterAgreement.map((item) => (
           <NavLink
             key={item.label}
             to={item.href}
