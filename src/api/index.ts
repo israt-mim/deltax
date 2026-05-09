@@ -200,3 +200,7 @@ export type {
 	AgreementDetailsTypeApi,
 	GetAgreementDetailsParams,
 } from "./services/agreementDetails";
+
+export { createAgreement } from "./services/agreements";
+export type { CreateAgreementBody, CreateAgreementResponse } from "./services/agreements";
+export { useCreateAgreementMutation } from "./hooks/agreements";

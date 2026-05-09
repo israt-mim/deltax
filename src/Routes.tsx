@@ -4,6 +4,7 @@ import { AppLayout } from "./layouts/AppLayout";
 import { Home, Configure, Settings, AgreementConfiguration, FieldConfiguration } from "./pages/index";
 import CreateFieldConfiguration from "./pages/CreateFieldConfiguration";
 import CreateAgreementConfiguration from "./pages/CreateAgreementConfiguration";
+import CreateAgreementDetailsPage from "./pages/CreateAgreementDetailsPage";
 import { AgreementConfigurationDetailsPage } from "./pages/AgreementConfigurationDetailsPage";
 import { FieldDetailPage } from "./pages/FieldDetailPage";
 import { ClausesPage } from "./pages/ClausesPage";
@@ -21,17 +22,18 @@ export const Routes = () => {
 				<Route element={<AppLayout />}>
 					<Route element={<RequirePasswordResetComplete />}>
 						<Route index element={<Home />} />
-						<Route path="/agreements">
-							<Route path=":categoryId/:domainId" element={<AgreementListPage />} />
-						</Route>
+						<Route path="/agreements/create/:id" element={<CreateAgreementDetailsPage />} />
+						<Route path="/agreements/:categoryId/:domainId" element={<AgreementListPage />} />
+						<Route path="/agreements" element={<AgreementListPage />} />
 						<Route path="/configure">
 							<Route index element={<Configure />} />
 							<Route path="fields" element={<FieldConfiguration />} />
 							<Route path="fields/create" element={<CreateFieldConfiguration />} />
 							<Route path="fields/:id" element={<FieldDetailPage />} />
-							<Route path="agreements" element={<AgreementConfiguration />} />
+							<Route path="agreements/configuration" element={<AgreementConfiguration />} />
 							<Route path="agreements/create/:id" element={<CreateAgreementConfiguration />} />
 							<Route path="agreements/:id" element={<AgreementConfigurationDetailsPage />} />
+							<Route path="agreements" element={<AgreementListPage />} />
 						</Route>
 						<Route path="/clauses" element={<ClausesPage />} />
 						<Route path="/clauses/:id" element={<ClauseDetailPage />} />
