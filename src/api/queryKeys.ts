@@ -17,6 +17,9 @@ export const queryKeys = {
 	agreementConfigs: {
 		all: ["agreement-configs"] as const,
 	},
+	agreements: {
+		all: ["agreements"] as const,
+	},
 	clauses: {
 		all: ["clauses"] as const,
 	},

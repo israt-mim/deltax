@@ -9,10 +9,10 @@ import { AgreementSidebarNavRow } from './AgreementSidebarNavRow';
 
 const SidebarItemsBeforeAgreement = [
   { icon: <HomeOutlinedIcon sx={{ fontSize: 20 }} />, label: 'Dashboard', href: '/' },
-  { icon: <AcUnitOutlinedIcon sx={{ fontSize: 20 }} />, label: 'Clause', href: '/clauses' },
 ];
 
 const SidebarItemsAfterAgreement = [
+  { icon: <AcUnitOutlinedIcon sx={{ fontSize: 20 }} />, label: 'Clause', href: '/clauses' },
   { icon: <SettingsOutlinedIcon sx={{ fontSize: 20 }} />, label: 'Configure', href: '/configure' },
   { icon: <AdminPanelSettingsOutlined sx={{ fontSize: 20 }} />, label: 'Settings', href: '/settings' },
 ];

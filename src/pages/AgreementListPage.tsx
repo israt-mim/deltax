@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
 import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
+import { toast } from "react-toastify";
 import { Button } from "../components/base/Button";
 import { CardMain } from "../components/base/CardMain";
 import { Title } from "../components/base/Title";
@@ -14,7 +15,7 @@ import {
 	agreementListPageColumnConfigs,
 	type AgreementListPageRow,
 } from "./agreementConfiguration/agreementListPageTable";
-import { useAgreementConfigsInfiniteList } from "../api";
+import { useAgreementsInfiniteList } from "../api";
 import { formatUserFacingError } from "../lib/formatUserFacingError";
 import { useAppSelector } from "../store/hooks";
 
@@ -54,12 +55,19 @@ export function AgreementListPage() {
 		return () => window.clearTimeout(t);
 	}, [searchInput]);
 
-	const listQuery = useAgreementConfigsInfiniteList({
+	const listQuery = useAgreementsInfiniteList({
 		search: debouncedSearch || undefined,
 		sort: "-createdAt",
 		agreement_category: agreementCategory,
 		agreement_domain: agreementDomain,
 	});
+
+	useEffect(() => {
+		if (!listQuery.isError || !listQuery.error) return;
+		toast.error(formatUserFacingError(listQuery.error, "Could not load agreements."), {
+			toastId: `agreements-list-error-${agreementCategory ?? "all"}-${agreementDomain ?? "all"}`,
+		});
+	}, [listQuery.isError, listQuery.error, agreementCategory, agreementDomain]);
 
 	const rows = useMemo(
 		() => listQuery.data?.pages.flatMap((p) => p.data.map(agreementListItemToListPageRow)) ?? [],
@@ -85,19 +93,6 @@ export function AgreementListPage() {
 					New
 				</Button>
 			</div>
-
-			{listQuery.isError && (
-				<p className="text-sm text-error-500">
-					{formatUserFacingError(listQuery.error, "Could not load agreements.")}{" "}
-					<button
-						type="button"
-						className="font-medium text-primary-600 underline dark:text-primary-400"
-						onClick={() => void listQuery.refetch()}
-					>
-						Retry
-					</button>
-				</p>
-			)}
 
 			<Card className="flex flex-col gap-3">
 				<div className="relative max-w-xl">
