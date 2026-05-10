@@ -1,6 +1,7 @@
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "../queryKeys";
 import {
+	bulkDeleteAgreements,
 	createAgreement,
 	listAgreements,
 	type AgreementsListParams,
@@ -69,6 +70,27 @@ export function useCreateAgreementMutation() {
 		onSettled: () => {
 			void queryClient.invalidateQueries({ queryKey: queryKeys.agreements.all });
 			void queryClient.invalidateQueries({ queryKey: queryKeys.agreementConfigs.all });
+		},
+	});
+}
+
+/** Discards one agreement document (`ids: [id]`). */
+export function useDeleteAgreementMutation() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (agreementId: string) => bulkDeleteAgreements([agreementId]),
+		onSettled: () => {
+			void queryClient.invalidateQueries({ queryKey: queryKeys.agreements.all });
+		},
+	});
+}
+
+export function useBulkDeleteAgreementsMutation() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (ids: string[]) => bulkDeleteAgreements(ids),
+		onSettled: () => {
+			void queryClient.invalidateQueries({ queryKey: queryKeys.agreements.all });
 		},
 	});
 }

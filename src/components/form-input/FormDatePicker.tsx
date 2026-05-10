@@ -1,8 +1,9 @@
+import type { ReactNode } from "react";
 import { DatePicker, type DatePickerProps } from "antd";
 import { FormField } from "./FormField";
 
 export interface FormDatePickerProps extends DatePickerProps {
-	label?: string;
+	label?: ReactNode;
 	error?: string;
 	helperText?: string;
 	required?: boolean;

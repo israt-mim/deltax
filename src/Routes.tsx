@@ -33,7 +33,7 @@ export const Routes = () => {
 							<Route path="agreements/configuration" element={<AgreementConfiguration />} />
 							<Route path="agreements/create/:id" element={<CreateAgreementConfiguration />} />
 							<Route path="agreements/:id" element={<AgreementConfigurationDetailsPage />} />
-							<Route path="agreements" element={<AgreementListPage />} />
+							<Route path="agreements" element={<AgreementConfiguration />} />
 						</Route>
 						<Route path="/clauses" element={<ClausesPage />} />
 						<Route path="/clauses/:id" element={<ClauseDetailPage />} />

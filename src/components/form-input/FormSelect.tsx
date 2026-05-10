@@ -1,8 +1,9 @@
+import type { ReactNode } from "react";
 import { Select, type SelectProps } from "antd";
 import { FormField } from "./FormField";
 
 export interface FormSelectProps extends SelectProps {
-	label?: string;
+	label?: ReactNode;
 	error?: string;
 	helperText?: string;
 	required?: boolean;

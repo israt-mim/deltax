@@ -1,8 +1,9 @@
+import type { ReactNode } from "react";
 import { InputNumber, type InputNumberProps } from "antd";
 import { FormField } from "./FormField";
 
 export interface FormNumberProps extends InputNumberProps {
-	label?: string;
+	label?: ReactNode;
 	error?: string;
 	helperText?: string;
 	required?: boolean;

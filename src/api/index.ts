@@ -201,13 +201,31 @@ export type {
 	GetAgreementDetailsParams,
 } from "./services/agreementDetails";
 
-export { createAgreement, listAgreements } from "./services/agreements";
+export {
+	agreementStepDetailsOfQuery,
+	bulkDeleteAgreements,
+	createAgreement,
+	getAgreementStepDetails,
+	getAgreementSteps,
+	listAgreements,
+} from "./services/agreements";
 export type {
+	AgreementDocumentStep,
 	AgreementListItem,
 	AgreementListUser,
 	AgreementsListParams,
+	AgreementStepDetailsData,
+	AgreementStepDetailsField,
+	AgreementStepDetailsSection,
+	BulkDeleteAgreementsResponse,
 	CreateAgreementBody,
 	CreateAgreementResponse,
+	GetAgreementStepsResponse,
 } from "./services/agreements";
-export { useAgreementsInfiniteList, useCreateAgreementMutation } from "./hooks/agreements";
+export {
+	useAgreementsInfiniteList,
+	useBulkDeleteAgreementsMutation,
+	useCreateAgreementMutation,
+	useDeleteAgreementMutation,
+} from "./hooks/agreements";
 export type { AgreementsListFilters } from "./hooks/agreements";

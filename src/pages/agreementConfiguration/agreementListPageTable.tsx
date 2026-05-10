@@ -1,3 +1,7 @@
+import { Dropdown } from "antd";
+import type { MenuProps } from "antd";
+import MoreVertOutlinedIcon from "@mui/icons-material/MoreVertOutlined";
+import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import type { AgreementListItem } from "../../api";
 import { formatUsDateTime } from "../../lib/formatDateTime";
 import type { ColumnConfig } from "../../hooks/useColumns";
@@ -13,6 +17,8 @@ export type AgreementListPageRow = {
 	createdOnLabel: string;
 	modifiedOnLabel: string;
 	statusLabel: string;
+	/** Placeholder field for the actions column accessor (always null). */
+	_menu: null;
 };
 
 function dashIfEmpty(value: string | undefined): string {
@@ -53,6 +59,69 @@ export function agreementListItemToListPageRow(item: AgreementListItem): Agreeme
 		createdOnLabel: item.createdAt ? formatUsDateTime(item.createdAt) : "—",
 		modifiedOnLabel: item.modifiedAt ? formatUsDateTime(item.modifiedAt) : "—",
 		statusLabel,
+		_menu: null,
+	};
+}
+
+export function AgreementRowMenu({
+	row,
+	onDeleteRequest,
+}: {
+	row: AgreementListPageRow;
+	onDeleteRequest: (row: AgreementListPageRow) => void;
+}) {
+	const items: MenuProps["items"] = [
+		{
+			key: "delete",
+			icon: <DeleteOutlineOutlinedIcon sx={{ fontSize: 18 }} />,
+			label: "Delete",
+			danger: true,
+		},
+	];
+
+	return (
+		<div
+			className="flex items-center justify-center"
+			data-row-click-ignore
+			onClick={(e) => e.stopPropagation()}
+		>
+			<Dropdown
+				trigger={["click"]}
+				classNames={{ root: "actions-dropdown-icon" }}
+				menu={{
+					items,
+					onClick: ({ key, domEvent }) => {
+						domEvent.preventDefault();
+						domEvent.stopPropagation();
+						if (key === "delete") onDeleteRequest(row);
+					},
+				}}
+			>
+				<button
+					type="button"
+					aria-label="Agreement actions"
+					className="flex rounded-md p-1.5 text-neutral-400 transition-colors hover:bg-neutral-100 dark:hover:bg-black-600"
+				>
+					<MoreVertOutlinedIcon sx={{ fontSize: 18 }} />
+				</button>
+			</Dropdown>
+		</div>
+	);
+}
+
+/** Right-sticky overflow menu column; append after `agreementListPageColumnConfigs`. */
+export function agreementListMenuColumnConfig(
+	onDeleteRequest: (row: AgreementListPageRow) => void
+): ColumnConfig<AgreementListPageRow> {
+	return {
+		key: "_menu",
+		name: "",
+		width: 44,
+		minWidth: 44,
+		maxWidth: 44,
+		resizable: false,
+		isSticky: true,
+		cell: ({ row }) => <AgreementRowMenu row={row.original} onDeleteRequest={onDeleteRequest} />,
 	};
 }
 

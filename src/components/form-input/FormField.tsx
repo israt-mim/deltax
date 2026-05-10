@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import cn from "classnames";
 
 export interface FormFieldProps {
-	label?: string;
+	label?: ReactNode;
 	required?: boolean;
 	error?: string;
 	helperText?: string;

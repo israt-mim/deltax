@@ -1,8 +1,9 @@
+import type { ReactNode } from "react";
 import { Switch, type SwitchProps } from "antd";
 import { FormField } from "./FormField";
 
 export interface FormSwitchProps extends SwitchProps {
-	label?: string;
+	label?: ReactNode;
 	error?: string;
 	helperText?: string;
 	required?: boolean;

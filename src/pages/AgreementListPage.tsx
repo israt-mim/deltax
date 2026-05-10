@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
+import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
 import { toast } from "react-toastify";
 import { Button } from "../components/base/Button";
@@ -8,14 +9,17 @@ import { CardMain } from "../components/base/CardMain";
 import { Title } from "../components/base/Title";
 import { Card } from "../components/base/Card";
 import { InfiniteTable } from "../components/base/InfiniteTable";
+import { FloatingBar } from "../components/base/FloatingBar";
+import { ConfirmModal } from "../components/base/ConfirmModal";
 import { useColumns } from "../hooks/useColumns";
 import { NewContractModal } from "./agreementConfiguration/NewContractModal";
 import {
 	agreementListItemToListPageRow,
+	agreementListMenuColumnConfig,
 	agreementListPageColumnConfigs,
 	type AgreementListPageRow,
 } from "./agreementConfiguration/agreementListPageTable";
-import { useAgreementsInfiniteList } from "../api";
+import { useAgreementsInfiniteList, useBulkDeleteAgreementsMutation } from "../api";
 import { formatUserFacingError } from "../lib/formatUserFacingError";
 import { useAppSelector } from "../store/hooks";
 
@@ -45,7 +49,20 @@ export function AgreementListPage() {
 		return "Agreements";
 	}, [categories, agreementDomain]);
 
-	const columns = useColumns(agreementListPageColumnConfigs);
+	const [checkedIds, setCheckedIds] = useState<Set<string>>(() => new Set());
+	const [agreementPendingDelete, setAgreementPendingDelete] = useState<AgreementListPageRow | null>(null);
+	const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
+
+	const requestDeleteAgreement = useCallback((row: AgreementListPageRow) => {
+		setAgreementPendingDelete(row);
+	}, []);
+
+	const columnConfigs = useMemo(
+		() => [...agreementListPageColumnConfigs, agreementListMenuColumnConfig(requestDeleteAgreement)],
+		[requestDeleteAgreement]
+	);
+	const columns = useColumns(columnConfigs);
+
 	const [newAgreementModalOpen, setNewAgreementModalOpen] = useState(false);
 	const [searchInput, setSearchInput] = useState("");
 	const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -61,6 +78,7 @@ export function AgreementListPage() {
 		agreement_category: agreementCategory,
 		agreement_domain: agreementDomain,
 	});
+	const bulkDeleteMutation = useBulkDeleteAgreementsMutation();
 
 	useEffect(() => {
 		if (!listQuery.isError || !listQuery.error) return;
@@ -80,9 +98,53 @@ export function AgreementListPage() {
 		}
 	}, [listQuery.hasNextPage, listQuery.isFetchingNextPage, listQuery.fetchNextPage]);
 
+	const clearSelection = useCallback(() => {
+		setCheckedIds(new Set());
+	}, []);
+
+	const runBulkDelete = useCallback(
+		async (ids: string[]) => {
+			if (!ids.length) return;
+			try {
+				const res = await bulkDeleteMutation.mutateAsync(ids);
+				if (res.deletedCount === 0) {
+					toast.info(res.message?.trim() || "No agreements were deleted.");
+				} else if (res.deletedCount < res.requestedCount) {
+					toast.success(
+						`${res.deletedCount} of ${res.requestedCount} agreement${res.requestedCount === 1 ? "" : "s"} deleted. Some were already removed.`
+					);
+				} else {
+					toast.success(`${res.deletedCount} agreement${res.deletedCount === 1 ? "" : "s"} deleted.`);
+				}
+				setCheckedIds((prev) => {
+					const next = new Set(prev);
+					for (const id of ids) next.delete(id);
+					return next;
+				});
+				setBulkDeleteConfirmOpen(false);
+				setAgreementPendingDelete((cur) => (cur && ids.includes(cur._id) ? null : cur));
+			} catch (e) {
+				toast.error(formatUserFacingError(e, "Could not delete agreements."));
+			}
+		},
+		[bulkDeleteMutation]
+	);
+
+	const handleBulkDeleteConfirm = useCallback(async () => {
+		const ids = [...checkedIds];
+		await runBulkDelete(ids);
+	}, [checkedIds, runBulkDelete]);
+
+	const confirmDeleteSingleAgreement = useCallback(async () => {
+		if (!agreementPendingDelete) return;
+		await runBulkDelete([agreementPendingDelete._id]);
+	}, [agreementPendingDelete, runBulkDelete]);
+
 	const isInitialLoading = listQuery.isLoading && !listQuery.data;
 	const isLoadingMore = listQuery.isFetchingNextPage;
 	const hasMore = Boolean(listQuery.hasNextPage);
+
+	const bulkSelectedCount = checkedIds.size;
 
 	return (
 		<CardMain className="flex flex-col gap-4">
@@ -110,18 +172,74 @@ export function AgreementListPage() {
 					/>
 				</div>
 
+				<FloatingBar
+					open={bulkSelectedCount > 0}
+					selectedCount={bulkSelectedCount}
+					onClearSelection={clearSelection}
+					items={
+						<button
+							type="button"
+							onClick={() => setBulkDeleteConfirmOpen(true)}
+							className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium text-red-200 transition-colors hover:bg-white/10 hover:text-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+						>
+							<DeleteOutlineOutlinedIcon sx={{ fontSize: 18 }} />
+							Delete
+						</button>
+					}
+				/>
+
 				<InfiniteTable<AgreementListPageRow>
 					data={rows}
 					columns={columns}
-					height="calc(100vh - 240px)"
+					height="calc(100vh - 280px)"
 					onLoadMore={loadMore}
 					isLoading={isLoadingMore}
 					isInitialLoading={isInitialLoading}
 					hasMore={hasMore}
 					onRowClick={(row) => void navigate(`/configure/agreements/${encodeURIComponent(row._id)}`)}
 					emptyMessage="No agreements match your filters."
+					checkboxConfig={{
+						getRowId: (row) => row._id,
+						checkedIds,
+						setCheckedIds,
+					}}
 				/>
 			</Card>
+
+			<ConfirmModal
+				open={bulkDeleteConfirmOpen}
+				onClose={() => setBulkDeleteConfirmOpen(false)}
+				title={`Delete ${bulkSelectedCount} agreement${bulkSelectedCount === 1 ? "" : "s"}?`}
+				confirmLabel="Delete"
+				cancelLabel="Cancel"
+				confirmDanger
+				pending={bulkDeleteMutation.isPending}
+				onConfirm={() => void handleBulkDeleteConfirm()}
+			>
+				<p className="mb-0 text-neutral-700 dark:text-neutral-300">
+					Selected agreements will be permanently removed. This cannot be undone.
+				</p>
+			</ConfirmModal>
+
+			<ConfirmModal
+				open={agreementPendingDelete !== null}
+				onClose={() => setAgreementPendingDelete(null)}
+				title="Delete this agreement?"
+				confirmLabel="Delete"
+				cancelLabel="Cancel"
+				confirmDanger
+				pending={bulkDeleteMutation.isPending}
+				onConfirm={() => void confirmDeleteSingleAgreement()}
+			>
+				<p className="mb-0 text-neutral-700 dark:text-neutral-300">
+					<span className="font-medium text-neutral-900 dark:text-white">
+						{agreementPendingDelete?.displayName && agreementPendingDelete.displayName !== "—"
+							? `“${agreementPendingDelete.displayName}”`
+							: agreementPendingDelete?.displayId ?? "This agreement"}
+					</span>{" "}
+					will be permanently deleted. This cannot be undone.
+				</p>
+			</ConfirmModal>
 
 			<NewContractModal
 				open={newAgreementModalOpen}
