@@ -203,13 +203,25 @@ export type {
 
 export {
 	agreementStepDetailsOfQuery,
+	buildAgreementFieldValuesPatchList,
+	fieldValuesPatchOfParam,
 	bulkDeleteAgreements,
 	createAgreement,
 	getAgreementStepDetails,
 	getAgreementSteps,
+	getAgreementWizardDetails,
+	isAgreementFieldValuesStep,
+	isAuthoringOrModificationAgreementCreationStep,
+	isClausesAgreementStep,
+	isClausesWizardStepName,
+	isHeaderAgreementStep,
 	listAgreements,
+	patchAgreementClauses,
+	patchAgreementFieldValues,
 } from "./services/agreements";
 export type {
+	AgreementClauseBrief,
+	AgreementClauseRefEntry,
 	AgreementDocumentStep,
 	AgreementListItem,
 	AgreementListUser,
@@ -217,15 +229,24 @@ export type {
 	AgreementStepDetailsData,
 	AgreementStepDetailsField,
 	AgreementStepDetailsSection,
+	AgreementWizardFullData,
+	AgreementWizardStepBlock,
 	BulkDeleteAgreementsResponse,
 	CreateAgreementBody,
 	CreateAgreementResponse,
 	GetAgreementStepsResponse,
+	PatchAgreementClausesBody,
+	PatchAgreementClausesResponse,
+	PatchAgreementFieldValueItem,
+	PatchAgreementFieldValuesBody,
+	PatchAgreementFieldValuesResponse,
 } from "./services/agreements";
 export {
 	useAgreementsInfiniteList,
 	useBulkDeleteAgreementsMutation,
 	useCreateAgreementMutation,
 	useDeleteAgreementMutation,
+	usePatchAgreementClausesMutation,
+	usePatchAgreementFieldValuesMutation,
 } from "./hooks/agreements";
 export type { AgreementsListFilters } from "./hooks/agreements";

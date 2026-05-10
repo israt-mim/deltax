@@ -5,10 +5,16 @@ import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import {
 	ApiError,
 	agreementStepDetailsOfQuery,
+	buildAgreementFieldValuesPatchList,
+	fieldValuesPatchOfParam,
 	getAgreementStepDetails,
 	getAgreementSteps,
+	isAgreementFieldValuesStep,
+	isAuthoringOrModificationAgreementCreationStep,
+	isClausesWizardStepName,
 	isMongoObjectIdString,
 	useDeleteAgreementMutation,
+	usePatchAgreementFieldValuesMutation,
 	type AgreementDocumentStep,
 	type AgreementStepDetailsData,
 } from "../api";
@@ -19,6 +25,7 @@ import { ConfirmModal } from "../components/base/ConfirmModal";
 import { PageLoader } from "../components/base/PageLoader";
 import { Stepper, type StepperStep } from "../components/base/Stepper";
 import { Typography } from "../components/base/Typography";
+import { AgreementClausesStepPanel } from "./agreementConfiguration/AgreementClausesStepPanel";
 import { AgreementStepDetailsForm } from "./agreementConfiguration/AgreementStepDetailsForm";
 import {
 	buildInitialFieldValues,
@@ -30,6 +37,7 @@ export default function CreateAgreementDetailsPage() {
 	const { id: agreementIdParam } = useParams<{ id: string }>();
 	const navigate = useNavigate();
 	const deleteAgreementMutation = useDeleteAgreementMutation();
+	const patchFieldValuesMutation = usePatchAgreementFieldValuesMutation();
 
 	const agreementId = agreementIdParam?.trim() ?? "";
 
@@ -43,6 +51,11 @@ export default function CreateAgreementDetailsPage() {
 	const [stepDetailsLoading, setStepDetailsLoading] = useState(false);
 	const [stepDetailsError, setStepDetailsError] = useState<string | null>(null);
 	const [fieldValuesByStepId, setFieldValuesByStepId] = useState<Record<string, Record<string, unknown>>>({});
+	const [stepDetailsNonce, setStepDetailsNonce] = useState(0);
+
+	const refreshStepDetails = useCallback(() => {
+		setStepDetailsNonce((n) => n + 1);
+	}, []);
 
 	useEffect(() => {
 		setFieldValuesByStepId({});
@@ -63,7 +76,8 @@ export default function CreateAgreementDetailsPage() {
 		void getAgreementSteps(agreementId)
 			.then((res) => {
 				if (cancelled) return;
-				setSteps(Array.isArray(res.steps) ? res.steps : []);
+				const raw = Array.isArray(res.steps) ? res.steps : [];
+				setSteps(raw.filter((s) => !isAuthoringOrModificationAgreementCreationStep(s)));
 				setStepsLoading(false);
 			})
 			.catch((err: unknown) => {
@@ -121,8 +135,27 @@ export default function CreateAgreementDetailsPage() {
 		return false;
 	}, [canValidateCurrentStep, currentFieldValues, stepDetails]);
 
+	const persistCurrentStepFieldValues = useCallback(async (): Promise<boolean> => {
+		if (!agreementId || !currentStep || !stepDetails || !isAgreementFieldValuesStep(stepDetails)) {
+			return true;
+		}
+		try {
+			const of = fieldValuesPatchOfParam(stepDetails, currentStep);
+			const values = buildAgreementFieldValuesPatchList(stepDetails, currentFieldValues);
+			if (values.length === 0) return true;
+			await patchFieldValuesMutation.mutateAsync({
+				agreementId,
+				body: { of, values },
+			});
+			return true;
+		} catch (e) {
+			toast.error(formatUserFacingError(e, "Could not save field values."));
+			return false;
+		}
+	}, [agreementId, currentFieldValues, currentStep, patchFieldValuesMutation, stepDetails]);
+
 	const goToStepIndex = useCallback(
-		(nextIndex: number) => {
+		async (nextIndex: number) => {
 			if (nextIndex === activeStepIndex) return;
 			if (nextIndex < 0 || nextIndex >= steps.length) return;
 			if (nextIndex < activeStepIndex) {
@@ -134,9 +167,17 @@ export default function CreateAgreementDetailsPage() {
 				return;
 			}
 			if (!assertCurrentStepValid()) return;
+			const saved = await persistCurrentStepFieldValues();
+			if (!saved) return;
 			setActiveStepIndex(nextIndex);
 		},
-		[activeStepIndex, assertCurrentStepValid, stepDetailsLoading, steps.length]
+		[
+			activeStepIndex,
+			assertCurrentStepValid,
+			persistCurrentStepFieldValues,
+			stepDetailsLoading,
+			steps.length,
+		]
 	);
 
 	useEffect(() => {
@@ -174,7 +215,7 @@ export default function CreateAgreementDetailsPage() {
 		return () => {
 			cancelled = true;
 		};
-	}, [agreementId, currentStep?.id, currentStep?.name]);
+	}, [agreementId, currentStep?.id, currentStep?.name, stepDetailsNonce]);
 
 	const stepperSteps: StepperStep[] = useMemo(
 		() => steps.map((s) => ({ key: s.id, label: s.name })),
@@ -210,15 +251,24 @@ export default function CreateAgreementDetailsPage() {
 		}
 	}, [agreementId, deleteAgreementMutation, navigate]);
 
-	const handlePrimaryAction = useCallback(() => {
+	const handlePrimaryAction = useCallback(async () => {
 		if (!isLastStep) {
-			goToStepIndex(activeStepIndex + 1);
+			await goToStepIndex(activeStepIndex + 1);
 			return;
 		}
 		if (!assertCurrentStepValid()) return;
+		const saved = await persistCurrentStepFieldValues();
+		if (!saved) return;
 		toast.success("Agreement wizard completed.");
 		void navigate("/agreements");
-	}, [activeStepIndex, assertCurrentStepValid, goToStepIndex, isLastStep, navigate]);
+	}, [
+		activeStepIndex,
+		assertCurrentStepValid,
+		goToStepIndex,
+		isLastStep,
+		navigate,
+		persistCurrentStepFieldValues,
+	]);
 
 	if (!agreementId || !isMongoObjectIdString(agreementId)) {
 		return (
@@ -269,7 +319,7 @@ export default function CreateAgreementDetailsPage() {
 						<Stepper
 							steps={stepperSteps}
 							activeStep={activeStepIndex}
-							onStepClick={goToStepIndex}
+							onStepClick={(i) => void goToStepIndex(i)}
 							className="w-full pt-1"
 						/>
 					) : (
@@ -282,13 +332,23 @@ export default function CreateAgreementDetailsPage() {
 
 				<div className="min-h-0 flex-1 overflow-auto py-2">
 					{currentStep ? (
-						<AgreementStepDetailsForm
-							details={stepDetails}
-							loading={stepDetailsLoading}
-							errorMessage={stepDetailsError}
-							valuesByFieldId={currentFieldValues}
-							onFieldValueChange={handleFieldValueChange}
-						/>
+						isClausesWizardStepName(currentStep) ? (
+							<AgreementClausesStepPanel
+								agreementId={agreementId}
+								clauses={stepDetails?.clauses}
+								loading={stepDetailsLoading}
+								errorMessage={stepDetailsError}
+								onRefresh={refreshStepDetails}
+							/>
+						) : (
+							<AgreementStepDetailsForm
+								details={stepDetails}
+								loading={stepDetailsLoading}
+								errorMessage={stepDetailsError}
+								valuesByFieldId={currentFieldValues}
+								onFieldValueChange={handleFieldValueChange}
+							/>
+						)
 					) : (
 						<p className="text-sm text-neutral-500 dark:text-neutral-400">No step selected.</p>
 					)}
@@ -309,7 +369,7 @@ export default function CreateAgreementDetailsPage() {
 								size="md"
 								appearance="outlined"
 								status="secondary-neutral"
-								onClick={() => goToStepIndex(activeStepIndex - 1)}
+								onClick={() => void goToStepIndex(activeStepIndex - 1)}
 							>
 								Back
 							</Button>
@@ -319,7 +379,8 @@ export default function CreateAgreementDetailsPage() {
 							size="md"
 							appearance="filled"
 							status="primary"
-							disabled={steps.length === 0}
+							disabled={steps.length === 0 || patchFieldValuesMutation.isPending}
+							loading={patchFieldValuesMutation.isPending}
 							onClick={() => void handlePrimaryAction()}
 						>
 							{isLastStep ? "Create Agreement" : "Next"}

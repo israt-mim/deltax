@@ -4,8 +4,12 @@ import {
 	bulkDeleteAgreements,
 	createAgreement,
 	listAgreements,
+	patchAgreementClauses,
+	patchAgreementFieldValues,
 	type AgreementsListParams,
 	type CreateAgreementBody,
+	type PatchAgreementClausesBody,
+	type PatchAgreementFieldValuesBody,
 } from "../services/agreements";
 
 const AGREEMENTS_LIST_PAGE_SIZE = 20;
@@ -91,6 +95,38 @@ export function useBulkDeleteAgreementsMutation() {
 		mutationFn: (ids: string[]) => bulkDeleteAgreements(ids),
 		onSettled: () => {
 			void queryClient.invalidateQueries({ queryKey: queryKeys.agreements.all });
+		},
+	});
+}
+
+export function usePatchAgreementFieldValuesMutation() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (args: { agreementId: string; body: PatchAgreementFieldValuesBody }) =>
+			patchAgreementFieldValues(args.agreementId, args.body),
+		onSettled: (_data, _err, args) => {
+			void queryClient.invalidateQueries({ queryKey: queryKeys.agreements.all });
+			if (args?.agreementId) {
+				void queryClient.invalidateQueries({
+					queryKey: [...queryKeys.agreements.all, "detail", args.agreementId] as const,
+				});
+			}
+		},
+	});
+}
+
+export function usePatchAgreementClausesMutation() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (args: { agreementId: string; body: PatchAgreementClausesBody }) =>
+			patchAgreementClauses(args.agreementId, args.body),
+		onSettled: (_data, _err, args) => {
+			void queryClient.invalidateQueries({ queryKey: queryKeys.agreements.all });
+			if (args?.agreementId) {
+				void queryClient.invalidateQueries({
+					queryKey: [...queryKeys.agreements.all, "detail", args.agreementId] as const,
+				});
+			}
 		},
 	});
 }

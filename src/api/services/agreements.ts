@@ -1,4 +1,4 @@
-import { ApiError, get, post } from "../client/http";
+import { ApiError, get, patch, post } from "../client/http";
 import { buildQueryString } from "../client/queryString";
 import type { ListResponse } from "../types/list";
 import { isMongoObjectIdString } from "./agreementCatalog";
@@ -18,6 +18,9 @@ export interface CreateAgreementResponse {
 	id: string;
 	displayId: string;
 	status: string;
+	agreementConfigId?: string;
+	agreementConfigDisplayId?: string;
+	steps?: Array<{ id: string; name: string; catalogStepName?: string | null }>;
 }
 
 /** POST /api/agreements */
@@ -25,10 +28,11 @@ export async function createAgreement(body: CreateAgreementBody): Promise<Create
 	return post<CreateAgreementResponse>("/api/agreements", body);
 }
 
-/** Step from `GET /api/agreements/:id/steps` (id + name). */
+/** Step from `GET /api/agreements/:id/steps` (wizard navigation). */
 export interface AgreementDocumentStep {
 	id: string;
 	name: string;
+	catalogStepName?: string | null;
 }
 
 export interface GetAgreementStepsResponse {
@@ -64,11 +68,47 @@ export interface AgreementStepDetailsSection {
 	fields: AgreementStepDetailsField[];
 }
 
+/** Clause row returned on GET …/details (clause step) or PATCH …/clauses. */
+export interface AgreementClauseBrief {
+	id: string;
+	displayId?: string;
+	isActive?: boolean;
+	title?: string;
+	category?: string;
+	text?: string;
+	language?: string;
+}
+
 export interface AgreementStepDetailsData {
 	sections: AgreementStepDetailsSection[];
-	step: { id: string; name: string; catalogStepName?: string | null };
+	step?: { id: string; name: string; catalogStepName?: string | null } | null;
 	agreementConfigId: string;
 	agreementConfigDisplayId?: string;
+	/** Server-resolved slug for PATCH …/field-values `of` (e.g. `header`, `line-items`). */
+	ofKey?: string;
+	clauses?: AgreementClauseBrief[];
+}
+
+/** One step block under GET /api/agreements/:id/details with no `of` query. */
+export interface AgreementWizardStepBlock {
+	sections?: AgreementStepDetailsSection[];
+	step?: { id: string; name: string; catalogStepName?: string | null } | null;
+	ofKey?: string;
+	clauses?: AgreementClauseBrief[];
+	agreementConfigId?: string;
+	agreementConfigDisplayId?: string;
+}
+
+export interface AgreementWizardFullData {
+	steps: Record<string, AgreementWizardStepBlock>;
+	agreementConfigId: string;
+	agreementConfigDisplayId?: string;
+}
+
+export interface AgreementWizardFullEnvelope {
+	data: AgreementWizardFullData | null;
+	status: string;
+	message?: string;
 }
 
 export interface AgreementStepDetailsEnvelope {
@@ -89,6 +129,72 @@ export function agreementStepDetailsOfQuery(step: { id: string; name: string }):
 	return slug.length > 0 ? slug : id;
 }
 
+function slugStepName(name: string | undefined | null): string {
+	return (name ?? "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
+/** True when the loaded step is the Header step (PATCH `of` should be `"header"`). */
+export function isHeaderAgreementStep(
+	details: AgreementStepDetailsData,
+	step: { id: string; name: string }
+): boolean {
+	const ofKey = (details.ofKey ?? "").trim().toLowerCase();
+	if (ofKey === "header") return true;
+	if (slugStepName(step.name) === "header") return true;
+	if (slugStepName(details.step?.name) === "header") return true;
+	if (slugStepName(details.step?.catalogStepName ?? undefined) === "header") return true;
+	return false;
+}
+
+/**
+ * `of` for PATCH /api/agreements/:id/field-values — use literal `"header"` on the header step for clarity.
+ */
+export function fieldValuesPatchOfParam(
+	details: AgreementStepDetailsData,
+	step: { id: string; name: string }
+): string {
+	if (isHeaderAgreementStep(details, step)) return "header";
+	const k = details.ofKey?.trim();
+	if (k) return k;
+	return agreementStepDetailsOfQuery(step);
+}
+
+/** Wizard / details step is the Clauses library step (not field-values PATCH). */
+export function isClausesAgreementStep(
+	details: AgreementStepDetailsData | null,
+	step: { id: string; name: string } | null | undefined
+): boolean {
+	if (!step) return false;
+	const stepSlug = slugStepName(step.name);
+	if (stepSlug === "clauses" || stepSlug === "clause") return true;
+	if (!details) return false;
+	const ok = (details.ofKey ?? "").trim().toLowerCase();
+	if (ok === "clauses" || ok === "clause") return true;
+	if (slugStepName(details.step?.name) === "clauses" || slugStepName(details.step?.name) === "clause") {
+		return true;
+	}
+	return false;
+}
+
+/** True when the wizard step label indicates Clauses (use before details load). */
+export function isClausesWizardStepName(step: { name: string } | null | undefined): boolean {
+	if (!step) return false;
+	const s = slugStepName(step.name);
+	return s === "clauses" || s === "clause";
+}
+
+/**
+ * Authoring and Modification steps are hidden from the **new agreement** wizard
+ * (`/agreements/create/:id`). Full agreement details (`GET …/details` without step filter)
+ * still returns every step for post-creation editing.
+ */
+export function isAuthoringOrModificationAgreementCreationStep(step: AgreementDocumentStep): boolean {
+	const slugs = [slugStepName(step.catalogStepName ?? undefined), slugStepName(step.name)].filter(
+		(s) => s.length > 0
+	);
+	return slugs.some((s) => s === "authoring" || s === "modification" || s === "modifications");
+}
+
 /** GET /api/agreements/:id/details?of= */
 export async function getAgreementStepDetails(agreementId: string, of: string): Promise<AgreementStepDetailsData> {
 	const trimmed = of.trim();
@@ -106,7 +212,110 @@ export async function getAgreementStepDetails(agreementId: string, of: string): 
 				: "Could not load agreement step details.";
 		throw new ApiError(msg, 400, body);
 	}
+	const d = body.data;
+	return {
+		...d,
+		sections: d.sections ?? [],
+		clauses: d.clauses ?? [],
+	};
+}
+
+/** GET /api/agreements/:id/details — full wizard payload (all steps + clauses bundle). */
+export async function getAgreementWizardDetails(agreementId: string): Promise<AgreementWizardFullData> {
+	const body = await get<AgreementWizardFullEnvelope>(
+		`/api/agreements/${encodeURIComponent(agreementId)}/details`
+	);
+	if (body.status !== "success" || body.data == null) {
+		const msg =
+			typeof body.message === "string" && body.message.trim()
+				? body.message.trim()
+				: "Could not load agreement wizard details.";
+		throw new ApiError(msg, 400, body);
+	}
 	return body.data;
+}
+
+export interface PatchAgreementFieldValueItem {
+	field?: string;
+	fieldId?: string;
+	value?: unknown;
+	remove?: boolean;
+	clear?: boolean;
+}
+
+export interface PatchAgreementFieldValuesBody {
+	/** Step key; defaults server-side to `header` when omitted. Must not be `clauses`. */
+	of?: string;
+	values: PatchAgreementFieldValueItem[];
+}
+
+export type PatchAgreementFieldValuesResponse =
+	| { message: string; agreementStepSnapshots?: unknown[] }
+	| { message: string; fieldValues?: Array<{ field: string; value: unknown }> };
+
+/** PATCH /api/agreements/:id/field-values — persist field values for one non-clause step. */
+export async function patchAgreementFieldValues(
+	agreementId: string,
+	body: PatchAgreementFieldValuesBody
+): Promise<PatchAgreementFieldValuesResponse> {
+	return patch<PatchAgreementFieldValuesResponse>(
+		`/api/agreements/${encodeURIComponent(agreementId)}/field-values`,
+		body
+	);
+}
+
+export interface PatchAgreementClausesBody {
+	add?: string[];
+	remove?: string[];
+}
+
+export interface AgreementClauseRefEntry {
+	clause?: AgreementClauseBrief;
+}
+
+export interface PatchAgreementClausesResponse {
+	message: string;
+	clauseRefs?: AgreementClauseRefEntry[];
+	clauses?: AgreementClauseBrief[];
+}
+
+/** PATCH /api/agreements/:id/clauses — ordered clause refs on the agreement. */
+export async function patchAgreementClauses(
+	agreementId: string,
+	body: PatchAgreementClausesBody
+): Promise<PatchAgreementClausesResponse> {
+	return patch<PatchAgreementClausesResponse>(
+		`/api/agreements/${encodeURIComponent(agreementId)}/clauses`,
+		body
+	);
+}
+
+/**
+ * Build PATCH …/field-values `values` for every field on the step layout (visible or not).
+ * Uses `values[fieldId]` when the user edited the field, otherwise the template `f.value`.
+ */
+export function buildAgreementFieldValuesPatchList(
+	details: AgreementStepDetailsData,
+	values: Record<string, unknown>
+): PatchAgreementFieldValueItem[] {
+	const out: PatchAgreementFieldValueItem[] = [];
+	for (const sec of details.sections ?? []) {
+		for (const f of sec.fields ?? []) {
+			const id = f.id?.trim();
+			if (!id) continue;
+			const v = Object.prototype.hasOwnProperty.call(values, id) ? values[id] : f.value;
+			out.push({ field: id, value: v });
+		}
+	}
+	return out;
+}
+
+/** True when this step has field sections to PATCH (not the clauses library step). */
+export function isAgreementFieldValuesStep(details: AgreementStepDetailsData | null): boolean {
+	if (!details) return false;
+	const key = (details.ofKey ?? "").toLowerCase();
+	if (key === "clauses" || key === "clause") return false;
+	return (details.sections ?? []).some((s) => (s.fields ?? []).length > 0);
 }
 
 /** POST /api/agreements/bulk-delete — single or multiple agreement documents (non-empty `ids`). */
