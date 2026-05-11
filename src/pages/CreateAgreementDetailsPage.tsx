@@ -5,6 +5,7 @@ import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import {
 	ApiError,
 	agreementStepDetailsOfQuery,
+	agreementStepEditorHideWizardNav,
 	buildAgreementFieldValuesPatchList,
 	fieldValuesPatchOfParam,
 	getAgreementStepDetails,
@@ -12,21 +13,35 @@ import {
 	isAgreementFieldValuesStep,
 	isAuthoringOrModificationAgreementCreationStep,
 	isClausesWizardStepName,
+	isLineItemsAgreementStep,
+	isLineItemsWizardStepName,
 	isMongoObjectIdString,
+	useAgreementDashboardQuery,
 	useDeleteAgreementMutation,
 	usePatchAgreementFieldValuesMutation,
+	usePatchAgreementLineItemMutation,
+	usePostAgreementLineItemMutation,
+	type AgreementDashboardData,
 	type AgreementDocumentStep,
 	type AgreementStepDetailsData,
 } from "../api";
 import { formatUserFacingError } from "../lib/formatUserFacingError";
 import { Button } from "../components/base/Button";
+import { Card } from "../components/base/Card";
 import { CardMain } from "../components/base/CardMain";
 import { ConfirmModal } from "../components/base/ConfirmModal";
 import { PageLoader } from "../components/base/PageLoader";
 import { Stepper, type StepperStep } from "../components/base/Stepper";
 import { Typography } from "../components/base/Typography";
 import { AgreementClausesStepPanel } from "./agreementConfiguration/AgreementClausesStepPanel";
+import { AgreementLineItemEditorView } from "./agreementConfiguration/AgreementLineItemEditorView";
+import { AgreementLineItemsStepPanel } from "./agreementConfiguration/AgreementLineItemsStepPanel";
 import { AgreementStepDetailsForm } from "./agreementConfiguration/AgreementStepDetailsForm";
+import {
+	emptyLineItemValuesFromLayout,
+	fieldValuesArrayFromRecord,
+	valuesRecordFromLineItemPayload,
+} from "./agreementConfiguration/agreementLineItemsUtils";
 import {
 	buildInitialFieldValues,
 	validateRequiredAgreementFields,
@@ -38,8 +53,16 @@ export default function CreateAgreementDetailsPage() {
 	const navigate = useNavigate();
 	const deleteAgreementMutation = useDeleteAgreementMutation();
 	const patchFieldValuesMutation = usePatchAgreementFieldValuesMutation();
+	const postLineItemMutation = usePostAgreementLineItemMutation();
+	const patchLineItemMutation = usePatchAgreementLineItemMutation();
 
 	const agreementId = agreementIdParam?.trim() ?? "";
+
+	const dashboardQuery = useAgreementDashboardQuery({
+		agreementId,
+		enabled: Boolean(agreementId) && isMongoObjectIdString(agreementId),
+	});
+	const dashboard: AgreementDashboardData | undefined = dashboardQuery.data;
 
 	const [steps, setSteps] = useState<AgreementDocumentStep[]>([]);
 	const [stepsLoading, setStepsLoading] = useState(true);
@@ -51,6 +74,9 @@ export default function CreateAgreementDetailsPage() {
 	const [stepDetailsLoading, setStepDetailsLoading] = useState(false);
 	const [stepDetailsError, setStepDetailsError] = useState<string | null>(null);
 	const [fieldValuesByStepId, setFieldValuesByStepId] = useState<Record<string, Record<string, unknown>>>({});
+	const [fieldErrorsById, setFieldErrorsById] = useState<Record<string, string>>({});
+	/** `null` = Line Items list/table; `"new"` or line-item `_id` = editor GET modes. */
+	const [lineItemQuery, setLineItemQuery] = useState<string | null>(null);
 	const [stepDetailsNonce, setStepDetailsNonce] = useState(0);
 
 	const refreshStepDetails = useCallback(() => {
@@ -59,6 +85,7 @@ export default function CreateAgreementDetailsPage() {
 
 	useEffect(() => {
 		setFieldValuesByStepId({});
+		setLineItemQuery(null);
 	}, [agreementId]);
 
 	useEffect(() => {
@@ -102,6 +129,22 @@ export default function CreateAgreementDetailsPage() {
 	const currentStep = steps[activeStepIndex];
 	const stepStorageKey = currentStep?.id ?? "";
 
+	useEffect(() => {
+		if (!currentStep || !isLineItemsWizardStepName(currentStep)) {
+			setLineItemQuery(null);
+		}
+		setFieldErrorsById({});
+	}, [currentStep?.id, currentStep?.name]);
+
+	const hideLineItemsWizardNav = useMemo(() => {
+		if (!currentStep || !isLineItemsWizardStepName(currentStep)) return false;
+		const q = lineItemQuery?.trim();
+		if (!q || q.toLowerCase() === "list") return false;
+		if (agreementStepEditorHideWizardNav(stepDetails)) return true;
+		if (q === "new" || isMongoObjectIdString(q)) return true;
+		return false;
+	}, [currentStep, lineItemQuery, stepDetails]);
+
 	const currentFieldValues = useMemo(() => {
 		if (!stepDetails?.sections?.length) return {};
 		const defaults = buildInitialFieldValues(stepDetails);
@@ -117,6 +160,12 @@ export default function CreateAgreementDetailsPage() {
 				const cur = { ...defaults, ...(prev[stepStorageKey] ?? {}) };
 				return { ...prev, [stepStorageKey]: { ...cur, [fieldId]: value } };
 			});
+			setFieldErrorsById((prev) => {
+				if (!prev[fieldId]) return prev;
+				const next = { ...prev };
+				delete next[fieldId];
+				return next;
+			});
 		},
 		[stepStorageKey, stepDetails]
 	);
@@ -127,16 +176,30 @@ export default function CreateAgreementDetailsPage() {
 		if (!canValidateCurrentStep || !stepDetails) {
 			return true;
 		}
-		const { ok, missingLabels } = validateRequiredAgreementFields(stepDetails, currentFieldValues);
-		if (ok) return true;
+		if (currentStep && isLineItemsAgreementStep(stepDetails, currentStep)) {
+			return true;
+		}
+		const { ok, missingLabels, missingFieldIds } = validateRequiredAgreementFields(stepDetails, currentFieldValues);
+		if (ok) {
+			setFieldErrorsById({});
+			return true;
+		}
+		setFieldErrorsById(Object.fromEntries(missingFieldIds.map((fieldId) => [fieldId, "This is required"])));
 		const list = missingLabels.slice(0, 6).join(", ");
 		const more = missingLabels.length > 6 ? ` (+${missingLabels.length - 6} more)` : "";
 		toast.error(`Fill all required fields before continuing: ${list}${more}.`);
 		return false;
-	}, [canValidateCurrentStep, currentFieldValues, stepDetails]);
+	}, [canValidateCurrentStep, currentFieldValues, currentStep, stepDetails]);
 
 	const persistCurrentStepFieldValues = useCallback(async (): Promise<boolean> => {
-		if (!agreementId || !currentStep || !stepDetails || !isAgreementFieldValuesStep(stepDetails)) {
+		if (!agreementId || !currentStep || !stepDetails) {
+			return true;
+		}
+		/* Line items persist via POST/PATCH …/line-items only; field-values PATCH is rejected for this step. */
+		if (isLineItemsAgreementStep(stepDetails, currentStep)) {
+			return true;
+		}
+		if (!isAgreementFieldValuesStep(stepDetails)) {
 			return true;
 		}
 		try {
@@ -156,6 +219,10 @@ export default function CreateAgreementDetailsPage() {
 
 	const goToStepIndex = useCallback(
 		async (nextIndex: number) => {
+			if (hideLineItemsWizardNav) {
+				toast.info("Finish or cancel the line item editor first.");
+				return;
+			}
 			if (nextIndex === activeStepIndex) return;
 			if (nextIndex < 0 || nextIndex >= steps.length) return;
 			if (nextIndex < activeStepIndex) {
@@ -174,6 +241,7 @@ export default function CreateAgreementDetailsPage() {
 		[
 			activeStepIndex,
 			assertCurrentStepValid,
+			hideLineItemsWizardNav,
 			persistCurrentStepFieldValues,
 			stepDetailsLoading,
 			steps.length,
@@ -193,8 +261,14 @@ export default function CreateAgreementDetailsPage() {
 		setStepDetailsLoading(true);
 		setStepDetailsError(null);
 		setStepDetails(null);
+		setFieldErrorsById({});
 
-		void getAgreementStepDetails(agreementId, of)
+		const lineItemIdParam =
+			lineItemQuery != null && lineItemQuery.trim() !== "" && lineItemQuery.trim().toLowerCase() !== "list"
+				? lineItemQuery.trim()
+				: undefined;
+
+		void getAgreementStepDetails(agreementId, of, { lineItemId: lineItemIdParam })
 			.then((data) => {
 				if (cancelled) return;
 				setStepDetails(data);
@@ -209,13 +283,15 @@ export default function CreateAgreementDetailsPage() {
 						? err.message.trim() || "No layout found for this step."
 						: formatUserFacingError(err, "Could not load fields for this step.");
 				setStepDetailsError(message);
-				toast.error(message, { toastId: `agreement-details-${agreementId}-${of}` });
+				toast.error(message, {
+					toastId: `agreement-details-${agreementId}-${of}-${lineItemIdParam ?? "list"}`,
+				});
 			});
 
 		return () => {
 			cancelled = true;
 		};
-	}, [agreementId, currentStep?.id, currentStep?.name, stepDetailsNonce]);
+	}, [agreementId, currentStep?.id, currentStep?.name, lineItemQuery, stepDetailsNonce]);
 
 	const stepperSteps: StepperStep[] = useMemo(
 		() => steps.map((s) => ({ key: s.id, label: s.name })),
@@ -224,16 +300,98 @@ export default function CreateAgreementDetailsPage() {
 
 	const isLastStep = steps.length > 0 && activeStepIndex === steps.length - 1;
 
-	const headerSubtitle = useMemo(() => {
-		const parts: string[] = [];
-		if (stepDetails?.agreementConfigDisplayId?.trim()) {
-			parts.push(stepDetails.agreementConfigDisplayId.trim());
+	const lineItemEditorMode = useMemo<"create" | "edit">(() => {
+		const m = stepDetails?.meta?.editorMode?.toLowerCase();
+		if (m === "edit") return "edit";
+		if (m === "create") return "create";
+		if (lineItemQuery?.trim() === "new") return "create";
+		return "edit";
+	}, [lineItemQuery, stepDetails?.meta?.editorMode]);
+
+	const lineItemEditorInitialValues = useMemo(() => {
+		if (!stepDetails) return {};
+		if (lineItemEditorMode === "edit") {
+			return valuesRecordFromLineItemPayload(stepDetails.lineItem);
 		}
-		if (currentStep?.name?.trim()) {
-			parts.push(currentStep.name.trim());
-		}
-		return parts.join(" · ");
-	}, [currentStep?.name, stepDetails?.agreementConfigDisplayId]);
+		return emptyLineItemValuesFromLayout(stepDetails);
+	}, [lineItemEditorMode, stepDetails]);
+
+	const headerDisplayName = useMemo(() => {
+		const name = dashboard?.agreement_display_name?.trim();
+		if (name) return name;
+		const did = dashboard?.displayId?.trim();
+		return did || "New agreement";
+	}, [dashboard?.agreement_display_name, dashboard?.displayId]);
+
+	const headerDisplayId = useMemo(() => dashboard?.displayId?.trim() ?? "", [dashboard?.displayId]);
+
+	const headerBreadcrumb = useMemo(() => {
+		const parts = [
+			dashboard?.agreement_category?.name,
+			dashboard?.agreement_domain?.name,
+			dashboard?.agreement_type?.name,
+			dashboard?.agreement_subtype?.name,
+		]
+			.map((s) => (typeof s === "string" ? s.trim() : ""))
+			.filter((s) => s.length > 0);
+		return parts.join(" → ");
+	}, [
+		dashboard?.agreement_category?.name,
+		dashboard?.agreement_domain?.name,
+		dashboard?.agreement_subtype?.name,
+		dashboard?.agreement_type?.name,
+	]);
+
+	const handleLineItemSave = useCallback(
+		async (values: Record<string, unknown>) => {
+			if (!agreementId || !stepDetails) return;
+			const payload = fieldValuesArrayFromRecord(values);
+			const editorMode = stepDetails.meta?.editorMode?.toLowerCase();
+			const isCreate = editorMode === "create" || lineItemQuery?.trim() === "new";
+			try {
+				if (isCreate) {
+					const res = await postLineItemMutation.mutateAsync({
+						agreementId,
+						body: { values: payload },
+					});
+					toast.success("Line item added.");
+					const rid = [res.lineItemId, res.id, (res as { _id?: string })._id].find(
+						(x): x is string => typeof x === "string" && isMongoObjectIdString(x.trim())
+					);
+					if (rid?.trim()) {
+						setLineItemQuery(rid.trim());
+					} else {
+						setLineItemQuery(null);
+						refreshStepDetails();
+					}
+				} else {
+					const id = lineItemQuery?.trim();
+					if (!id || !isMongoObjectIdString(id)) {
+						toast.error("Missing line item id.");
+						return;
+					}
+					await patchLineItemMutation.mutateAsync({
+						agreementId,
+						lineItemId: id,
+						body: { values: payload },
+					});
+					toast.success("Line item saved.");
+					setLineItemQuery(null);
+					refreshStepDetails();
+				}
+			} catch (e) {
+				toast.error(formatUserFacingError(e, "Could not save line item."));
+			}
+		},
+		[
+			agreementId,
+			lineItemQuery,
+			patchLineItemMutation,
+			postLineItemMutation,
+			refreshStepDetails,
+			stepDetails,
+		]
+	);
 
 	const handleConfirmDiscard = useCallback(async () => {
 		if (!agreementId) return;
@@ -252,6 +410,10 @@ export default function CreateAgreementDetailsPage() {
 	}, [agreementId, deleteAgreementMutation, navigate]);
 
 	const handlePrimaryAction = useCallback(async () => {
+		if (hideLineItemsWizardNav) {
+			toast.info("Finish or cancel the line item editor first.");
+			return;
+		}
 		if (!isLastStep) {
 			await goToStepIndex(activeStepIndex + 1);
 			return;
@@ -265,6 +427,7 @@ export default function CreateAgreementDetailsPage() {
 		activeStepIndex,
 		assertCurrentStepValid,
 		goToStepIndex,
+		hideLineItemsWizardNav,
 		isLastStep,
 		navigate,
 		persistCurrentStepFieldValues,
@@ -272,55 +435,70 @@ export default function CreateAgreementDetailsPage() {
 
 	if (!agreementId || !isMongoObjectIdString(agreementId)) {
 		return (
-			<CardMain className="flex flex-col gap-4">
+			<div className="flex flex-col gap-4">
 				<Typography size="small" className="text-neutral-600 dark:text-neutral-400">
 					{stepsError ?? "Invalid or missing agreement id."}
 				</Typography>
-			</CardMain>
+			</div>
 		);
 	}
 
 	if (stepsLoading) {
 		return (
-			<CardMain className="flex min-h-[min(360px,calc(100vh-200px))] flex-1 items-center justify-center">
+			<div className="flex min-h-[min(360px,calc(100vh-200px))] flex-1 items-center justify-center">
 				<PageLoader mode="embedded" />
-			</CardMain>
+			</div>
 		);
 	}
 
 	if (stepsError && steps.length === 0) {
 		return (
-			<CardMain className="flex flex-col gap-4">
+			<div className="flex flex-col gap-4">
 				<Typography size="small" className="text-neutral-600 dark:text-neutral-400">
 					{stepsError}
 				</Typography>
-			</CardMain>
+			</div>
 		);
 	}
 
 	return (
 		<>
-			<CardMain className="flex min-h-0 flex-1 flex-col gap-0">
-				<div className="flex flex-col gap-4 pb-4">
-					<div className="flex flex-wrap items-center gap-2 gap-y-1">
-						<DescriptionOutlinedIcon sx={{ fontSize: 22 }} className="text-neutral-500 dark:text-neutral-400" />
-						<span className="text-lg font-semibold text-neutral-900 dark:text-white">New agreement</span>
+			<CardMain className="flex min-h-0 flex-1 flex-col gap-0 !m-0 !p-0">
+				<Card className="flex flex-col gap-4 p-4">
+					<div className="flex items-center gap-3">
+						<DescriptionOutlinedIcon
+							sx={{ fontSize: 40 }}
+							className="shrink-0 text-neutral-500 dark:text-neutral-400"
+						/>
+						<div className="flex min-w-0 flex-col gap-0.5">
+							<span className="text-lg font-semibold text-neutral-900 dark:text-white">
+								{headerDisplayName}
+							</span>
+							{headerDisplayId || headerBreadcrumb ? (
+								<div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-neutral-500 dark:text-neutral-400">
+									{headerDisplayId ? <span className="font-medium">{headerDisplayId}</span> : null}
+									{headerDisplayId && headerBreadcrumb ? (
+										<span aria-hidden className="text-neutral-400 dark:text-neutral-500">
+											·
+										</span>
+									) : null}
+									{headerBreadcrumb ? <span>{headerBreadcrumb}</span> : null}
+								</div>
+							) : null}
+						</div>
 					</div>
-					{headerSubtitle ? (
-						<Typography size="small" variant="regular" className="text-neutral-600 dark:text-neutral-400">
-							{headerSubtitle}
-						</Typography>
-					) : (
-						<Typography size="small" variant="regular" className="text-neutral-600 dark:text-neutral-400">
-							Follow each step to build this agreement. Fields load from the matching completed configuration.
-						</Typography>
-					)}
 					{stepperSteps.length > 0 ? (
 						<Stepper
 							steps={stepperSteps}
 							activeStep={activeStepIndex}
-							onStepClick={(i) => void goToStepIndex(i)}
-							className="w-full pt-1"
+							onStepClick={(i) => {
+								if (hideLineItemsWizardNav) {
+									toast.info("Finish or cancel the line item editor first.");
+									return;
+								}
+								void goToStepIndex(i);
+							}}
+							className="w-full"
 						/>
 					) : (
 						<p className="text-sm text-neutral-500 dark:text-neutral-400">
@@ -328,33 +506,56 @@ export default function CreateAgreementDetailsPage() {
 							agreement. You can still discard the draft below.
 						</p>
 					)}
-				</div>
+				</Card>
 
-				<div className="min-h-0 flex-1 overflow-auto py-2">
-					{currentStep ? (
-						isClausesWizardStepName(currentStep) ? (
-							<AgreementClausesStepPanel
-								agreementId={agreementId}
-								clauses={stepDetails?.clauses}
-								loading={stepDetailsLoading}
-								errorMessage={stepDetailsError}
-								onRefresh={refreshStepDetails}
-							/>
+				<div className="m-4 flex min-h-0 flex-1 flex-col">
+					<Card className="flex min-h-0 flex-1 flex-col overflow-auto p-4">
+						{currentStep ? (
+							isClausesWizardStepName(currentStep) ? (
+								<AgreementClausesStepPanel
+									agreementId={agreementId}
+									clauses={stepDetails?.clauses}
+									loading={stepDetailsLoading}
+									errorMessage={stepDetailsError}
+									onRefresh={refreshStepDetails}
+								/>
+							) : isLineItemsWizardStepName(currentStep) ? (
+								lineItemQuery ? (
+									<AgreementLineItemEditorView
+										key={`${lineItemQuery}-${stepDetailsNonce}`}
+										details={stepDetails}
+										mode={lineItemEditorMode}
+										initialValuesByFieldId={lineItemEditorInitialValues}
+										onCancel={() => setLineItemQuery(null)}
+										onSave={(v) => void handleLineItemSave(v)}
+										savePending={postLineItemMutation.isPending || patchLineItemMutation.isPending}
+									/>
+								) : (
+									<AgreementLineItemsStepPanel
+										details={stepDetails}
+										loading={stepDetailsLoading}
+										errorMessage={stepDetailsError}
+										onNewClick={() => setLineItemQuery("new")}
+										onRowClick={(rowId) => setLineItemQuery(rowId)}
+									/>
+								)
+							) : (
+								<AgreementStepDetailsForm
+									details={stepDetails}
+									loading={stepDetailsLoading}
+									errorMessage={stepDetailsError}
+									valuesByFieldId={currentFieldValues}
+									errorsByFieldId={fieldErrorsById}
+									onFieldValueChange={handleFieldValueChange}
+								/>
+							)
 						) : (
-							<AgreementStepDetailsForm
-								details={stepDetails}
-								loading={stepDetailsLoading}
-								errorMessage={stepDetailsError}
-								valuesByFieldId={currentFieldValues}
-								onFieldValueChange={handleFieldValueChange}
-							/>
-						)
-					) : (
-						<p className="text-sm text-neutral-500 dark:text-neutral-400">No step selected.</p>
-					)}
+							<p className="text-sm text-neutral-500 dark:text-neutral-400">No step selected.</p>
+						)}
+					</Card>
 				</div>
 
-				<div className="mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-neutral-200 pt-4 dark:border-black-600">
+				<Card className="mt-auto flex flex-wrap items-center justify-between gap-3 p-4">
 					<button
 						type="button"
 						className="text-sm font-medium text-error-600 hover:text-error-700 dark:text-error-400 dark:hover:text-error-300"
@@ -362,31 +563,38 @@ export default function CreateAgreementDetailsPage() {
 					>
 						Discard
 					</button>
-					<div className="flex flex-wrap items-center justify-end gap-2">
-						{activeStepIndex > 0 && (
+					{!hideLineItemsWizardNav ? (
+						<div className="flex flex-wrap items-center justify-end gap-2">
+							{activeStepIndex > 0 && (
+								<Button
+									type="button"
+									size="md"
+									appearance="outlined"
+									status="secondary-neutral"
+									onClick={() => void goToStepIndex(activeStepIndex - 1)}
+								>
+									Back
+								</Button>
+							)}
 							<Button
 								type="button"
 								size="md"
-								appearance="outlined"
-								status="secondary-neutral"
-								onClick={() => void goToStepIndex(activeStepIndex - 1)}
+								appearance="filled"
+								status="primary"
+								disabled={
+									steps.length === 0 ||
+									patchFieldValuesMutation.isPending ||
+									postLineItemMutation.isPending ||
+									patchLineItemMutation.isPending
+								}
+								loading={patchFieldValuesMutation.isPending}
+								onClick={() => void handlePrimaryAction()}
 							>
-								Back
+								{isLastStep ? "Create Agreement" : "Next"}
 							</Button>
-						)}
-						<Button
-							type="button"
-							size="md"
-							appearance="filled"
-							status="primary"
-							disabled={steps.length === 0 || patchFieldValuesMutation.isPending}
-							loading={patchFieldValuesMutation.isPending}
-							onClick={() => void handlePrimaryAction()}
-						>
-							{isLastStep ? "Create Agreement" : "Next"}
-						</Button>
-					</div>
-				</div>
+						</div>
+					) : null}
+				</Card>
 			</CardMain>
 
 			<ConfirmModal

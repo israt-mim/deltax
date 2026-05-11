@@ -1,15 +1,20 @@
-import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "../queryKeys";
 import {
 	bulkDeleteAgreements,
 	createAgreement,
+	getAgreementDashboard,
 	listAgreements,
 	patchAgreementClauses,
 	patchAgreementFieldValues,
+	patchAgreementLineItem,
+	postAgreementLineItem,
 	type AgreementsListParams,
 	type CreateAgreementBody,
 	type PatchAgreementClausesBody,
 	type PatchAgreementFieldValuesBody,
+	type PatchAgreementLineItemBody,
+	type PostAgreementLineItemBody,
 } from "../services/agreements";
 
 const AGREEMENTS_LIST_PAGE_SIZE = 20;
@@ -67,6 +72,16 @@ export function useAgreementsInfiniteList(options: AgreementsListFilters & { ena
 	});
 }
 
+/** Lightweight agreement summary for header / dashboard views. */
+export function useAgreementDashboardQuery(options: { agreementId: string | undefined; enabled?: boolean }) {
+	const id = options.agreementId?.trim();
+	return useQuery({
+		queryKey: [...queryKeys.agreements.all, "dashboard", id] as const,
+		queryFn: () => getAgreementDashboard(id as string),
+		enabled: Boolean(id) && options.enabled !== false,
+	});
+}
+
 export function useCreateAgreementMutation() {
 	const queryClient = useQueryClient();
 	return useMutation({
@@ -120,6 +135,38 @@ export function usePatchAgreementClausesMutation() {
 	return useMutation({
 		mutationFn: (args: { agreementId: string; body: PatchAgreementClausesBody }) =>
 			patchAgreementClauses(args.agreementId, args.body),
+		onSettled: (_data, _err, args) => {
+			void queryClient.invalidateQueries({ queryKey: queryKeys.agreements.all });
+			if (args?.agreementId) {
+				void queryClient.invalidateQueries({
+					queryKey: [...queryKeys.agreements.all, "detail", args.agreementId] as const,
+				});
+			}
+		},
+	});
+}
+
+export function usePostAgreementLineItemMutation() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (args: { agreementId: string; body?: PostAgreementLineItemBody }) =>
+			postAgreementLineItem(args.agreementId, args.body),
+		onSettled: (_data, _err, args) => {
+			void queryClient.invalidateQueries({ queryKey: queryKeys.agreements.all });
+			if (args?.agreementId) {
+				void queryClient.invalidateQueries({
+					queryKey: [...queryKeys.agreements.all, "detail", args.agreementId] as const,
+				});
+			}
+		},
+	});
+}
+
+export function usePatchAgreementLineItemMutation() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (args: { agreementId: string; lineItemId: string; body: PatchAgreementLineItemBody }) =>
+			patchAgreementLineItem(args.agreementId, args.lineItemId, args.body),
 		onSettled: (_data, _err, args) => {
 			void queryClient.invalidateQueries({ queryKey: queryKeys.agreements.all });
 			if (args?.agreementId) {

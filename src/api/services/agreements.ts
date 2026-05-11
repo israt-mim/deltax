@@ -1,4 +1,4 @@
-import { ApiError, get, patch, post } from "../client/http";
+import { ApiError, del, get, patch, post } from "../client/http";
 import { buildQueryString } from "../client/queryString";
 import type { ListResponse } from "../types/list";
 import { isMongoObjectIdString } from "./agreementCatalog";
@@ -32,6 +32,7 @@ export async function createAgreement(body: CreateAgreementBody): Promise<Create
 export interface AgreementDocumentStep {
 	id: string;
 	name: string;
+	/** Catalog template step name when distinct from display `name`. */
 	catalogStepName?: string | null;
 }
 
@@ -42,6 +43,52 @@ export interface GetAgreementStepsResponse {
 /** GET /api/agreements/:id/steps */
 export async function getAgreementSteps(agreementId: string): Promise<GetAgreementStepsResponse> {
 	return get<GetAgreementStepsResponse>(`/api/agreements/${encodeURIComponent(agreementId)}/steps`);
+}
+
+/** Populated user reference returned by the dashboard endpoint. */
+export interface AgreementDashboardUser {
+	_id: string;
+	firstName?: string;
+	lastName?: string;
+	email?: string;
+	username?: string;
+}
+
+/** Populated catalog reference (category/domain/type/subtype) returned by the dashboard endpoint. */
+export interface AgreementDashboardCatalogRef {
+	_id: string;
+	name?: string;
+}
+
+/** Shape returned by GET /api/agreements/:id/dashboard. */
+export interface AgreementDashboardData {
+	id: string;
+	displayId: string;
+	agreement_display_name: string;
+	status: string;
+	createdAt?: string;
+	updatedAt?: string;
+	createdBy?: AgreementDashboardUser | null;
+	updatedBy?: AgreementDashboardUser | null;
+	agreement_category?: AgreementDashboardCatalogRef | null;
+	agreement_domain?: AgreementDashboardCatalogRef | null;
+	agreement_type?: AgreementDashboardCatalogRef | null;
+	agreement_subtype?: AgreementDashboardCatalogRef | null;
+}
+
+export interface AgreementDashboardEnvelope {
+	data: AgreementDashboardData | null;
+}
+
+/** GET /api/agreements/:id/dashboard — lightweight agreement summary for headers/dashboards. */
+export async function getAgreementDashboard(agreementId: string): Promise<AgreementDashboardData> {
+	const body = await get<AgreementDashboardEnvelope>(
+		`/api/agreements/${encodeURIComponent(agreementId)}/dashboard`
+	);
+	if (!body.data) {
+		throw new ApiError("Agreement not found", 404, body);
+	}
+	return body.data;
 }
 
 /** Flattened field from GET /api/agreements/:id/details?of= */
@@ -68,6 +115,37 @@ export interface AgreementStepDetailsSection {
 	fields: AgreementStepDetailsField[];
 }
 
+/** Line Items GET …/details?of=line-items — ordered grid columns. */
+export interface AgreementLineItemsTableColumn {
+	fieldId: string;
+	sectionName?: string;
+	label?: string;
+	width?: number;
+	sortable?: boolean;
+}
+
+/** One grid row: `id` is the line-item subdocument `_id`. */
+export interface AgreementLineItemsTableRow {
+	id: string;
+	rowIndex?: number;
+	cells: Record<string, unknown>;
+}
+
+export interface AgreementLineItemsTableBlock {
+	columns: AgreementLineItemsTableColumn[];
+	rows: AgreementLineItemsTableRow[];
+}
+
+export interface AgreementLineItemsLayoutBlock {
+	sections: AgreementStepDetailsSection[];
+}
+
+export interface AgreementStepDetailsMeta {
+	contentMode?: string;
+	editorMode?: string;
+	editorHideWizardNav?: boolean;
+}
+
 /** Clause row returned on GET …/details (clause step) or PATCH …/clauses. */
 export interface AgreementClauseBrief {
 	id: string;
@@ -80,13 +158,23 @@ export interface AgreementClauseBrief {
 }
 
 export interface AgreementStepDetailsData {
+	/** Column / section definitions (normalized from `layout.sections` when present). */
 	sections: AgreementStepDetailsSection[];
+	/** Raw layout block from Line Items GET (optional). */
+	layout?: AgreementLineItemsLayoutBlock | null;
+	/** Table-friendly shape for the Line Items grid. */
+	table?: AgreementLineItemsTableBlock | null;
 	step?: { id: string; name: string; catalogStepName?: string | null } | null;
 	agreementConfigId: string;
 	agreementConfigDisplayId?: string;
 	/** Server-resolved slug for PATCH …/field-values `of` (e.g. `header`, `line-items`). */
 	ofKey?: string;
 	clauses?: AgreementClauseBrief[];
+	/** Full line-item rows for accordion list (Line Items step). */
+	lineItems?: unknown[] | null;
+	/** Single line item when `lineItemId` query is set (new/edit editor). */
+	lineItem?: unknown | null;
+	meta?: AgreementStepDetailsMeta | null;
 }
 
 /** One step block under GET /api/agreements/:id/details with no `of` query. */
@@ -183,6 +271,76 @@ export function isClausesWizardStepName(step: { name: string } | null | undefine
 	return s === "clauses" || s === "clause";
 }
 
+/** True when the wizard step is the Line Items repeater (before details load). */
+export function isLineItemsWizardStepName(
+	step: { name: string; catalogStepName?: string | null } | null | undefined
+): boolean {
+	if (!step) return false;
+	const s = slugStepName(step.name);
+	const c = slugStepName(step.catalogStepName ?? undefined);
+	return s === "lineitems" || s === "lineitem" || c === "lineitems" || c === "lineitem";
+}
+
+/** True when loaded step details correspond to the Line Items repeater. */
+export function isLineItemsAgreementStep(
+	details: AgreementStepDetailsData | null,
+	step: { name: string; catalogStepName?: string | null } | null | undefined
+): boolean {
+	if (!details && !step) return false;
+	if (details?.meta?.contentMode && slugStepName(details.meta.contentMode) === "lineitems") return true;
+	const ok = slugStepName(details?.ofKey ?? undefined);
+	if (ok === "lineitems" || ok === "lineitem") return true;
+	if (step && isLineItemsWizardStepName(step)) return true;
+	if (details?.step && isLineItemsWizardStepName(details.step)) return true;
+	return false;
+}
+
+/** Whether wizard prev/next should be hidden (Line Items editor query modes). */
+export function agreementStepEditorHideWizardNav(details: AgreementStepDetailsData | null): boolean {
+	return Boolean(details?.meta?.editorHideWizardNav);
+}
+
+function coalesceSectionsFromPayload(d: Record<string, unknown>): AgreementStepDetailsSection[] {
+	const layout = d.layout as { sections?: AgreementStepDetailsSection[] } | undefined;
+	if (layout?.sections && Array.isArray(layout.sections)) return layout.sections;
+	const root = d.sections;
+	if (Array.isArray(root)) return root as AgreementStepDetailsSection[];
+	return [];
+}
+
+export function normalizeAgreementStepDetailsData(d: Record<string, unknown>): AgreementStepDetailsData {
+	const sections = coalesceSectionsFromPayload(d);
+	const rawTable = d.table as AgreementLineItemsTableBlock | null | undefined;
+	const table =
+		rawTable && Array.isArray(rawTable.columns) && Array.isArray(rawTable.rows)
+			? { columns: rawTable.columns, rows: rawTable.rows }
+			: null;
+	const layoutRaw = d.layout as AgreementLineItemsLayoutBlock | null | undefined;
+	const layout =
+		layoutRaw && Array.isArray(layoutRaw.sections)
+			? { sections: layoutRaw.sections }
+			: sections.length > 0
+				? { sections }
+				: null;
+
+	return {
+		sections,
+		layout,
+		table,
+		step: (d.step as AgreementStepDetailsData["step"]) ?? null,
+		agreementConfigId: String(d.agreementConfigId ?? ""),
+		agreementConfigDisplayId: typeof d.agreementConfigDisplayId === "string" ? d.agreementConfigDisplayId : undefined,
+		ofKey: typeof d.ofKey === "string" ? d.ofKey : undefined,
+		clauses: Array.isArray(d.clauses) ? (d.clauses as AgreementClauseBrief[]) : undefined,
+		lineItems: Array.isArray(d.lineItems) ? d.lineItems : d.lineItems === null ? null : undefined,
+		lineItem: "lineItem" in d ? (d.lineItem as unknown) : undefined,
+		meta:
+			d.meta && typeof d.meta === "object" && !Array.isArray(d.meta)
+				? (d.meta as AgreementStepDetailsMeta)
+				: null,
+	};
+}
+
 /**
  * Authoring and Modification steps are hidden from the **new agreement** wizard
  * (`/agreements/create/:id`). Full agreement details (`GET …/details` without step filter)
@@ -195,13 +353,31 @@ export function isAuthoringOrModificationAgreementCreationStep(step: AgreementDo
 	return slugs.some((s) => s === "authoring" || s === "modification" || s === "modifications");
 }
 
-/** GET /api/agreements/:id/details?of= */
-export async function getAgreementStepDetails(agreementId: string, of: string): Promise<AgreementStepDetailsData> {
+export interface GetAgreementStepDetailsOptions {
+	/**
+	 * Omit or `"list"` — main Line Items table (wizard nav stays).
+	 * `"new"` — create editor (`meta.editorHideWizardNav`).
+	 * Line-item `_id` — edit that row.
+	 */
+	lineItemId?: string | null;
+}
+
+/** GET /api/agreements/:id/details?of=…&lineItemId=… */
+export async function getAgreementStepDetails(
+	agreementId: string,
+	of: string,
+	options?: GetAgreementStepDetailsOptions
+): Promise<AgreementStepDetailsData> {
 	const trimmed = of.trim();
 	if (!trimmed) {
 		throw new ApiError("Step reference (of) is required.", 400, undefined);
 	}
-	const qs = buildQueryString({ of: trimmed });
+	const params: Record<string, string | number | undefined | null> = { of: trimmed };
+	const lid = options?.lineItemId?.trim();
+	if (lid && lid.toLowerCase() !== "list") {
+		params.lineItemId = lid;
+	}
+	const qs = buildQueryString(params);
 	const body = await get<AgreementStepDetailsEnvelope>(
 		`/api/agreements/${encodeURIComponent(agreementId)}/details${qs}`
 	);
@@ -212,12 +388,8 @@ export async function getAgreementStepDetails(agreementId: string, of: string): 
 				: "Could not load agreement step details.";
 		throw new ApiError(msg, 400, body);
 	}
-	const d = body.data;
-	return {
-		...d,
-		sections: d.sections ?? [],
-		clauses: d.clauses ?? [],
-	};
+	const d = body.data as unknown as Record<string, unknown>;
+	return normalizeAgreementStepDetailsData(d);
 }
 
 /** GET /api/agreements/:id/details — full wizard payload (all steps + clauses bundle). */
@@ -244,9 +416,10 @@ export interface PatchAgreementFieldValueItem {
 }
 
 export interface PatchAgreementFieldValuesBody {
-	/** Step key; defaults server-side to `header` when omitted. Must not be `clauses`. */
+	/** Step key; defaults server-side to `header` when omitted. Must not be `clauses` or Line Items. */
 	of?: string;
-	values: PatchAgreementFieldValueItem[];
+	/** Flat field updates for the step layout. */
+	values?: PatchAgreementFieldValueItem[];
 }
 
 export type PatchAgreementFieldValuesResponse =
@@ -290,6 +463,59 @@ export async function patchAgreementClauses(
 	);
 }
 
+export interface PostAgreementLineItemBody {
+	values?: PatchAgreementFieldValueItem[];
+}
+
+export interface PostAgreementLineItemResponse {
+	message?: string;
+	id?: string;
+	lineItemId?: string;
+	/** Some APIs return Mongo id here after create. */
+	_id?: string;
+}
+
+/** POST /api/agreements/:id/line-items */
+export async function postAgreementLineItem(
+	agreementId: string,
+	body?: PostAgreementLineItemBody
+): Promise<PostAgreementLineItemResponse> {
+	return post<PostAgreementLineItemResponse>(
+		`/api/agreements/${encodeURIComponent(agreementId)}/line-items`,
+		body ?? {}
+	);
+}
+
+export interface PatchAgreementLineItemBody {
+	values: PatchAgreementFieldValueItem[];
+}
+
+export type PatchAgreementLineItemResponse = { message?: string } & Record<string, unknown>;
+
+/** PATCH /api/agreements/:id/line-items/:lineItemId */
+export async function patchAgreementLineItem(
+	agreementId: string,
+	lineItemId: string,
+	body: PatchAgreementLineItemBody
+): Promise<PatchAgreementLineItemResponse> {
+	return patch<PatchAgreementLineItemResponse>(
+		`/api/agreements/${encodeURIComponent(agreementId)}/line-items/${encodeURIComponent(lineItemId)}`,
+		body
+	);
+}
+
+export type DeleteAgreementLineItemResponse = { message?: string } & Record<string, unknown>;
+
+/** DELETE /api/agreements/:id/line-items/:lineItemId */
+export async function deleteAgreementLineItem(
+	agreementId: string,
+	lineItemId: string
+): Promise<DeleteAgreementLineItemResponse> {
+	return del<DeleteAgreementLineItemResponse>(
+		`/api/agreements/${encodeURIComponent(agreementId)}/line-items/${encodeURIComponent(lineItemId)}`
+	);
+}
+
 /**
  * Build PATCH …/field-values `values` for every field on the step layout (visible or not).
  * Uses `values[fieldId]` when the user edited the field, otherwise the template `f.value`.
@@ -315,6 +541,7 @@ export function isAgreementFieldValuesStep(details: AgreementStepDetailsData | n
 	if (!details) return false;
 	const key = (details.ofKey ?? "").toLowerCase();
 	if (key === "clauses" || key === "clause") return false;
+	if (isLineItemsAgreementStep(details, details.step ?? undefined)) return false;
 	return (details.sections ?? []).some((s) => (s.fields ?? []).length > 0);
 }
 

@@ -68,11 +68,12 @@ function isFieldSatisfied(field: AgreementStepDetailsField, value: unknown): boo
 export function validateRequiredAgreementFields(
 	details: AgreementStepDetailsData | null,
 	values: Record<string, unknown>
-): { ok: boolean; missingLabels: string[] } {
+): { ok: boolean; missingLabels: string[]; missingFieldIds: string[] } {
 	if (!details?.sections?.length) {
-		return { ok: true, missingLabels: [] };
+		return { ok: true, missingLabels: [], missingFieldIds: [] };
 	}
 	const missing: string[] = [];
+	const missingFieldIds: string[] = [];
 	for (const sec of details.sections) {
 		for (const field of sec.fields ?? []) {
 			if (field.visible === false) continue;
@@ -80,8 +81,9 @@ export function validateRequiredAgreementFields(
 			const v = values[field.id];
 			if (!isFieldSatisfied(field, v)) {
 				missing.push(field.name?.trim() || "Field");
+				missingFieldIds.push(field.id);
 			}
 		}
 	}
-	return { ok: missing.length === 0, missingLabels: missing };
+	return { ok: missing.length === 0, missingLabels: missing, missingFieldIds };
 }

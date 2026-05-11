@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
 import ExpandMoreOutlinedIcon from "@mui/icons-material/ExpandMoreOutlined";
@@ -27,10 +27,12 @@ function toDayjsOrNull(v: unknown): Dayjs | null {
 function AgreementStepFieldControl({
 	field,
 	value,
+	error,
 	onChange,
 }: {
 	field: AgreementStepDetailsField;
 	value: unknown;
+	error?: string;
 	onChange: (next: unknown) => void;
 }) {
 	const disabled = Boolean(field.disabled || field.locked);
@@ -73,6 +75,7 @@ function AgreementStepFieldControl({
 				label={label}
 				required={required}
 				helperText={helperText}
+				error={error}
 				placeholder={placeholder}
 				disabled={disabled}
 				allowClear
@@ -90,6 +93,7 @@ function AgreementStepFieldControl({
 				label={label}
 				required={required}
 				helperText={helperText}
+				error={error}
 				disabled={disabled}
 				className="w-full"
 				style={{ width: "100%" }}
@@ -113,6 +117,7 @@ function AgreementStepFieldControl({
 				label={label}
 				required={required}
 				helperText={helperText}
+				error={error}
 				disabled={disabled}
 				className="w-full"
 				min={0}
@@ -132,6 +137,7 @@ function AgreementStepFieldControl({
 				label={label}
 				required={required}
 				helperText={helperText}
+				error={error}
 				disabled={disabled}
 				className="w-full"
 				placeholder={placeholder}
@@ -146,6 +152,7 @@ function AgreementStepFieldControl({
 			label={label}
 			required={required}
 			helperText={helperText}
+			error={error}
 			placeholder={placeholder}
 			disabled={disabled}
 			value={value == null ? "" : String(value)}
@@ -159,6 +166,7 @@ export interface AgreementStepDetailsFormProps {
 	loading: boolean;
 	errorMessage: string | null;
 	valuesByFieldId: Record<string, unknown>;
+	errorsByFieldId?: Record<string, string>;
 	onFieldValueChange: (fieldId: string, value: unknown) => void;
 }
 
@@ -170,6 +178,7 @@ export function AgreementStepDetailsForm({
 	loading,
 	errorMessage,
 	valuesByFieldId,
+	errorsByFieldId,
 	onFieldValueChange,
 }: AgreementStepDetailsFormProps) {
 	const [collapsedByKey, setCollapsedByKey] = useState<Record<string, boolean>>({});
@@ -178,6 +187,25 @@ export function AgreementStepDetailsForm({
 		if (!details?.sections?.length) return [];
 		return details.sections.map((s, i) => `sec-${i}-${(s.name ?? "").slice(0, 48)}`);
 	}, [details?.sections]);
+
+	useEffect(() => {
+		const errorIds = new Set(Object.keys(errorsByFieldId ?? {}));
+		if (!errorIds.size || !details?.sections?.length) return;
+
+		setCollapsedByKey((prev) => {
+			let changed = false;
+			const next = { ...prev };
+			details.sections.forEach((section, i) => {
+				if (!(section.fields ?? []).some((field) => errorIds.has(field.id))) return;
+				const key = sectionKeys[i] ?? `sec-${i}`;
+				if (next[key]) {
+					next[key] = false;
+					changed = true;
+				}
+			});
+			return changed ? next : prev;
+		});
+	}, [details?.sections, errorsByFieldId, sectionKeys]);
 
 	const toggleSection = useCallback((key: string) => {
 		setCollapsedByKey((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -248,6 +276,7 @@ export function AgreementStepDetailsForm({
 												key={field.id}
 												field={field}
 												value={valuesByFieldId[field.id]}
+												error={errorsByFieldId?.[field.id]}
 												onChange={(next) => onFieldValueChange(field.id, next)}
 											/>
 										))}
