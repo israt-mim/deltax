@@ -5,6 +5,7 @@ import { Home, Configure, Settings, AgreementConfiguration, FieldConfiguration }
 import CreateFieldConfiguration from "./pages/CreateFieldConfiguration";
 import CreateAgreementConfiguration from "./pages/CreateAgreementConfiguration";
 import CreateAgreementDetailsPage from "./pages/CreateAgreementDetailsPage";
+import AgreementDetailsPage from "./pages/AgreementDetailsPage";
 import { AgreementConfigurationDetailsPage } from "./pages/AgreementConfigurationDetailsPage";
 import { FieldDetailPage } from "./pages/FieldDetailPage";
 import { ClausesPage } from "./pages/ClausesPage";
@@ -24,6 +25,7 @@ export const Routes = () => {
 						<Route index element={<Home />} />
 						<Route path="/agreements/create/:id" element={<CreateAgreementDetailsPage />} />
 						<Route path="/agreements/:categoryId/:domainId" element={<AgreementListPage />} />
+						<Route path="/agreements/:id" element={<AgreementDetailsPage />} />
 						<Route path="/agreements" element={<AgreementListPage />} />
 						<Route path="/configure">
 							<Route index element={<Configure />} />

@@ -22,6 +22,8 @@ import type { SettingsUserListRow } from "../../schemas/settingsUser";
 
 export interface AgreementTeamsStepPanelProps {
 	agreementId: string;
+	/** Hide all member add/remove controls and show team rosters as read-only. */
+	readOnly?: boolean;
 }
 
 type AddMembersTarget = {
@@ -250,7 +252,7 @@ function AddAgreementTeamMembersModal({
 	);
 }
 
-export function AgreementTeamsStepPanel({ agreementId }: AgreementTeamsStepPanelProps) {
+export function AgreementTeamsStepPanel({ agreementId, readOnly = false }: AgreementTeamsStepPanelProps) {
 	const teamsQuery = useAgreementTeamsQuery({ agreementId, enabled: Boolean(agreementId) });
 	const patchMembersMutation = usePatchAgreementTeamMembersMutation();
 	const [collapsedById, setCollapsedById] = useState<Record<string, boolean>>({});
@@ -360,17 +362,19 @@ export function AgreementTeamsStepPanel({ agreementId }: AgreementTeamsStepPanel
 								</div>
 							</div>
 							<div className="flex items-center gap-2">
-								<Button
-									type="button"
-									size="sm"
-									appearance="filled"
-									status="secondary-neutral"
-									disabled={!teamId}
-									onClick={() => setAddMembersTarget({ team: entry, teamId })}
-								>
-									<AddOutlinedIcon sx={{ fontSize: 14 }} />
-									Add Members
-								</Button>
+								{readOnly ? null : (
+									<Button
+										type="button"
+										size="sm"
+										appearance="filled"
+										status="secondary-neutral"
+										disabled={!teamId}
+										onClick={() => setAddMembersTarget({ team: entry, teamId })}
+									>
+										<AddOutlinedIcon sx={{ fontSize: 14 }} />
+										Add Members
+									</Button>
+								)}
 								<button
 									type="button"
 									aria-label={collapsed ? "Expand team" : "Collapse team"}
@@ -390,14 +394,16 @@ export function AgreementTeamsStepPanel({ agreementId }: AgreementTeamsStepPanel
 								<table className="w-full min-w-[640px] border-collapse text-left text-sm">
 									<thead className="bg-neutral-50 dark:bg-black-800">
 										<tr className="border-b border-neutral-200 dark:border-black-600">
-											<th className="w-12 px-3 py-2.5">
-												<input
-													type="checkbox"
-													disabled
-													className="h-4 w-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-400 dark:border-black-500"
-													aria-label={`Select all ${teamName(entry)} members`}
-												/>
-											</th>
+											{readOnly ? null : (
+												<th className="w-12 px-3 py-2.5">
+													<input
+														type="checkbox"
+														disabled
+														className="h-4 w-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-400 dark:border-black-500"
+														aria-label={`Select all ${teamName(entry)} members`}
+													/>
+												</th>
+											)}
 											<th className="px-4 py-2.5 text-xs font-medium text-neutral-500 dark:text-neutral-400">
 												Name
 											</th>
@@ -407,15 +413,20 @@ export function AgreementTeamsStepPanel({ agreementId }: AgreementTeamsStepPanel
 											<th className="px-4 py-2.5 text-xs font-medium text-neutral-500 dark:text-neutral-400">
 												Username
 											</th>
-											<th className="w-20 px-4 py-2.5 text-right text-xs font-medium text-neutral-500 dark:text-neutral-400">
-												<span className="sr-only">Actions</span>
-											</th>
+											{readOnly ? null : (
+												<th className="w-20 px-4 py-2.5 text-right text-xs font-medium text-neutral-500 dark:text-neutral-400">
+													<span className="sr-only">Actions</span>
+												</th>
+											)}
 										</tr>
 									</thead>
 									<tbody>
 										{members.length === 0 ? (
 											<tr className="bg-white dark:bg-black-800">
-												<td colSpan={5} className="px-4 py-8 text-center text-sm text-neutral-500 dark:text-neutral-400">
+												<td
+													colSpan={readOnly ? 3 : 5}
+													className="px-4 py-8 text-center text-sm text-neutral-500 dark:text-neutral-400"
+												>
 													No members added to this agreement team.
 												</td>
 											</tr>
@@ -427,14 +438,16 @@ export function AgreementTeamsStepPanel({ agreementId }: AgreementTeamsStepPanel
 														key={memberId}
 														className="border-b border-neutral-100 bg-white hover:bg-neutral-50 dark:border-black-600 dark:bg-black-800 dark:hover:bg-black-700/50"
 													>
-														<td className="px-3 py-2.5">
-															<input
-																type="checkbox"
-																disabled
-																className="h-4 w-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-400 dark:border-black-500"
-																aria-label={`Select ${userDisplayName(member.user)}`}
-															/>
-														</td>
+														{readOnly ? null : (
+															<td className="px-3 py-2.5">
+																<input
+																	type="checkbox"
+																	disabled
+																	className="h-4 w-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-400 dark:border-black-500"
+																	aria-label={`Select ${userDisplayName(member.user)}`}
+																/>
+															</td>
+														)}
 														<td className="px-4 py-2.5 font-medium text-neutral-900 dark:text-white">
 															{userDisplayName(member.user)}
 														</td>
@@ -444,17 +457,19 @@ export function AgreementTeamsStepPanel({ agreementId }: AgreementTeamsStepPanel
 														<td className="px-4 py-2.5 text-neutral-600 dark:text-neutral-300">
 															{member.user?.username?.trim() || "—"}
 														</td>
-														<td className="px-4 py-2.5 text-right">
-															<button
-																type="button"
-																disabled={!teamId || patchMembersMutation.isPending}
-																className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-error-600 transition-colors hover:bg-error-50 disabled:pointer-events-none disabled:opacity-50 dark:text-error-400 dark:hover:bg-error-950/30"
-																onClick={() => void handleRemoveMember(teamId, memberId)}
-															>
-																<DeleteOutlineOutlinedIcon sx={{ fontSize: 16 }} />
-																Remove
-															</button>
-														</td>
+														{readOnly ? null : (
+															<td className="px-4 py-2.5 text-right">
+																<button
+																	type="button"
+																	disabled={!teamId || patchMembersMutation.isPending}
+																	className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-error-600 transition-colors hover:bg-error-50 disabled:pointer-events-none disabled:opacity-50 dark:text-error-400 dark:hover:bg-error-950/30"
+																	onClick={() => void handleRemoveMember(teamId, memberId)}
+																>
+																	<DeleteOutlineOutlinedIcon sx={{ fontSize: 16 }} />
+																	Remove
+																</button>
+															</td>
+														)}
 													</tr>
 												);
 											})
@@ -467,13 +482,15 @@ export function AgreementTeamsStepPanel({ agreementId }: AgreementTeamsStepPanel
 				);
 			})}
 
-			<AddAgreementTeamMembersModal
-				open={addMembersTarget !== null}
-				team={addMembersTarget?.team ?? null}
-				pending={patchMembersMutation.isPending}
-				onClose={() => setAddMembersTarget(null)}
-				onSave={handleSaveMembers}
-			/>
+			{readOnly ? null : (
+				<AddAgreementTeamMembersModal
+					open={addMembersTarget !== null}
+					team={addMembersTarget?.team ?? null}
+					pending={patchMembersMutation.isPending}
+					onClose={() => setAddMembersTarget(null)}
+					onSave={handleSaveMembers}
+				/>
+			)}
 		</div>
 	);
 }

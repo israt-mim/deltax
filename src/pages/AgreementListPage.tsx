@@ -196,7 +196,7 @@ export function AgreementListPage() {
 					isLoading={isLoadingMore}
 					isInitialLoading={isInitialLoading}
 					hasMore={hasMore}
-					onRowClick={(row) => void navigate(`/configure/agreements/${encodeURIComponent(row._id)}`)}
+					onRowClick={(row) => void navigate(`/agreements/${encodeURIComponent(row._id)}`)}
 					emptyMessage="No agreements match your filters."
 					checkboxConfig={{
 						getRowId: (row) => row._id,
