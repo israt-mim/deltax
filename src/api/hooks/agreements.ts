@@ -4,16 +4,19 @@ import {
 	bulkDeleteAgreements,
 	createAgreement,
 	getAgreementDashboard,
+	getAgreementTeams,
 	listAgreements,
 	patchAgreementClauses,
 	patchAgreementFieldValues,
 	patchAgreementLineItem,
+	patchAgreementTeamMembers,
 	postAgreementLineItem,
 	type AgreementsListParams,
 	type CreateAgreementBody,
 	type PatchAgreementClausesBody,
 	type PatchAgreementFieldValuesBody,
 	type PatchAgreementLineItemBody,
+	type PatchAgreementTeamMembersBody,
 	type PostAgreementLineItemBody,
 } from "../services/agreements";
 
@@ -82,6 +85,16 @@ export function useAgreementDashboardQuery(options: { agreementId: string | unde
 	});
 }
 
+/** Teams and members attached to one agreement. */
+export function useAgreementTeamsQuery(options: { agreementId: string | undefined; enabled?: boolean }) {
+	const id = options.agreementId?.trim();
+	return useQuery({
+		queryKey: [...queryKeys.agreements.all, "teams", id] as const,
+		queryFn: () => getAgreementTeams(id as string),
+		enabled: Boolean(id) && options.enabled !== false,
+	});
+}
+
 export function useCreateAgreementMutation() {
 	const queryClient = useQueryClient();
 	return useMutation({
@@ -140,6 +153,25 @@ export function usePatchAgreementClausesMutation() {
 			if (args?.agreementId) {
 				void queryClient.invalidateQueries({
 					queryKey: [...queryKeys.agreements.all, "detail", args.agreementId] as const,
+				});
+			}
+		},
+	});
+}
+
+export function usePatchAgreementTeamMembersMutation() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (args: {
+			agreementId: string;
+			teamId: string;
+			body: PatchAgreementTeamMembersBody;
+		}) => patchAgreementTeamMembers(args.agreementId, args.teamId, args.body),
+		onSettled: (_data, _err, args) => {
+			void queryClient.invalidateQueries({ queryKey: queryKeys.agreements.all });
+			if (args?.agreementId) {
+				void queryClient.invalidateQueries({
+					queryKey: [...queryKeys.agreements.all, "teams", args.agreementId] as const,
 				});
 			}
 		},

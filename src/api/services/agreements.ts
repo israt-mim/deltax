@@ -91,6 +91,76 @@ export async function getAgreementDashboard(agreementId: string): Promise<Agreem
 	return body.data;
 }
 
+export interface AgreementTeamUser {
+	_id: string;
+	firstName?: string;
+	lastName?: string;
+	email?: string;
+	username?: string;
+}
+
+export interface AgreementTeamRef {
+	_id: string;
+	name?: string;
+	description?: string;
+	userCount?: number;
+	groupTechnicalName?: string;
+	createdAt?: string;
+	updatedAt?: string;
+}
+
+export interface AgreementTeamMember {
+	user: AgreementTeamUser | null;
+}
+
+export interface AgreementTeamEntry {
+	id: string;
+	team: AgreementTeamRef | null;
+	description?: string;
+	addAllMembersFromConfig?: boolean;
+	memberCount?: number;
+	members?: AgreementTeamMember[];
+}
+
+export interface AgreementTeamsData {
+	teams: AgreementTeamEntry[];
+}
+
+export interface AgreementTeamsEnvelope {
+	data: AgreementTeamsData | null;
+}
+
+export interface PatchAgreementTeamMembersBody {
+	add?: string[];
+	remove?: string[];
+}
+
+export interface PatchAgreementTeamMembersResponse {
+	message: string;
+	team: AgreementTeamEntry;
+}
+
+/** GET /api/agreements/:id/teams — agreement team snapshots with attached members. */
+export async function getAgreementTeams(agreementId: string): Promise<AgreementTeamsData> {
+	const body = await get<AgreementTeamsEnvelope>(`/api/agreements/${encodeURIComponent(agreementId)}/teams`);
+	if (!body.data) {
+		throw new ApiError("Agreement not found", 404, body);
+	}
+	return body.data;
+}
+
+/** PATCH /api/agreements/:id/teams/:teamId/members — add/remove members for one agreement team. */
+export async function patchAgreementTeamMembers(
+	agreementId: string,
+	teamId: string,
+	body: PatchAgreementTeamMembersBody
+): Promise<PatchAgreementTeamMembersResponse> {
+	return patch<PatchAgreementTeamMembersResponse>(
+		`/api/agreements/${encodeURIComponent(agreementId)}/teams/${encodeURIComponent(teamId)}/members`,
+		body
+	);
+}
+
 /** Flattened field from GET /api/agreements/:id/details?of= */
 export interface AgreementStepDetailsField {
 	id: string;

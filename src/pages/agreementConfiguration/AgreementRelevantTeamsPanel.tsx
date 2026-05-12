@@ -201,7 +201,7 @@ export function AgreementRelevantTeamsPanel({
 					const tid = row.original.id;
 					const v = effectiveSettings(tid, config, draftSettings);
 					return (
-						<div data-row-click-ignore className="flex justify-center">
+						<div data-row-click-ignore className="flex justify-start">
 							<Switch
 								size="small"
 								checked={v.addAllMembers}
@@ -222,7 +222,7 @@ export function AgreementRelevantTeamsPanel({
 					const tid = row.original.id;
 					const v = effectiveSettings(tid, config, draftSettings);
 					return (
-						<div data-row-click-ignore className="flex justify-center">
+						<div data-row-click-ignore className="flex justify-start">
 							<Switch
 								size="small"
 								checked={v.canCreate}

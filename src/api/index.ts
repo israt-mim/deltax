@@ -212,6 +212,7 @@ export {
 	getAgreementDashboard,
 	getAgreementStepDetails,
 	getAgreementSteps,
+	getAgreementTeams,
 	getAgreementWizardDetails,
 	isAgreementFieldValuesStep,
 	isAuthoringOrModificationAgreementCreationStep,
@@ -225,6 +226,7 @@ export {
 	patchAgreementClauses,
 	patchAgreementFieldValues,
 	patchAgreementLineItem,
+	patchAgreementTeamMembers,
 	postAgreementLineItem,
 } from "./services/agreements";
 export type {
@@ -235,6 +237,12 @@ export type {
 	AgreementDashboardEnvelope,
 	AgreementDashboardUser,
 	AgreementDocumentStep,
+	AgreementTeamEntry,
+	AgreementTeamMember,
+	AgreementTeamRef,
+	AgreementTeamsData,
+	AgreementTeamsEnvelope,
+	AgreementTeamUser,
 	AgreementLineItemsLayoutBlock,
 	AgreementLineItemsTableBlock,
 	AgreementLineItemsTableColumn,
@@ -261,11 +269,14 @@ export type {
 	PatchAgreementFieldValuesResponse,
 	PatchAgreementLineItemBody,
 	PatchAgreementLineItemResponse,
+	PatchAgreementTeamMembersBody,
+	PatchAgreementTeamMembersResponse,
 	PostAgreementLineItemBody,
 	PostAgreementLineItemResponse,
 } from "./services/agreements";
 export {
 	useAgreementDashboardQuery,
+	useAgreementTeamsQuery,
 	useAgreementsInfiniteList,
 	useBulkDeleteAgreementsMutation,
 	useCreateAgreementMutation,
@@ -273,6 +284,7 @@ export {
 	usePatchAgreementClausesMutation,
 	usePatchAgreementFieldValuesMutation,
 	usePatchAgreementLineItemMutation,
+	usePatchAgreementTeamMembersMutation,
 	usePostAgreementLineItemMutation,
 } from "./hooks/agreements";
 export type { AgreementsListFilters } from "./hooks/agreements";

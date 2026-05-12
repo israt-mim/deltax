@@ -37,6 +37,7 @@ import { AgreementClausesStepPanel } from "./agreementConfiguration/AgreementCla
 import { AgreementLineItemEditorView } from "./agreementConfiguration/AgreementLineItemEditorView";
 import { AgreementLineItemsStepPanel } from "./agreementConfiguration/AgreementLineItemsStepPanel";
 import { AgreementStepDetailsForm } from "./agreementConfiguration/AgreementStepDetailsForm";
+import { AgreementTeamsStepPanel } from "./agreementConfiguration/AgreementTeamsStepPanel";
 import {
 	emptyLineItemValuesFromLayout,
 	fieldValuesArrayFromRecord,
@@ -46,6 +47,16 @@ import {
 	buildInitialFieldValues,
 	validateRequiredAgreementFields,
 } from "./agreementConfiguration/agreementStepDetailsValidation";
+
+const AGREEMENT_TEAMS_STEP: AgreementDocumentStep = {
+	id: "__agreement-teams__",
+	name: "Teams",
+	catalogStepName: "Teams",
+};
+
+function isAgreementTeamsWizardStep(step: AgreementDocumentStep | null | undefined): boolean {
+	return step?.id === AGREEMENT_TEAMS_STEP.id;
+}
 
 /** `/agreements/create/:id` — `id` is the Agreement document ObjectId. */
 export default function CreateAgreementDetailsPage() {
@@ -86,6 +97,7 @@ export default function CreateAgreementDetailsPage() {
 	useEffect(() => {
 		setFieldValuesByStepId({});
 		setLineItemQuery(null);
+		setActiveStepIndex(0);
 	}, [agreementId]);
 
 	useEffect(() => {
@@ -121,12 +133,13 @@ export default function CreateAgreementDetailsPage() {
 		};
 	}, [agreementId]);
 
-	useEffect(() => {
-		if (steps.length === 0) return;
-		setActiveStepIndex((i) => Math.min(Math.max(0, i), steps.length - 1));
-	}, [steps]);
+	const wizardSteps = useMemo(() => [...steps, AGREEMENT_TEAMS_STEP], [steps]);
 
-	const currentStep = steps[activeStepIndex];
+	useEffect(() => {
+		setActiveStepIndex((i) => Math.min(Math.max(0, i), wizardSteps.length - 1));
+	}, [wizardSteps.length]);
+
+	const currentStep = wizardSteps[activeStepIndex];
 	const stepStorageKey = currentStep?.id ?? "";
 
 	useEffect(() => {
@@ -224,7 +237,7 @@ export default function CreateAgreementDetailsPage() {
 				return;
 			}
 			if (nextIndex === activeStepIndex) return;
-			if (nextIndex < 0 || nextIndex >= steps.length) return;
+			if (nextIndex < 0 || nextIndex >= wizardSteps.length) return;
 			if (nextIndex < activeStepIndex) {
 				setActiveStepIndex(nextIndex);
 				return;
@@ -244,7 +257,7 @@ export default function CreateAgreementDetailsPage() {
 			hideLineItemsWizardNav,
 			persistCurrentStepFieldValues,
 			stepDetailsLoading,
-			steps.length,
+			wizardSteps.length,
 		]
 	);
 
@@ -253,6 +266,13 @@ export default function CreateAgreementDetailsPage() {
 			setStepDetails(null);
 			setStepDetailsError(null);
 			setStepDetailsLoading(false);
+			return;
+		}
+		if (isAgreementTeamsWizardStep(currentStep)) {
+			setStepDetails(null);
+			setStepDetailsError(null);
+			setStepDetailsLoading(false);
+			setFieldErrorsById({});
 			return;
 		}
 
@@ -294,11 +314,11 @@ export default function CreateAgreementDetailsPage() {
 	}, [agreementId, currentStep?.id, currentStep?.name, lineItemQuery, stepDetailsNonce]);
 
 	const stepperSteps: StepperStep[] = useMemo(
-		() => steps.map((s) => ({ key: s.id, label: s.name })),
-		[steps]
+		() => wizardSteps.map((s) => ({ key: s.id, label: s.name })),
+		[wizardSteps]
 	);
 
-	const isLastStep = steps.length > 0 && activeStepIndex === steps.length - 1;
+	const isLastStep = wizardSteps.length > 0 && activeStepIndex === wizardSteps.length - 1;
 
 	const lineItemEditorMode = useMemo<"create" | "edit">(() => {
 		const m = stepDetails?.meta?.editorMode?.toLowerCase();
@@ -511,7 +531,9 @@ export default function CreateAgreementDetailsPage() {
 				<div className="m-4 flex min-h-0 flex-1 flex-col">
 					<Card className="flex min-h-0 flex-1 flex-col overflow-auto p-4">
 						{currentStep ? (
-							isClausesWizardStepName(currentStep) ? (
+							isAgreementTeamsWizardStep(currentStep) ? (
+								<AgreementTeamsStepPanel agreementId={agreementId} />
+							) : isClausesWizardStepName(currentStep) ? (
 								<AgreementClausesStepPanel
 									agreementId={agreementId}
 									clauses={stepDetails?.clauses}
@@ -582,7 +604,7 @@ export default function CreateAgreementDetailsPage() {
 								appearance="filled"
 								status="primary"
 								disabled={
-									steps.length === 0 ||
+									wizardSteps.length === 0 ||
 									patchFieldValuesMutation.isPending ||
 									postLineItemMutation.isPending ||
 									patchLineItemMutation.isPending
