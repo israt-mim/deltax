@@ -63,17 +63,18 @@ const fieldColumnConfigs: ColumnConfig<FieldRow>[] = [
 	},
 	{
 		key: "dataType",
-		name: "D",
-		width: 60,
-		minWidth: 40,
-		maxWidth: 80,
+		name: "Data Type",
+		width: 120,
+		minWidth: 80,
+		maxWidth: 160,
 	},
 	{
 		key: "tags",
 		name: "Tags",
-		width: 120,
-		minWidth: 80,
+		width: 160,
+		minWidth: 120,
 		sortable: true,
+		isSticky: true,
 		cell: ({ getValue }) => {
 			const tags = getValue() as string[];
 			if (!tags?.length) return null;

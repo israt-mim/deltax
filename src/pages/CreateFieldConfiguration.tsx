@@ -165,9 +165,9 @@ const CreateFieldConfiguration = () => {
 	const navigate = useNavigate();
 	const [activeStep, setActiveStep] = useState(0);
 
-	const [name, setName] = useState("test");
-	const [group, setGroup] = useState("testGroup");
-	const [groupTechName, setGroupTechName] = useState("testgroup");
+	const [name, setName] = useState("");
+	const [group, setGroup] = useState("");
+	const [groupTechName, setGroupTechName] = useState("");
 	const [context, setContext] = useState("Global");
 	const [tags, setTags] = useState<string[]>([]);
 	const [tooltip, setTooltip] = useState("");
