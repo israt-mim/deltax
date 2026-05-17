@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import cn from "classnames";
+import { TABLE_EMPTY_CELL_CLASS, TABLE_SHELL_CLASS } from "../../constants/global";
 import { Dropdown } from "antd";
 import type { MenuProps } from "antd";
 import { toast } from "react-toastify";
@@ -247,7 +249,7 @@ export function AgreementLineItemsStepPanel({
 					columns here.
 				</p>
 			) : (
-				<div className="overflow-auto rounded-lg border border-neutral-200 dark:border-black-600">
+				<div className={TABLE_SHELL_CLASS}>
 					<table className="w-full min-w-[640px] border-collapse text-left text-sm">
 						<thead className="bg-neutral-50 dark:bg-black-800">
 							<tr className="border-b border-neutral-200 dark:border-black-600">
@@ -309,7 +311,7 @@ export function AgreementLineItemsStepPanel({
 								<tr className={LINE_ITEM_TR_CLASS}>
 									<td
 										colSpan={headerColCount}
-										className="px-4 py-14 text-center text-sm text-error-600 dark:text-error-400"
+										className={cn(TABLE_EMPTY_CELL_CLASS, "text-sm text-error-600 dark:text-error-400")}
 									>
 										{errorMessage}
 									</td>
@@ -318,7 +320,7 @@ export function AgreementLineItemsStepPanel({
 								<tr className={LINE_ITEM_TR_CLASS}>
 									<td
 										colSpan={headerColCount}
-										className="px-4 py-14 text-center text-sm text-neutral-500 dark:text-neutral-400"
+										className={cn(TABLE_EMPTY_CELL_CLASS, "text-sm text-neutral-500 dark:text-neutral-400")}
 									>
 										No line items yet. Use New Line Item to add one.
 									</td>
@@ -327,7 +329,7 @@ export function AgreementLineItemsStepPanel({
 								<tr className={LINE_ITEM_TR_CLASS}>
 									<td
 										colSpan={headerColCount}
-										className="px-4 py-14 text-center text-sm text-neutral-500 dark:text-neutral-400"
+										className={cn(TABLE_EMPTY_CELL_CLASS, "text-sm text-neutral-500 dark:text-neutral-400")}
 									>
 										No line items match your search.
 									</td>

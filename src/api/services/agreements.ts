@@ -1,4 +1,4 @@
-import { ApiError, del, get, patch, post } from "../client/http";
+import { ApiError, del, get, patch, post, request } from "../client/http";
 import { buildQueryString } from "../client/queryString";
 import type { ListResponse } from "../types/list";
 import { isMongoObjectIdString } from "./agreementCatalog";
@@ -149,6 +149,168 @@ export async function getAgreementTeams(agreementId: string): Promise<AgreementT
 		throw new ApiError("Agreement not found", 404, body);
 	}
 	return body.data;
+}
+
+export interface AgreementAttachmentUser {
+	_id: string;
+	firstName?: string;
+	lastName?: string;
+	email?: string;
+	username?: string;
+	profilePictureUrl?: string | null;
+}
+
+export type AgreementAttachmentKind = "file" | "folder";
+
+export interface AgreementAttachment {
+	id: string;
+	kind: AgreementAttachmentKind;
+	name: string;
+	parentFolderId?: string | null;
+	tags?: string[];
+	attachmentUrl?: string | null;
+	originalFileName?: string;
+	contentType?: string;
+	size?: number;
+	createdBy?: AgreementAttachmentUser | null;
+	modifiedBy?: AgreementAttachmentUser | null;
+	uploadedBy?: AgreementAttachmentUser | null;
+	createdAt?: string;
+	modifiedAt?: string;
+}
+
+export interface AgreementAttachmentsData {
+	attachments: AgreementAttachment[];
+	parentFolderId?: string | null;
+}
+
+export interface AgreementAttachmentsEnvelope {
+	data: AgreementAttachmentsData | null;
+}
+
+export interface UploadAgreementAttachmentsResponse {
+	message: string;
+	attachments: AgreementAttachment[];
+}
+
+export interface CreateAgreementAttachmentFolderBody {
+	name: string;
+	tags?: string[];
+	parentFolderId?: string | null;
+}
+
+export interface CreateAgreementAttachmentFolderResponse {
+	message: string;
+	attachment: AgreementAttachment;
+}
+
+export interface UpdateAgreementAttachmentBody {
+	name?: string;
+	tags?: string[];
+}
+
+export interface UpdateAgreementAttachmentResponse {
+	message: string;
+	attachment: AgreementAttachment;
+}
+
+/** GET /api/agreements/:id/attachments */
+export async function getAgreementAttachments(
+	agreementId: string,
+	params?: { parentFolderId?: string | null }
+): Promise<AgreementAttachmentsData> {
+	const qs =
+		params?.parentFolderId != null && params.parentFolderId !== ""
+			? `?parentFolderId=${encodeURIComponent(params.parentFolderId)}`
+			: "";
+	const body = await get<AgreementAttachmentsEnvelope>(
+		`/api/agreements/${encodeURIComponent(agreementId)}/attachments${qs}`
+	);
+	if (!body.data) {
+		throw new ApiError("Agreement not found", 404, body);
+	}
+	return body.data;
+}
+
+/** POST /api/agreements/:id/attachments/folders */
+export async function createAgreementAttachmentFolder(
+	agreementId: string,
+	body: CreateAgreementAttachmentFolderBody
+): Promise<AgreementAttachment> {
+	const res = await post<CreateAgreementAttachmentFolderResponse>(
+		`/api/agreements/${encodeURIComponent(agreementId)}/attachments/folders`,
+		body
+	);
+	return res.attachment;
+}
+
+/** POST /api/agreements/:id/attachments/upload — multipart field `files` (multiple). */
+export async function uploadAgreementAttachments(
+	agreementId: string,
+	files: File[],
+	options?: { parentFolderId?: string | null; tags?: string[] }
+): Promise<AgreementAttachment[]> {
+	const formData = new FormData();
+	for (const file of files) {
+		formData.append("files", file);
+	}
+	if (options?.parentFolderId) {
+		formData.append("parentFolderId", options.parentFolderId);
+	}
+	if (options?.tags?.length) {
+		formData.append("tags", JSON.stringify(options.tags));
+	}
+	const res = await request<UploadAgreementAttachmentsResponse>(
+		"POST",
+		`/api/agreements/${encodeURIComponent(agreementId)}/attachments/upload`,
+		{ body: formData }
+	);
+	return res.attachments;
+}
+
+/** POST /api/agreements/:id/attachments — single file (`file` field), backward compatible. */
+export async function uploadAgreementAttachment(
+	agreementId: string,
+	file: File,
+	options?: { name?: string; parentFolderId?: string | null }
+): Promise<AgreementAttachment> {
+	const formData = new FormData();
+	formData.append("file", file);
+	if (options?.name?.trim()) {
+		formData.append("name", options.name.trim());
+	}
+	if (options?.parentFolderId) {
+		formData.append("parentFolderId", options.parentFolderId);
+	}
+	const res = await request<UploadAgreementAttachmentsResponse>(
+		"POST",
+		`/api/agreements/${encodeURIComponent(agreementId)}/attachments`,
+		{ body: formData }
+	);
+	return res.attachments[0];
+}
+
+/** PATCH /api/agreements/:id/attachments/:attachmentId — rename display name. */
+export async function updateAgreementAttachment(
+	agreementId: string,
+	attachmentId: string,
+	body: UpdateAgreementAttachmentBody
+): Promise<AgreementAttachment> {
+	const res = await patch<UpdateAgreementAttachmentResponse>(
+		`/api/agreements/${encodeURIComponent(agreementId)}/attachments/${encodeURIComponent(attachmentId)}`,
+		body
+	);
+	return res.attachment;
+}
+
+/** DELETE /api/agreements/:id/attachments/:attachmentId */
+export async function deleteAgreementAttachment(
+	agreementId: string,
+	attachmentId: string
+): Promise<{ message: string }> {
+	return del<{ message: string }>(
+		`/api/agreements/${encodeURIComponent(agreementId)}/attachments/${encodeURIComponent(attachmentId)}`
+	);
 }
 
 /** PATCH /api/agreements/:id/teams/:teamId/members — add/remove members for one agreement team. */
@@ -302,6 +464,7 @@ export function agreementTabKeyFromStep(step: {
 	const id = step.id?.trim() ?? "";
 	if (id === "__agreement-dashboard__") return "dashboard";
 	if (id === "__agreement-teams__") return "teams";
+	if (id === "__agreement-attachments__") return "attachments";
 	const fromCatalog = slugStepName(step.catalogStepName);
 	if (fromCatalog) return fromCatalog;
 	return slugStepName(step.name);
@@ -318,6 +481,7 @@ export function buildAgreementTabDescriptors(
 	options?: {
 		dashboardStep?: AgreementDocumentStep;
 		teamsStep?: AgreementDocumentStep;
+		attachmentsStep?: AgreementDocumentStep;
 	}
 ): AgreementTabDescriptor[] {
 	const dashboardStep = options?.dashboardStep ?? {
@@ -330,7 +494,12 @@ export function buildAgreementTabDescriptors(
 		name: "Teams",
 		catalogStepName: "Teams",
 	};
-	const allSteps = [dashboardStep, ...steps, teamsStep];
+	const attachmentsStep = options?.attachmentsStep ?? {
+		id: "__agreement-attachments__",
+		name: "Attachments",
+		catalogStepName: "Attachments",
+	};
+	const allSteps = [dashboardStep, ...steps, teamsStep, attachmentsStep];
 	const used = new Set<string>();
 
 	return allSteps.map((step, index) => {
@@ -598,6 +767,84 @@ export async function patchAgreementClauses(
 		`/api/agreements/${encodeURIComponent(agreementId)}/clauses`,
 		body
 	);
+}
+
+export interface AgreementClausesListParams {
+	page?: number;
+	limit?: number;
+	sort?: string;
+	search?: string;
+	q?: string;
+}
+
+function normalizeAgreementClausesListResponse(body: unknown): ListResponse<AgreementClauseBrief> {
+	if (
+		body &&
+		typeof body === "object" &&
+		"pagination" in body &&
+		Array.isArray((body as ListResponse<AgreementClauseBrief>).data)
+	) {
+		return body as ListResponse<AgreementClauseBrief>;
+	}
+	if (body && typeof body === "object" && "status" in body && "data" in body) {
+		const envelope = body as { status?: string; data?: unknown; message?: string };
+		const d = envelope.data;
+		if (d && typeof d === "object") {
+			const record = d as Record<string, unknown>;
+			if (Array.isArray(record.data) && record.pagination && typeof record.pagination === "object") {
+				return {
+					data: record.data as AgreementClauseBrief[],
+					pagination: record.pagination as ListResponse<AgreementClauseBrief>["pagination"],
+				};
+			}
+			if (Array.isArray(record.clauses) && record.pagination && typeof record.pagination === "object") {
+				return {
+					data: record.clauses as AgreementClauseBrief[],
+					pagination: record.pagination as ListResponse<AgreementClauseBrief>["pagination"],
+				};
+			}
+		}
+		const msg =
+			typeof envelope.message === "string" && envelope.message.trim()
+				? envelope.message.trim()
+				: "Could not load agreement clauses.";
+		throw new ApiError(msg, 400, body);
+	}
+	throw new ApiError("Could not load agreement clauses.", 400, body);
+}
+
+/** GET /api/agreements/:id/clauses — paginated clauses attached to this agreement. */
+export async function listAgreementClauses(
+	agreementId: string,
+	params: AgreementClausesListParams = {}
+): Promise<ListResponse<AgreementClauseBrief>> {
+	const qs = buildQueryString({
+		page: params.page,
+		limit: params.limit,
+		sort: params.sort?.trim(),
+		search: params.search?.trim(),
+		q: params.q?.trim(),
+	});
+	const body = await get<unknown>(
+		`/api/agreements/${encodeURIComponent(agreementId)}/clauses${qs}`
+	);
+	return normalizeAgreementClausesListResponse(body);
+}
+
+/** Walks paginated clause list until all attached clause ids are collected. */
+export async function fetchAllAgreementClauseIds(agreementId: string): Promise<Set<string>> {
+	const ids = new Set<string>();
+	let page = 1;
+	for (;;) {
+		const res = await listAgreementClauses(agreementId, { page, limit: 100, sort: "-createdAt" });
+		for (const clause of res.data) {
+			const id = clause.id?.trim();
+			if (id) ids.add(id);
+		}
+		if (!res.pagination.hasNextPage) break;
+		page += 1;
+	}
+	return ids;
 }
 
 export interface PostAgreementLineItemBody {

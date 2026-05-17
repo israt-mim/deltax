@@ -161,11 +161,43 @@ button:focus-visible {
     @apply text-neutral-400;
   }
 
+  /* App modal — opaque surfaces (light) */
+  .app-modal .ant-modal-mask {
+    background-color: rgba(0, 0, 0, 0.45) !important;
+  }
+
+  .app-modal .ant-modal-container {
+    overflow: hidden;
+    border-radius: 0.75rem;
+    background-color: #ffffff !important;
+    box-shadow:
+      0 12px 40px rgba(0, 0, 0, 0.12),
+      0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+
+  .app-modal .ant-modal-header,
+  .app-modal .ant-modal-body,
+  .app-modal .ant-modal-footer {
+    background-color: #ffffff !important;
+  }
+
+  .app-modal .ant-modal-header {
+    border-bottom: 1px solid #e5e5e5 !important;
+    margin-bottom: 0 !important;
+  }
+
+  .app-modal .ant-modal-footer {
+    border-top: 1px solid #e5e5e5 !important;
+    margin-top: 0 !important;
+  }
+
   /* Ant Design Modal — dark mode */
+  .dark .app-modal .ant-modal-mask,
   .dark .ant-modal-root .ant-modal-mask {
     background-color: rgba(0, 0, 0, 0.65) !important;
   }
 
+  .dark .app-modal .ant-modal-container,
   .dark .ant-modal-root .ant-modal-container,
   .dark .ant-modal-root .ant-modal-content {
     background-color: #141414 !important;
@@ -175,8 +207,17 @@ button:focus-visible {
       0 3px 6px -4px rgba(0, 0, 0, 0.48) !important;
   }
 
+  .dark .app-modal .ant-modal-header,
+  .dark .app-modal .ant-modal-body,
+  .dark .app-modal .ant-modal-footer,
+  .dark .ant-modal-root .ant-modal-header,
+  .dark .ant-modal-root .ant-modal-body,
+  .dark .ant-modal-root .ant-modal-footer {
+    background-color: #141414 !important;
+  }
+
+  .dark .app-modal .ant-modal-header,
   .dark .ant-modal-root .ant-modal-header {
-    background-color: transparent !important;
     color: #f5f5f5 !important;
     border-bottom: 1px solid #262626 !important;
   }
@@ -185,19 +226,22 @@ button:focus-visible {
     color: #f5f5f5 !important;
   }
 
+  .dark .app-modal .ant-modal-body,
   .dark .ant-modal-root .ant-modal-body {
     color: #d4d4d4 !important;
   }
 
+  .dark .app-modal .ant-modal-footer,
   .dark .ant-modal-root .ant-modal-footer {
-    background-color: transparent !important;
     border-top: 1px solid #262626 !important;
   }
 
+  .dark .app-modal .ant-modal-close,
   .dark .ant-modal-root .ant-modal-close {
     color: #a3a3a3 !important;
   }
 
+  .dark .app-modal .ant-modal-close:hover,
   .dark .ant-modal-root .ant-modal-close:hover {
     color: #f5f5f5 !important;
     background-color: #262626 !important;
@@ -415,5 +459,18 @@ button:focus-visible {
   .infinite-table-checkbox:focus-visible {
     outline: 2px solid var(--color-bluegray-500, theme("colors.primary.500"));
     outline-offset: 2px;
+  }
+
+  .data-table-shell {
+    min-height: 420px;
+    max-height: min(630px, calc(100vh - 240px));
+  }
+
+  .data-table-empty-cell {
+    min-height: 354px;
+    vertical-align: middle;
+    text-align: center;
+    padding-left: 1rem;
+    padding-right: 1rem;
   }
 }

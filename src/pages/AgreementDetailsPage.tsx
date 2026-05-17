@@ -44,6 +44,7 @@ import { AgreementLineItemEditorView } from "./agreementConfiguration/AgreementL
 import { AgreementLineItemsStepPanel } from "./agreementConfiguration/AgreementLineItemsStepPanel";
 import { AgreementStepDetailsForm } from "./agreementConfiguration/AgreementStepDetailsForm";
 import { AgreementTeamsStepPanel } from "./agreementConfiguration/AgreementTeamsStepPanel";
+import { AgreementAttachmentsStepPanel } from "./agreementConfiguration/AgreementAttachmentsStepPanel";
 import {
 	emptyLineItemValuesFromLayout,
 	fieldValuesArrayFromRecord,
@@ -69,6 +70,12 @@ const AGREEMENT_TEAMS_TAB: AgreementDocumentStep = {
 	catalogStepName: "Teams",
 };
 
+const AGREEMENT_ATTACHMENTS_TAB: AgreementDocumentStep = {
+	id: "__agreement-attachments__",
+	name: "Attachments",
+	catalogStepName: "Attachments",
+};
+
 const TAB_QUERY_PARAM = "tab";
 const DASHBOARD_TAB_KEY = "dashboard";
 
@@ -86,6 +93,10 @@ function isAgreementDashboardTab(step: AgreementDocumentStep | null | undefined)
 
 function isAgreementTeamsTab(step: AgreementDocumentStep | null | undefined): boolean {
 	return step?.id === AGREEMENT_TEAMS_TAB.id;
+}
+
+function isAgreementAttachmentsTab(step: AgreementDocumentStep | null | undefined): boolean {
+	return step?.id === AGREEMENT_ATTACHMENTS_TAB.id;
 }
 
 function formatAgreementStatusLabel(status: string): string {
@@ -192,6 +203,7 @@ export default function AgreementDetailsPage() {
 			buildAgreementTabDescriptors(steps, {
 				dashboardStep: AGREEMENT_DASHBOARD_TAB,
 				teamsStep: AGREEMENT_TEAMS_TAB,
+				attachmentsStep: AGREEMENT_ATTACHMENTS_TAB,
 			}),
 		[steps]
 	);
@@ -264,7 +276,9 @@ export default function AgreementDetailsPage() {
 		agreementIdValid &&
 		Boolean(currentStep) &&
 		!isAgreementDashboardTab(currentStep) &&
-		!isAgreementTeamsTab(currentStep);
+		!isAgreementTeamsTab(currentStep) &&
+		!isAgreementAttachmentsTab(currentStep) &&
+		!isClausesWizardStepName(currentStep);
 
 	const stepDetailsQuery = useAgreementStepDetailsQuery({
 		agreementId,
@@ -321,7 +335,13 @@ export default function AgreementDetailsPage() {
 
 	const hasUnsavedChanges = useMemo(() => {
 		if (!isEditMode || stepDetailsLoading || !currentStep || !stepDetails) return false;
-		if (isAgreementDashboardTab(currentStep) || isAgreementTeamsTab(currentStep)) return false;
+		if (
+			isAgreementDashboardTab(currentStep) ||
+			isAgreementTeamsTab(currentStep) ||
+			isAgreementAttachmentsTab(currentStep)
+		) {
+			return false;
+		}
 		if (isClausesWizardStepName(currentStep) || isLineItemsWizardStepName(currentStep)) return false;
 		if (!isAgreementFieldValuesStep(stepDetails)) return false;
 		const baseline = buildInitialFieldValues(stepDetails);
@@ -752,15 +772,10 @@ export default function AgreementDetailsPage() {
 						{currentStep ? (
 							isAgreementTeamsTab(currentStep) ? (
 								<AgreementTeamsStepPanel agreementId={agreementId} readOnly={!isEditMode} />
+							) : isAgreementAttachmentsTab(currentStep) ? (
+								<AgreementAttachmentsStepPanel agreementId={agreementId} readOnly={!isEditMode} />
 							) : isClausesWizardStepName(currentStep) ? (
-								<AgreementClausesStepPanel
-									agreementId={agreementId}
-									clauses={stepDetails?.clauses}
-									loading={stepDetailsLoading}
-									errorMessage={stepDetailsError}
-									onRefresh={refreshStepDetails}
-									readOnly={!isEditMode}
-								/>
+								<AgreementClausesStepPanel agreementId={agreementId} readOnly={!isEditMode} />
 							) : isLineItemsWizardStepName(currentStep) ? (
 								lineItemQuery && isEditMode ? (
 									<AgreementLineItemEditorView

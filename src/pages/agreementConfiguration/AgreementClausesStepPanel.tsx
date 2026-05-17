@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
 import { Dropdown } from "antd";
 import type { MenuProps } from "antd";
 import { toast } from "react-toastify";
@@ -9,24 +10,33 @@ import MoreVertOutlinedIcon from "@mui/icons-material/MoreVertOutlined";
 import { Button } from "../../components/base/Button";
 import { ConfirmModal } from "../../components/base/ConfirmModal";
 import { FloatingBar } from "../../components/base/FloatingBar";
-import { Skeleton } from "../../components/base/Skeleton";
-import { usePatchAgreementClausesMutation, type AgreementClauseBrief } from "../../api";
+import { InfiniteTable } from "../../components/base/InfiniteTable";
+import type { StickyColumnMeta } from "../../hooks/useColumns";
+import {
+	useAgreementAttachedClauseIdsQuery,
+	useAgreementClausesInfiniteList,
+	usePatchAgreementClausesMutation,
+	type AgreementClauseBrief,
+} from "../../api";
 import { formatUserFacingError } from "../../lib/formatUserFacingError";
 import { AddAgreementClausesModal } from "./AddAgreementClausesModal";
 import { ClauseDetailModal } from "./ClauseDetailModal";
 
 export interface AgreementClausesStepPanelProps {
 	agreementId: string;
-	clauses: AgreementClauseBrief[] | undefined;
-	loading: boolean;
-	errorMessage: string | null;
-	onRefresh: () => void;
 	readOnly?: boolean;
 }
 
 function briefId(c: AgreementClauseBrief): string {
 	return (c.id ?? "").trim();
 }
+
+const actionsStickyMeta: StickyColumnMeta = {
+	isSticky: true,
+	stickyRight: 0,
+	isFirstSticky: true,
+	sortable: false,
+};
 
 function ClauseRowMenu({
 	clause,
@@ -46,25 +56,21 @@ function ClauseRowMenu({
 			danger: true,
 		},
 	];
-
 	return (
-		<div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
+		<div data-row-click-ignore className="flex justify-end">
 			<Dropdown
-				trigger={["click"]}
-				classNames={{ root: "actions-dropdown-icon" }}
 				menu={{
 					items,
-					onClick: ({ key, domEvent }) => {
-						domEvent.preventDefault();
-						domEvent.stopPropagation();
+					onClick: ({ key }) => {
 						if (key === "remove") onRemoveRequest(clause);
 					},
 				}}
+				trigger={["click"]}
 			>
 				<button
 					type="button"
+					className="inline-flex items-center justify-center rounded-md p-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-black-700"
 					aria-label="Clause actions"
-					className="flex rounded-md p-1.5 text-neutral-400 transition-colors hover:bg-neutral-100 dark:hover:bg-black-600"
 				>
 					<MoreVertOutlinedIcon sx={{ fontSize: 18 }} />
 				</button>
@@ -78,33 +84,60 @@ type RemovePending =
 	| { mode: "bulk"; ids: string[] }
 	| null;
 
-const CLAUSE_TABLE_SKELETON_ROWS = 6;
-const CLAUSE_TR_CLASS =
-	"border-b border-neutral-100 bg-white dark:border-black-600 dark:bg-black-800";
-const CLAUSE_TD_CLASS = "px-4 py-2.5 align-middle";
+function clauseStatusCell(c: AgreementClauseBrief) {
+	if (c.isActive === true) {
+		return (
+			<span className="rounded bg-success-100 px-2 py-0.5 text-xs font-medium text-success-700 dark:bg-success-900 dark:text-success-300">
+				Active
+			</span>
+		);
+	}
+	if (c.isActive === false) {
+		return (
+			<span className="rounded bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-600 dark:bg-black-600 dark:text-neutral-300">
+				Inactive
+			</span>
+		);
+	}
+	return <span className="text-neutral-400">—</span>;
+}
 
-export function AgreementClausesStepPanel({
-	agreementId,
-	clauses,
-	loading,
-	errorMessage,
-	onRefresh,
-	readOnly = false,
-}: AgreementClausesStepPanelProps) {
+export function AgreementClausesStepPanel({ agreementId, readOnly = false }: AgreementClausesStepPanelProps) {
 	const patchMutation = usePatchAgreementClausesMutation();
-	const [tableSearch, setTableSearch] = useState("");
+	const [searchInput, setSearchInput] = useState("");
+	const [debouncedSearch, setDebouncedSearch] = useState("");
 	const [addModalOpen, setAddModalOpen] = useState(false);
 	const [checkedIds, setCheckedIds] = useState<Set<string>>(() => new Set());
 	const [removePending, setRemovePending] = useState<RemovePending>(null);
 	const [viewClauseId, setViewClauseId] = useState<string | null>(null);
 	const [viewClauseBrief, setViewClauseBrief] = useState<AgreementClauseBrief | null>(null);
-	const selectAllRef = useRef<HTMLInputElement>(null);
 
 	const showSelection = !readOnly;
 	const showActions = !readOnly;
-	const dataColCount = 5;
-	const extraCols = (showSelection ? 1 : 0) + (showActions ? 1 : 0);
-	const colCount = dataColCount + extraCols;
+
+	useEffect(() => {
+		const t = window.setTimeout(() => setDebouncedSearch(searchInput.trim()), 350);
+		return () => window.clearTimeout(t);
+	}, [searchInput]);
+
+	const listQuery = useAgreementClausesInfiniteList({
+		agreementId,
+		search: debouncedSearch || undefined,
+		sort: "-createdAt",
+		limit: 25,
+	});
+
+	const attachedIdsQuery = useAgreementAttachedClauseIdsQuery({ agreementId });
+
+	const rows = useMemo(
+		() => listQuery.data?.pages.flatMap((p) => p.data) ?? [],
+		[listQuery.data?.pages]
+	);
+
+	const errorMessage = useMemo(() => {
+		if (!listQuery.isError || !listQuery.error) return null;
+		return formatUserFacingError(listQuery.error, "Could not load agreement clauses.");
+	}, [listQuery.error, listQuery.isError]);
 
 	const openClauseDetail = useCallback((clause: AgreementClauseBrief) => {
 		const id = briefId(clause);
@@ -118,45 +151,21 @@ export function AgreementClausesStepPanel({
 		setViewClauseBrief(null);
 	}, []);
 
-	const attachedIds = useMemo(() => {
-		const s = new Set<string>();
-		for (const c of clauses ?? []) {
-			const id = briefId(c);
-			if (id) s.add(id);
+	const attachedIds = attachedIdsQuery.data ?? new Set<string>();
+
+	const loadMore = useCallback(() => {
+		if (listQuery.hasNextPage && !listQuery.isFetchingNextPage) {
+			void listQuery.fetchNextPage();
 		}
-		return s;
-	}, [clauses]);
+	}, [listQuery.hasNextPage, listQuery.isFetchingNextPage, listQuery.fetchNextPage]);
 
-	const filteredClauses = useMemo(() => {
-		const list = clauses ?? [];
-		const q = tableSearch.trim().toLowerCase();
-		if (!q) return list;
-		return list.filter((c) => {
-			const hay = [c.displayId, c.title, c.category, briefId(c)].filter(Boolean).join(" ").toLowerCase();
-			return hay.includes(q);
-		});
-	}, [clauses, tableSearch]);
-
-	const filteredRowIds = useMemo(
-		() => filteredClauses.map((c) => briefId(c)).filter(Boolean),
-		[filteredClauses]
-	);
-	const allFilteredSelected =
-		filteredRowIds.length > 0 && filteredRowIds.every((id) => checkedIds.has(id));
-	const someFilteredSelected = filteredRowIds.some((id) => checkedIds.has(id));
+	const refreshClauses = useCallback(() => {
+		void listQuery.refetch();
+		void attachedIdsQuery.refetch();
+	}, [attachedIdsQuery, listQuery]);
 
 	useEffect(() => {
-		const el = selectAllRef.current;
-		if (!el) return;
-		el.indeterminate = someFilteredSelected && !allFilteredSelected;
-	}, [someFilteredSelected, allFilteredSelected]);
-
-	useEffect(() => {
-		const valid = new Set(
-			(clauses ?? [])
-				.map((c) => briefId(c))
-				.filter(Boolean)
-		);
+		const valid = attachedIds;
 		setCheckedIds((prev) => {
 			const next = new Set<string>();
 			for (const id of prev) {
@@ -164,20 +173,7 @@ export function AgreementClausesStepPanel({
 			}
 			return next.size === prev.size && [...prev].every((id) => next.has(id)) ? prev : next;
 		});
-	}, [clauses]);
-
-	const toggleSelectAllFiltered = useCallback(() => {
-		setCheckedIds((prev) => {
-			if (allFilteredSelected) {
-				const next = new Set(prev);
-				for (const id of filteredRowIds) next.delete(id);
-				return next;
-			}
-			const next = new Set(prev);
-			for (const id of filteredRowIds) next.add(id);
-			return next;
-		});
-	}, [allFilteredSelected, filteredRowIds]);
+	}, [attachedIds]);
 
 	const clearSelection = useCallback(() => {
 		setCheckedIds(new Set());
@@ -203,11 +199,99 @@ export function AgreementClausesStepPanel({
 				for (const id of ids) next.delete(id);
 				return next;
 			});
-			onRefresh();
+			refreshClauses();
 		} catch (e) {
 			toast.error(formatUserFacingError(e, "Could not remove clause(s)."));
 		}
-	}, [agreementId, onRefresh, patchMutation, removePending]);
+	}, [agreementId, patchMutation, refreshClauses, removePending]);
+
+	const columns = useMemo((): ColumnDef<AgreementClauseBrief, unknown>[] => {
+		const cols: ColumnDef<AgreementClauseBrief, unknown>[] = [
+			{
+				id: "displayId",
+				accessorFn: (c) => c.displayId?.trim() || briefId(c),
+				header: "Display ID",
+				size: 140,
+				minSize: 100,
+				cell: ({ row }) => (
+					<span className="font-medium text-neutral-900 dark:text-white">
+						{row.original.displayId?.trim() || briefId(row.original) || "—"}
+					</span>
+				),
+			},
+			{
+				id: "title",
+				accessorFn: (c) => c.title,
+				header: "Title",
+				size: 240,
+				minSize: 140,
+				cell: ({ row }) => (
+					<span className="block max-w-[240px] truncate" title={row.original.title}>
+						{row.original.title?.trim() || "—"}
+					</span>
+				),
+			},
+			{
+				id: "category",
+				accessorFn: (c) => c.category,
+				header: "Category",
+				size: 140,
+				minSize: 100,
+				cell: ({ row }) => row.original.category?.trim() || "—",
+			},
+			{
+				id: "language",
+				accessorFn: (c) => c.language,
+				header: "Language",
+				size: 120,
+				minSize: 88,
+				cell: ({ row }) => row.original.language?.trim() || "—",
+			},
+			{
+				id: "status",
+				accessorFn: (c) => c.isActive,
+				header: "Status",
+				size: 108,
+				minSize: 88,
+				enableResizing: false,
+				cell: ({ row }) => clauseStatusCell(row.original),
+			},
+		];
+
+		if (showActions) {
+			cols.push({
+				id: "actions",
+				header: () => <span className="sr-only">Actions</span>,
+				size: 52,
+				minSize: 52,
+				maxSize: 52,
+				enableResizing: false,
+				meta: actionsStickyMeta,
+				cell: ({ row }) => {
+					const id = briefId(row.original);
+					if (!id) return null;
+					return (
+						<ClauseRowMenu
+							clause={row.original}
+							readOnly={readOnly}
+							onRemoveRequest={(clause) => setRemovePending({ mode: "single", clause })}
+						/>
+					);
+				},
+			});
+		}
+
+		return cols;
+	}, [readOnly, showActions]);
+
+	const emptyMessage = useMemo(() => {
+		if (errorMessage) return errorMessage;
+		if (debouncedSearch.trim()) return "No attached clauses match your search.";
+		if (readOnly) return "No clauses on this agreement yet.";
+		return "No clauses on this agreement yet. Use Add to pick clauses from the library.";
+	}, [debouncedSearch, errorMessage, readOnly]);
+
+	const showInitialLoading = listQuery.isPending && rows.length === 0 && !errorMessage;
 
 	return (
 		<div className="flex flex-col gap-4">
@@ -215,8 +299,8 @@ export function AgreementClausesStepPanel({
 				<SearchInput
 					placeholder="Search attached clauses…"
 					aria-label="Search attached clauses"
-					value={tableSearch}
-					onChange={(e) => setTableSearch(e.target.value)}
+					value={searchInput}
+					onChange={(e) => setSearchInput(e.target.value)}
 					className="min-w-[200px] max-w-md flex-1"
 				/>
 				{readOnly ? null : (
@@ -228,7 +312,7 @@ export function AgreementClausesStepPanel({
 			</div>
 
 			<FloatingBar
-				open={!loading && !readOnly && checkedIds.size > 0}
+				open={!showInitialLoading && !readOnly && checkedIds.size > 0}
 				selectedCount={checkedIds.size}
 				onClearSelection={clearSelection}
 				deleteLabel="Remove"
@@ -240,205 +324,33 @@ export function AgreementClausesStepPanel({
 				}}
 			/>
 
-			<div className="overflow-auto rounded-lg border border-neutral-200 dark:border-black-600">
-				<table className="w-full min-w-[680px] border-collapse text-left text-sm">
-					<thead className="bg-neutral-50 dark:bg-black-800">
-						<tr className="border-b border-neutral-200 dark:border-black-600">
-							{showSelection ? (
-								<th className="w-12 px-3 py-2.5">
-									{!loading && filteredRowIds.length > 0 ? (
-										<input
-											ref={selectAllRef}
-											type="checkbox"
-											checked={allFilteredSelected}
-											onChange={() => toggleSelectAllFiltered()}
-											className="theme-checkbox"
-											aria-label="Select all clauses in this list"
-										/>
-									) : null}
-								</th>
-							) : null}
-							<th className="px-4 py-2.5 text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-								Display ID
-							</th>
-							<th className="px-4 py-2.5 text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-								Title
-							</th>
-							<th className="px-4 py-2.5 text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-								Category
-							</th>
-							<th className="px-4 py-2.5 text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-								Language
-							</th>
-							<th className="px-4 py-2.5 text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-								Status
-							</th>
-							{showActions ? (
-								<th className="w-12 px-3 py-2.5 text-right text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-									<span className="sr-only">Actions</span>
-								</th>
-							) : null}
-						</tr>
-					</thead>
-					<tbody>
-						{loading ? (
-							Array.from({ length: CLAUSE_TABLE_SKELETON_ROWS }).map((_, ri) => (
-								<tr key={`sk-${ri}`} className={CLAUSE_TR_CLASS} aria-hidden>
-									{showSelection ? (
-										<td className="px-3 py-2.5">
-											<Skeleton className="h-4 w-4" />
-										</td>
-									) : null}
-									<td className={CLAUSE_TD_CLASS}>
-										<Skeleton className="h-4 w-24" />
-									</td>
-									<td className={CLAUSE_TD_CLASS}>
-										<Skeleton className="h-4 w-[85%] max-w-[200px]" />
-									</td>
-									<td className={CLAUSE_TD_CLASS}>
-										<Skeleton className="h-4 w-20" />
-									</td>
-									<td className={CLAUSE_TD_CLASS}>
-										<Skeleton className="h-4 w-16" />
-									</td>
-									<td className={CLAUSE_TD_CLASS}>
-										<Skeleton className="h-5 w-14 rounded-full" />
-									</td>
-									{showActions ? (
-										<td className="px-3 py-2.5">
-											<Skeleton className="ml-auto h-4 w-4" />
-										</td>
-									) : null}
-								</tr>
-							))
-						) : errorMessage ? (
-							<tr className={CLAUSE_TR_CLASS}>
-								<td
-									colSpan={colCount}
-									className="px-4 py-12 text-center text-sm text-error-600 dark:text-error-400"
-								>
-									{errorMessage}
-								</td>
-							</tr>
-						) : filteredClauses.length === 0 ? (
-							<tr className="border-b border-neutral-100 bg-white dark:border-black-600 dark:bg-black-800">
-								<td
-									colSpan={colCount}
-									className="px-4 py-12 text-center text-sm text-neutral-500 dark:text-neutral-400"
-								>
-									{tableSearch.trim()
-										? "No attached clauses match your search."
-										: readOnly
-											? "No clauses on this agreement yet."
-											: "No clauses on this agreement yet. Use Add to pick clauses from the library."}
-								</td>
-							</tr>
-						) : (
-							filteredClauses.map((c) => {
-								const id = briefId(c);
-								const canOpenDetail = Boolean(id);
-								return (
-									<tr
-										key={id || c.displayId}
-										role={canOpenDetail ? "button" : undefined}
-										tabIndex={canOpenDetail ? 0 : undefined}
-										className={
-											canOpenDetail
-												? "cursor-pointer border-b border-neutral-100 bg-white hover:bg-neutral-50 dark:border-black-600 dark:bg-black-800 dark:hover:bg-black-700/50"
-												: "border-b border-neutral-100 bg-white dark:border-black-600 dark:bg-black-800"
-										}
-										onClick={canOpenDetail ? () => openClauseDetail(c) : undefined}
-										onKeyDown={
-											canOpenDetail
-												? (e) => {
-														if (e.key === "Enter" || e.key === " ") {
-															e.preventDefault();
-															openClauseDetail(c);
-														}
-													}
-												: undefined
-										}
-									>
-										{showSelection ? (
-											<td
-												className="px-3 py-2.5 align-middle"
-												onClick={(e) => e.stopPropagation()}
-												onKeyDown={(e) => e.stopPropagation()}
-											>
-												{id ? (
-													<input
-														type="checkbox"
-														checked={checkedIds.has(id)}
-														onChange={() => {
-															setCheckedIds((prev) => {
-																const next = new Set(prev);
-																if (next.has(id)) next.delete(id);
-																else next.add(id);
-																return next;
-															});
-														}}
-														className="theme-checkbox"
-														aria-label={`Select clause ${c.displayId?.trim() || c.title?.trim() || id}`}
-													/>
-												) : (
-													<span className="inline-block w-4" aria-hidden />
-												)}
-											</td>
-										) : null}
-										<td className="whitespace-nowrap px-4 py-2.5 font-medium text-neutral-900 dark:text-white">
-											{c.displayId?.trim() || id || "—"}
-										</td>
-										<td className="max-w-xs truncate px-4 py-2.5 text-neutral-700 dark:text-neutral-300" title={c.title}>
-											{c.title?.trim() || "—"}
-										</td>
-										<td className="whitespace-nowrap px-4 py-2.5 text-neutral-600 dark:text-neutral-400">
-											{c.category?.trim() || "—"}
-										</td>
-										<td className="whitespace-nowrap px-4 py-2.5 text-neutral-600 dark:text-neutral-400">
-											{c.language?.trim() || "—"}
-										</td>
-										<td className="px-4 py-2.5">
-											{c.isActive === true ? (
-												<span className="rounded bg-success-100 px-2 py-0.5 text-xs font-medium text-success-700 dark:bg-success-900 dark:text-success-300">
-													Active
-												</span>
-											) : c.isActive === false ? (
-												<span className="rounded bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-600 dark:bg-black-600 dark:text-neutral-300">
-													Inactive
-												</span>
-											) : (
-												<span className="text-neutral-400">—</span>
-											)}
-										</td>
-										{showActions ? (
-											<td
-												className="px-3 py-2.5 align-middle"
-												onClick={(e) => e.stopPropagation()}
-												onKeyDown={(e) => e.stopPropagation()}
-											>
-												{id ? (
-													<ClauseRowMenu
-														clause={c}
-														readOnly={readOnly}
-														onRemoveRequest={(row) => setRemovePending({ mode: "single", clause: row })}
-													/>
-												) : null}
-											</td>
-										) : null}
-									</tr>
-								);
-							})
-						)}
-					</tbody>
-				</table>
-			</div>
+			<InfiniteTable
+				data={errorMessage ? [] : rows}
+				columns={columns}
+				onLoadMore={loadMore}
+				isLoading={listQuery.isFetchingNextPage}
+				isInitialLoading={showInitialLoading}
+				hasMore={Boolean(listQuery.hasNextPage)}
+				skeletonRowCount={8}
+				emptyMessage={emptyMessage}
+				onRowClick={(row) => openClauseDetail(row)}
+				checkboxConfig={
+					showSelection
+						? {
+								getRowId: briefId,
+								checkedIds,
+								setCheckedIds: setCheckedIds,
+							}
+						: undefined
+				}
+			/>
 
 			<AddAgreementClausesModal
 				open={addModalOpen}
 				onClose={() => setAddModalOpen(false)}
 				agreementId={agreementId}
 				attachedClauseIds={attachedIds}
-				onAdded={onRefresh}
+				onAdded={refreshClauses}
 			/>
 
 			<ClauseDetailModal

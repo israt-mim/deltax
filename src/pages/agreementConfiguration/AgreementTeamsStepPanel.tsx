@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
 import { toast } from "react-toastify";
 import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
@@ -16,6 +17,7 @@ import { Button } from "../../components/base/Button";
 import { UserIdentity } from "../../components/UserIdentity";
 import { ConfirmModal } from "../../components/base/ConfirmModal";
 import { FloatingBar } from "../../components/base/FloatingBar";
+import { InfiniteTable } from "../../components/base/InfiniteTable";
 import { Modal } from "../../components/base/Modal";
 import { AgreementTeamsSkeleton } from "../../components/skeletons";
 import { Typography } from "../../components/base/Typography";
@@ -145,14 +147,39 @@ function AddAgreementTeamMembersModal({
 		wasOpenRef.current = open;
 	}, [currentMemberIds, open]);
 
-	const toggleUser = useCallback((id: string) => {
-		setSelectedIds((prev) => {
-			const next = new Set(prev);
-			if (next.has(id)) next.delete(id);
-			else next.add(id);
-			return next;
-		});
+	const memberColumns = useMemo((): ColumnDef<AgreementTeamUser, unknown>[] => {
+		return [
+			{
+				id: "name",
+				header: "Name",
+				size: 200,
+				minSize: 140,
+				cell: ({ row }) => <UserIdentity user={row.original} />,
+			},
+			{
+				id: "email",
+				accessorFn: (u) => userEmail(u),
+				header: "Email",
+				size: 220,
+				minSize: 160,
+				cell: ({ row }) => userEmail(row.original),
+			},
+			{
+				id: "username",
+				accessorFn: (u) => u.username,
+				header: "Username",
+				size: 140,
+				minSize: 100,
+				cell: ({ row }) => row.original.username?.trim() || "—",
+			},
+		];
 	}, []);
+
+	const loadMoreMembers = useCallback(() => {
+		if (usersQuery.hasNextPage && !usersQuery.isFetchingNextPage) {
+			void usersQuery.fetchNextPage();
+		}
+	}, [usersQuery.hasNextPage, usersQuery.isFetchingNextPage, usersQuery.fetchNextPage]);
 
 	const handleSave = useCallback(async () => {
 		const original = new Set(currentMemberIds);
@@ -210,72 +237,23 @@ function AddAgreementTeamMembersModal({
 					className="max-w-md"
 				/>
 
-				<div className="max-h-[420px] overflow-auto rounded-lg border border-neutral-200 dark:border-black-600">
-					<table className="w-full min-w-[560px] border-collapse text-left text-sm">
-						<thead className="sticky top-0 z-10 bg-neutral-50 dark:bg-black-800">
-							<tr className="border-b border-neutral-200 dark:border-black-600">
-								<th className="w-12 px-3 py-2.5">
-									<span className="sr-only">Select</span>
-								</th>
-								<th className="px-4 py-2.5 text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-									Name
-								</th>
-								<th className="px-4 py-2.5 text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-									Email
-								</th>
-								<th className="px-4 py-2.5 text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-									Username
-								</th>
-							</tr>
-						</thead>
-						<tbody>
-							{candidateUsers.length === 0 ? (
-								<tr className="bg-white dark:bg-black-800">
-									<td colSpan={4} className="px-4 py-10 text-center text-sm text-neutral-500 dark:text-neutral-400">
-										{usersQuery.isPending ? "Loading members..." : "No users found for this team."}
-									</td>
-								</tr>
-							) : (
-								candidateUsers.map((u) => {
-									const id = userId(u);
-									return (
-										<tr key={id} className="border-b border-neutral-100 bg-white dark:border-black-600 dark:bg-black-800">
-											<td className="px-3 py-2.5">
-												<input
-													type="checkbox"
-													checked={selectedIds.has(id)}
-													onChange={() => toggleUser(id)}
-													className="theme-checkbox"
-													aria-label={`Select ${userDisplayName(u)}`}
-												/>
-											</td>
-											<td className="px-4 py-2.5 font-medium text-neutral-900 dark:text-white">
-												<UserIdentity user={u} />
-											</td>
-											<td className="px-4 py-2.5 text-neutral-600 dark:text-neutral-300">{userEmail(u)}</td>
-											<td className="px-4 py-2.5 text-neutral-600 dark:text-neutral-300">{u.username?.trim() || "—"}</td>
-										</tr>
-									);
-								})
-							)}
-						</tbody>
-					</table>
-				</div>
-
-				{usersQuery.hasNextPage ? (
-					<div className="flex justify-center">
-						<Button
-							type="button"
-							size="sm"
-							appearance="outlined"
-							status="secondary-neutral"
-							loading={usersQuery.isFetchingNextPage}
-							onClick={() => void usersQuery.fetchNextPage()}
-						>
-							Load more users
-						</Button>
-					</div>
-				) : null}
+				<InfiniteTable
+					data={candidateUsers}
+					columns={memberColumns}
+					height={420}
+					rowHeight={44}
+					onLoadMore={loadMoreMembers}
+					isLoading={usersQuery.isFetchingNextPage}
+					isInitialLoading={usersQuery.isPending && candidateUsers.length === 0}
+					hasMore={Boolean(usersQuery.hasNextPage)}
+					skeletonRowCount={10}
+					emptyMessage="No users found for this team."
+					checkboxConfig={{
+						getRowId: (u) => userId(u),
+						checkedIds: selectedIds,
+						setCheckedIds: setSelectedIds,
+					}}
+				/>
 			</div>
 		</Modal>
 	);

@@ -19,6 +19,12 @@ import {
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import cn from "classnames";
+import {
+	TABLE_EMPTY_BODY_MIN_HEIGHT_PX,
+	TABLE_EMPTY_CELL_CLASS,
+	TABLE_MAX_HEIGHT_CSS,
+	TABLE_MIN_HEIGHT_PX,
+} from "../../constants/global";
 import { Skeleton } from "./Skeleton";
 import type { StickyColumnMeta } from "../../hooks/useColumns";
 
@@ -26,6 +32,8 @@ export interface InfiniteTableProps<TData> {
 	data: TData[];
 	columns: ColumnDef<TData, unknown>[];
 	height?: number | string;
+	/** Caps scroll area height; defaults to viewport-aware max. */
+	maxHeight?: number | string;
 	rowHeight?: number;
 	onLoadMore?: () => void;
 	isLoading?: boolean;
@@ -125,7 +133,8 @@ function SelectAllCheckboxHeader<TData>({
 export function InfiniteTable<TData>({
 	data,
 	columns: columnsProp,
-	height = 360,
+	height = TABLE_MIN_HEIGHT_PX,
+	maxHeight = TABLE_MAX_HEIGHT_CSS,
 	rowHeight = 40,
 	onLoadMore,
 	isLoading = false,
@@ -248,6 +257,14 @@ export function InfiniteTable<TData>({
 	const { rows } = table.getRowModel();
 	const showEmptyRow = !isInitialLoading && rows.length === 0 && Boolean(emptyMessage);
 
+	const resolvedHeight =
+		typeof height === "number" ? Math.max(height, TABLE_MIN_HEIGHT_PX) : height;
+	const resolvedMaxHeight = maxHeight ?? TABLE_MAX_HEIGHT_CSS;
+	const emptyCellMinHeight =
+		typeof resolvedHeight === "number"
+			? Math.max(resolvedHeight - rowHeight, TABLE_EMPTY_BODY_MIN_HEIGHT_PX)
+			: TABLE_EMPTY_BODY_MIN_HEIGHT_PX;
+
 	const isSkeletonBody = Boolean(isInitialLoading) && data.length === 0;
 	const bodyRowCount = isSkeletonBody ? skeletonRowCount : rows.length;
 
@@ -362,7 +379,11 @@ export function InfiniteTable<TData>({
 				ref={scrollRef}
 				onScroll={handleScroll}
 				className="self-stretch rounded-lg overflow-auto scrollbar-hidden"
-				style={{ height }}
+				style={{
+					height: resolvedHeight,
+					minHeight: TABLE_MIN_HEIGHT_PX,
+					maxHeight: resolvedMaxHeight,
+				}}
 				aria-busy={isSkeletonBody || undefined}
 			>
 				<table
@@ -480,7 +501,11 @@ export function InfiniteTable<TData>({
 									<tr className="bg-white dark:bg-black-800">
 										<td
 											colSpan={headerGroup.headers.length}
-											className="px-4 py-6 text-center text-sm text-neutral-500 dark:text-neutral-400 border-b border-neutral-100 dark:border-black-600"
+											style={{ minHeight: emptyCellMinHeight }}
+											className={cn(
+												TABLE_EMPTY_CELL_CLASS,
+												"border-b border-neutral-100 text-sm text-neutral-500 dark:border-black-600 dark:text-neutral-400"
+											)}
 										>
 											{emptyMessage}
 										</td>

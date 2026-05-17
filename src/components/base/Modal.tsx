@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
+import cn from "classnames";
+import CloseOutlinedIcon from "@mui/icons-material/CloseOutlined";
 import { Modal as antdModal, type ModalProps as AntdModalProps } from "antd";
-
 const AntdModal = antdModal;
 
 export type ModalProps = Omit<AntdModalProps, "title" | "footer" | "children"> & {
@@ -25,18 +26,37 @@ export const Modal = ({
 	maskClosable = true,
 	destroyOnHidden = true,
 	keyboard = true,
+	closable,
 	...rest
-}: ModalProps) => (
-	<AntdModal
-		title={header}
-		footer={footer ?? null}
-		centered={centered}
-		width={width}
-		maskClosable={maskClosable}
-		destroyOnHidden={destroyOnHidden}
-		keyboard={keyboard}
-		{...rest}
-	>
-		{children}
-	</AntdModal>
-);
+}: ModalProps) => {
+	const resolvedClosable =
+		closable === false
+			? false
+			: {
+					...(typeof closable === "object" ? closable : {}),
+					closeIcon: (
+						<CloseOutlinedIcon
+							sx={{ fontSize: 20 }}
+							className="text-neutral-500 dark:text-neutral-400"
+							aria-hidden
+						/>
+					),
+				};
+
+	return (
+		<AntdModal
+			title={<div className="pb-4">{header}</div>}
+			footer={footer != null ? <div className="py-4">{footer}</div> : null}
+			centered={centered}
+			width={width}
+			maskClosable={maskClosable}
+			destroyOnHidden={destroyOnHidden}
+			keyboard={keyboard}
+			rootClassName="app-modal"
+			closable={resolvedClosable}
+			{...rest}
+		>
+			<div className={cn("pt-4", footer != null && "pb-4")}>{children}</div>
+		</AntdModal>
+	);
+};

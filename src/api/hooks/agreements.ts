@@ -12,7 +12,14 @@ import {
 	getAgreementStepDetails,
 	getAgreementSteps,
 	getAgreementTeams,
+	getAgreementAttachments,
+	createAgreementAttachmentFolder,
+	uploadAgreementAttachments,
+	updateAgreementAttachment,
+	deleteAgreementAttachment,
 	isAuthoringOrModificationAgreementCreationStep,
+	fetchAllAgreementClauseIds,
+	listAgreementClauses,
 	listAgreements,
 	patchAgreementClauses,
 	patchAgreementFieldValues,
@@ -156,6 +163,83 @@ export function useAgreementTeamsQuery(options: { agreementId: string | undefine
 	});
 }
 
+export function useAgreementAttachmentsQuery(options: {
+	agreementId: string | undefined;
+	parentFolderId?: string | null;
+	enabled?: boolean;
+}) {
+	const id = options.agreementId?.trim();
+	const parentFolderId = options.parentFolderId ?? null;
+	return useQuery({
+		queryKey: [...queryKeys.agreements.all, "attachments", id, parentFolderId] as const,
+		queryFn: () => getAgreementAttachments(id as string, { parentFolderId }),
+		enabled: Boolean(id) && options.enabled !== false,
+	});
+}
+
+export function useCreateAgreementAttachmentFolderMutation() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (args: {
+			agreementId: string;
+			name: string;
+			tags?: string[];
+			parentFolderId?: string | null;
+		}) =>
+			createAgreementAttachmentFolder(args.agreementId, {
+				name: args.name,
+				tags: args.tags,
+				parentFolderId: args.parentFolderId,
+			}),
+		onSettled: (_data, _err, args) => {
+			void queryClient.invalidateQueries({ queryKey: queryKeys.agreements.all });
+			if (args?.agreementId) {
+				void queryClient.invalidateQueries({
+					queryKey: [...queryKeys.agreements.all, "attachments", args.agreementId],
+				});
+			}
+		},
+	});
+}
+
+export function useUploadAgreementAttachmentMutation() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (args: {
+			agreementId: string;
+			files: File[];
+			parentFolderId?: string | null;
+		}) =>
+			uploadAgreementAttachments(args.agreementId, args.files, {
+				parentFolderId: args.parentFolderId,
+			}),
+		onSettled: (_data, _err, args) => {
+			void queryClient.invalidateQueries({ queryKey: queryKeys.agreements.all });
+			if (args?.agreementId) {
+				void queryClient.invalidateQueries({
+					queryKey: [...queryKeys.agreements.all, "attachments", args.agreementId],
+				});
+			}
+		},
+	});
+}
+
+export function useDeleteAgreementAttachmentMutation() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (args: { agreementId: string; attachmentId: string }) =>
+			deleteAgreementAttachment(args.agreementId, args.attachmentId),
+		onSettled: (_data, _err, args) => {
+			void queryClient.invalidateQueries({ queryKey: queryKeys.agreements.all });
+			if (args?.agreementId) {
+				void queryClient.invalidateQueries({
+					queryKey: [...queryKeys.agreements.all, "attachments", args.agreementId] as const,
+				});
+			}
+		},
+	});
+}
+
 /** Wizard/document steps for one agreement (`GET /api/agreements/:id/steps`). */
 export function useAgreementDocumentStepsQuery(options: {
 	agreementId: string;
@@ -254,6 +338,57 @@ export function usePatchAgreementFieldValuesMutation() {
 	});
 }
 
+const AGREEMENT_CLAUSES_PAGE_SIZE = 25;
+
+export function agreementClausesListQueryKey(
+	agreementId: string,
+	filters: { sort: string; limit: number; search: string }
+) {
+	return [...queryKeys.agreements.all, "clauses", agreementId, filters] as const;
+}
+
+/** Paginated GET /api/agreements/:id/clauses for the agreement Clauses step table. */
+export function useAgreementClausesInfiniteList(options: {
+	agreementId: string;
+	search?: string;
+	sort?: string;
+	limit?: number;
+	enabled?: boolean;
+}) {
+	const agreementId = options.agreementId.trim();
+	const enabled =
+		Boolean(agreementId) && isMongoObjectIdString(agreementId) && options.enabled !== false;
+	const sort = options.sort ?? "-createdAt";
+	const limit = Math.min(options.limit ?? AGREEMENT_CLAUSES_PAGE_SIZE, 100);
+	const search = (options.search ?? "").trim();
+
+	return useInfiniteQuery({
+		queryKey: agreementClausesListQueryKey(agreementId, { sort, limit, search }),
+		queryFn: ({ pageParam }) =>
+			listAgreementClauses(agreementId, {
+				page: pageParam,
+				limit,
+				sort,
+				...(search ? { search } : {}),
+			}),
+		initialPageParam: 1,
+		getNextPageParam: (last) => (last.pagination.hasNextPage ? last.pagination.page + 1 : undefined),
+		enabled,
+	});
+}
+
+/** All clause ids currently on the agreement (for add-clause picker disabled rows). */
+export function useAgreementAttachedClauseIdsQuery(options: { agreementId: string; enabled?: boolean }) {
+	const agreementId = options.agreementId.trim();
+	return useQuery({
+		queryKey: [...queryKeys.agreements.all, "clause-ids", agreementId] as const,
+		queryFn: () => fetchAllAgreementClauseIds(agreementId),
+		enabled:
+			Boolean(agreementId) && isMongoObjectIdString(agreementId) && options.enabled !== false,
+		staleTime: 30_000,
+	});
+}
+
 export function usePatchAgreementClausesMutation() {
 	const queryClient = useQueryClient();
 	return useMutation({
@@ -264,6 +399,12 @@ export function usePatchAgreementClausesMutation() {
 			if (args?.agreementId) {
 				void queryClient.invalidateQueries({
 					queryKey: [...queryKeys.agreements.all, "detail", args.agreementId] as const,
+				});
+				void queryClient.invalidateQueries({
+					queryKey: [...queryKeys.agreements.all, "clauses", args.agreementId],
+				});
+				void queryClient.invalidateQueries({
+					queryKey: [...queryKeys.agreements.all, "clause-ids", args.agreementId],
 				});
 				invalidateAgreementStepDetailsQueries(queryClient, args.agreementId);
 			}

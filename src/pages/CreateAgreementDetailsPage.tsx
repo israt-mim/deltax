@@ -129,7 +129,10 @@ export default function CreateAgreementDetailsPage() {
 	const stepStorageKey = currentStep?.id ?? "";
 
 	const stepDetailsFetchEnabled =
-		agreementIdValid && Boolean(currentStep) && !isAgreementTeamsWizardStep(currentStep);
+		agreementIdValid &&
+		Boolean(currentStep) &&
+		!isAgreementTeamsWizardStep(currentStep) &&
+		!isClausesWizardStepName(currentStep);
 
 	const stepDetailsQuery = useAgreementStepDetailsQuery({
 		agreementId,
@@ -511,13 +514,7 @@ export default function CreateAgreementDetailsPage() {
 							isAgreementTeamsWizardStep(currentStep) ? (
 								<AgreementTeamsStepPanel agreementId={agreementId} />
 							) : isClausesWizardStepName(currentStep) ? (
-								<AgreementClausesStepPanel
-									agreementId={agreementId}
-									clauses={stepDetails?.clauses}
-									loading={stepDetailsLoading}
-									errorMessage={stepDetailsError}
-									onRefresh={refreshStepDetails}
-								/>
+								<AgreementClausesStepPanel agreementId={agreementId} />
 							) : isLineItemsWizardStepName(currentStep) ? (
 								lineItemQuery ? (
 									<AgreementLineItemEditorView
