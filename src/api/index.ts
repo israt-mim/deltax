@@ -208,7 +208,10 @@ export type {
 export {
 	agreementStepDetailsOfQuery,
 	agreementStepEditorHideWizardNav,
+	agreementTabKeyFromStep,
+	buildAgreementTabDescriptors,
 	buildAgreementFieldValuesPatchList,
+	resolveAgreementTabKeyFromUrl,
 	fieldValuesPatchOfParam,
 	bulkDeleteAgreements,
 	createAgreement,
@@ -258,6 +261,7 @@ export type {
 	AgreementStepDetailsField,
 	AgreementStepDetailsMeta,
 	AgreementStepDetailsSection,
+	AgreementTabDescriptor,
 	AgreementWizardFullData,
 	AgreementWizardStepBlock,
 	BulkDeleteAgreementsResponse,

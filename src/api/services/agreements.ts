@@ -291,6 +291,71 @@ function slugStepName(name: string | undefined | null): string {
 	return (name ?? "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
 }
 
+/** Stable URL/tab key for agreement wizard steps (not the step ObjectId). */
+export function agreementTabKeyFromStep(step: {
+	id: string;
+	name: string;
+	catalogStepName?: string | null;
+}): string {
+	const id = step.id?.trim() ?? "";
+	if (id === "__agreement-dashboard__") return "dashboard";
+	if (id === "__agreement-teams__") return "teams";
+	const fromCatalog = slugStepName(step.catalogStepName);
+	if (fromCatalog) return fromCatalog;
+	return slugStepName(step.name);
+}
+
+export type AgreementTabDescriptor = {
+	key: string;
+	step: AgreementDocumentStep;
+};
+
+/** Build tab list with unique slug keys for UI + `?tab=` routing. */
+export function buildAgreementTabDescriptors(
+	steps: AgreementDocumentStep[],
+	options?: {
+		dashboardStep?: AgreementDocumentStep;
+		teamsStep?: AgreementDocumentStep;
+	}
+): AgreementTabDescriptor[] {
+	const dashboardStep = options?.dashboardStep ?? {
+		id: "__agreement-dashboard__",
+		name: "Dashboard",
+		catalogStepName: "Dashboard",
+	};
+	const teamsStep = options?.teamsStep ?? {
+		id: "__agreement-teams__",
+		name: "Teams",
+		catalogStepName: "Teams",
+	};
+	const allSteps = [dashboardStep, ...steps, teamsStep];
+	const used = new Set<string>();
+
+	return allSteps.map((step, index) => {
+		let key = agreementTabKeyFromStep(step);
+		if (!key) key = `step-${index + 1}`;
+		if (used.has(key)) {
+			let suffix = 2;
+			while (used.has(`${key}-${suffix}`)) suffix += 1;
+			key = `${key}-${suffix}`;
+		}
+		used.add(key);
+		return { key, step };
+	});
+}
+
+/** Resolve `?tab=` from slug key or legacy step ObjectId. */
+export function resolveAgreementTabKeyFromUrl(
+	urlTab: string,
+	tabs: AgreementTabDescriptor[]
+): string | null {
+	const trimmed = urlTab.trim();
+	if (!trimmed) return null;
+	if (tabs.some((t) => t.key === trimmed)) return trimmed;
+	const legacyById = tabs.find((t) => t.step.id === trimmed);
+	return legacyById?.key ?? null;
+}
+
 /** True when the loaded step is the Header step (PATCH `of` should be `"header"`). */
 export function isHeaderAgreementStep(
 	details: AgreementStepDetailsData,

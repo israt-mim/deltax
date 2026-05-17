@@ -1,11 +1,14 @@
 /**
  * Loaded after `react-toastify/dist/ReactToastify.css` — colored theme between stock neon and flat/muted.
+ * Info toasts use the app primary scale (`--color-bluegray-*`), updated when the theme picker changes.
  */
 :root {
 	--toastify-color-success: #1f9d5c;
 	--toastify-color-error: #d64545;
 	--toastify-color-warning: #d9a514;
-	--toastify-color-info: #2b7fd4;
+	--toastify-color-info: var(--color-bluegray-600, #2c5572);
+	--toastify-icon-color-info: var(--toastify-color-info);
+	--toastify-color-progress-info: var(--toastify-color-info);
 	--toastify-text-color-success: rgba(255, 255, 255, 0.97);
 	--toastify-text-color-error: rgba(255, 255, 255, 0.97);
 	--toastify-text-color-warning: rgba(28, 22, 6, 0.9);
@@ -17,7 +20,9 @@
 	--toastify-color-success: #26a866;
 	--toastify-color-error: #e05252;
 	--toastify-color-warning: #e3ae1f;
-	--toastify-color-info: #3d8fe8;
+	--toastify-color-info: var(--color-bluegray-500, #326080);
+	--toastify-icon-color-info: var(--toastify-color-info);
+	--toastify-color-progress-info: var(--toastify-color-info);
 	--toastify-text-color-warning: rgba(18, 14, 4, 0.92);
 	--toastify-toast-shadow: 0 6px 22px rgba(0, 0, 0, 0.4);
 }

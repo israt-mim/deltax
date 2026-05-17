@@ -262,6 +262,15 @@ button:focus-visible {
   .dark .ant-tooltip .ant-tooltip-arrow::after {
     background: #262626 !important;
   }
+
+  /* Ant Design Switch — use app primary when checked */
+  .ant-switch.ant-switch-checked {
+    background: var(--color-bluegray-500, #326080) !important;
+  }
+
+  .ant-switch.ant-switch-checked:hover:not(.ant-switch-disabled) {
+    background: var(--color-bluegray-600, #2c5572) !important;
+  }
 }
 
 /* Profile theme settings — match Theme picker and Appearance select height (32px) */

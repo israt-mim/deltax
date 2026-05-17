@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import cn from "classnames";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { Switch } from "antd";
 import { toast } from "react-toastify";
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
@@ -10,7 +10,9 @@ import {
 	ApiError,
 	agreementStepDetailsOfQuery,
 	agreementStepEditorHideWizardNav,
+	buildAgreementTabDescriptors,
 	buildAgreementFieldValuesPatchList,
+	resolveAgreementTabKeyFromUrl,
 	fieldValuesPatchOfParam,
 	getAgreementStepDetails,
 	getAgreementSteps,
@@ -66,6 +68,17 @@ const AGREEMENT_TEAMS_TAB: AgreementDocumentStep = {
 	catalogStepName: "Teams",
 };
 
+const TAB_QUERY_PARAM = "tab";
+const DASHBOARD_TAB_KEY = "dashboard";
+
+function applyTabToSearchParams(params: URLSearchParams, tabKey: string): void {
+	if (tabKey === DASHBOARD_TAB_KEY) {
+		params.delete(TAB_QUERY_PARAM);
+	} else {
+		params.set(TAB_QUERY_PARAM, tabKey);
+	}
+}
+
 function isAgreementDashboardTab(step: AgreementDocumentStep | null | undefined): boolean {
 	return step?.id === AGREEMENT_DASHBOARD_TAB.id;
 }
@@ -100,6 +113,7 @@ function agreementStatusBadgeClass(status: string): string {
 /** `/agreements/:id` — read/edit view of one agreement using tabs for each step. */
 export default function AgreementDetailsPage() {
 	const { id: agreementIdParam } = useParams<{ id: string }>();
+	const [searchParams, setSearchParams] = useSearchParams();
 	const patchFieldValuesMutation = usePatchAgreementFieldValuesMutation();
 	const postLineItemMutation = usePostAgreementLineItemMutation();
 	const patchLineItemMutation = usePatchAgreementLineItemMutation();
@@ -115,8 +129,9 @@ export default function AgreementDetailsPage() {
 	const [steps, setSteps] = useState<AgreementDocumentStep[]>([]);
 	const [stepsLoading, setStepsLoading] = useState(true);
 	const [stepsError, setStepsError] = useState<string | null>(null);
-	const [activeTabKey, setActiveTabKey] = useState<string>("");
-
+	const [activeTabKey, setActiveTabKey] = useState("");
+	const prevAgreementIdRef = useRef(agreementId);
+	const skipUrlTabSyncRef = useRef(false);
 	const [stepDetails, setStepDetails] = useState<AgreementStepDetailsData | null>(null);
 	const [stepDetailsLoading, setStepDetailsLoading] = useState(false);
 	const [stepDetailsError, setStepDetailsError] = useState<string | null>(null);
@@ -133,11 +148,22 @@ export default function AgreementDetailsPage() {
 	}, []);
 
 	useEffect(() => {
+		if (prevAgreementIdRef.current === agreementId) return;
+		prevAgreementIdRef.current = agreementId;
 		setFieldValuesByStepId({});
 		setLineItemQuery(null);
-		setActiveTabKey("");
 		setIsEditMode(false);
 		setPendingTabKey(null);
+		setActiveTabKey("");
+		setSearchParams(
+			(prev) => {
+				const next = new URLSearchParams(prev);
+				next.delete(TAB_QUERY_PARAM);
+				return next;
+			},
+			{ replace: true }
+		);
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- only reset when agreement id changes
 	}, [agreementId]);
 
 	useEffect(() => {
@@ -177,22 +203,76 @@ export default function AgreementDetailsPage() {
 		};
 	}, [agreementId]);
 
-	const tabSteps = useMemo(
-		() => [AGREEMENT_DASHBOARD_TAB, ...steps, AGREEMENT_TEAMS_TAB],
+	const agreementTabs = useMemo(
+		() =>
+			buildAgreementTabDescriptors(steps, {
+				dashboardStep: AGREEMENT_DASHBOARD_TAB,
+				teamsStep: AGREEMENT_TEAMS_TAB,
+			}),
 		[steps]
 	);
 
+	const setActiveTab = useCallback(
+		(key: string) => {
+			if (!key) return;
+			skipUrlTabSyncRef.current = true;
+			setActiveTabKey(key);
+			setSearchParams(
+				(prev) => {
+					const next = new URLSearchParams(prev);
+					applyTabToSearchParams(next, key);
+					return next;
+				},
+				{ replace: true }
+			);
+		},
+		[setSearchParams]
+	);
+
+	/** Hydrate tab from URL when steps load or when the user navigates with back/forward. */
 	useEffect(() => {
-		if (tabSteps.length === 0) return;
-		setActiveTabKey((prev) => {
-			if (prev && tabSteps.some((s) => s.id === prev)) return prev;
-			return tabSteps[0].id;
-		});
-	}, [tabSteps]);
+		if (agreementTabs.length === 0) return;
+		if (skipUrlTabSyncRef.current) {
+			skipUrlTabSyncRef.current = false;
+			return;
+		}
+		const urlTab = searchParams.get(TAB_QUERY_PARAM)?.trim() ?? "";
+		const resolvedKey = urlTab ? resolveAgreementTabKeyFromUrl(urlTab, agreementTabs) : null;
+		if (resolvedKey) {
+			setActiveTabKey((prev) => (prev === resolvedKey ? prev : resolvedKey));
+			const needsUrlSync =
+				resolvedKey === DASHBOARD_TAB_KEY ? urlTab.length > 0 : urlTab !== resolvedKey;
+			if (needsUrlSync) {
+				setSearchParams(
+					(prev) => {
+						const next = new URLSearchParams(prev);
+						applyTabToSearchParams(next, resolvedKey);
+						return next;
+					},
+					{ replace: true }
+				);
+			}
+			return;
+		}
+		const fallback = agreementTabs[0]?.key ?? DASHBOARD_TAB_KEY;
+		setActiveTabKey((prev) =>
+			prev && agreementTabs.some((t) => t.key === prev) ? prev : fallback
+		);
+		if (urlTab) {
+			setSearchParams(
+				(prev) => {
+					const next = new URLSearchParams(prev);
+					next.delete(TAB_QUERY_PARAM);
+					return next;
+				},
+				{ replace: true }
+			);
+		}
+	}, [agreementTabs, searchParams, setSearchParams]);
 
 	const currentStep = useMemo(
-		() => tabSteps.find((s) => s.id === activeTabKey) ?? null,
-		[activeTabKey, tabSteps]
+		() => agreementTabs.find((t) => t.key === activeTabKey)?.step ?? null,
+		[activeTabKey, agreementTabs]
 	);
 	const stepStorageKey = currentStep?.id ?? "";
 
@@ -313,15 +393,15 @@ export default function AgreementDetailsPage() {
 				setPendingTabKey(nextKey);
 				return;
 			}
-			setActiveTabKey(nextKey);
+			setActiveTab(nextKey);
 		},
-		[activeTabKey, hasUnsavedChanges, hideLineItemsWizardNav, isEditMode, stepDetailsLoading]
+		[activeTabKey, hasUnsavedChanges, hideLineItemsWizardNav, isEditMode, setActiveTab, stepDetailsLoading]
 	);
 
 	const pendingTabLabel = useMemo(() => {
 		if (!pendingTabKey) return "";
-		return tabSteps.find((s) => s.id === pendingTabKey)?.name?.trim() || "tab";
-	}, [pendingTabKey, tabSteps]);
+		return agreementTabs.find((t) => t.key === pendingTabKey)?.step.name?.trim() || "tab";
+	}, [agreementTabs, pendingTabKey]);
 
 	const isTabChangeSaving = patchFieldValuesMutation.isPending && pendingTabKey !== null;
 
@@ -331,9 +411,9 @@ export default function AgreementDetailsPage() {
 
 	const completePendingTabChange = useCallback(() => {
 		if (!pendingTabKey) return;
-		setActiveTabKey(pendingTabKey);
+		setActiveTab(pendingTabKey);
 		setPendingTabKey(null);
-	}, [pendingTabKey]);
+	}, [pendingTabKey, setActiveTab]);
 
 	const handleTabSaveAndProceed = useCallback(async () => {
 		if (!pendingTabKey) return;
@@ -451,8 +531,12 @@ export default function AgreementDetailsPage() {
 	}, [agreementId, currentStep?.id, currentStep?.name, lineItemQuery, stepDetailsNonce]);
 
 	const tabItems: TabItem[] = useMemo(
-		() => tabSteps.map((s) => ({ key: s.id, label: s.name?.trim() || "Step" })),
-		[tabSteps]
+		() =>
+			agreementTabs.map((t) => ({
+				key: t.key,
+				label: t.step.name?.trim() || "Step",
+			})),
+		[agreementTabs]
 	);
 
 	const lineItemEditorMode = useMemo<"create" | "edit">(() => {
