@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
@@ -13,6 +13,8 @@ import {
 	type AgreementTeamUser,
 } from "../../api";
 import { Button } from "../../components/base/Button";
+import { ConfirmModal } from "../../components/base/ConfirmModal";
+import { FloatingBar } from "../../components/base/FloatingBar";
 import { Modal } from "../../components/base/Modal";
 import { AgreementTeamsSkeleton } from "../../components/skeletons";
 import { Typography } from "../../components/base/Typography";
@@ -51,6 +53,31 @@ function userDisplayName(user: AgreementTeamUser | null | undefined): string {
 
 function userEmail(user: AgreementTeamUser | null | undefined): string {
 	return user?.email?.trim() || "—";
+}
+
+function memberSelectionKey(teamId: string, memberId: string): string {
+	return `${teamId}::${memberId}`;
+}
+
+function parseMemberSelectionKey(key: string): { teamId: string; memberId: string } | null {
+	const sep = key.indexOf("::");
+	if (sep <= 0) return null;
+	const teamId = key.slice(0, sep).trim();
+	const memberId = key.slice(sep + 2).trim();
+	if (!teamId || !memberId) return null;
+	return { teamId, memberId };
+}
+
+function groupMemberSelectionsByTeam(checkedKeys: Set<string>): Map<string, string[]> {
+	const byTeam = new Map<string, string[]>();
+	for (const key of checkedKeys) {
+		const parsed = parseMemberSelectionKey(key);
+		if (!parsed) continue;
+		const list = byTeam.get(parsed.teamId) ?? [];
+		list.push(parsed.memberId);
+		byTeam.set(parsed.teamId, list);
+	}
+	return byTeam;
 }
 
 function rowToAgreementUser(row: SettingsUserListRow): AgreementTeamUser {
@@ -107,10 +134,13 @@ function AddAgreementTeamMembersModal({
 		return [...byId.values()].sort((a, b) => userDisplayName(a).localeCompare(userDisplayName(b)));
 	}, [availableRows, currentMembers]);
 
+	const wasOpenRef = useRef(false);
 	useEffect(() => {
-		if (!open) return;
-		setSearch("");
-		setSelectedIds(new Set(currentMemberIds));
+		if (open && !wasOpenRef.current) {
+			setSearch("");
+			setSelectedIds(new Set(currentMemberIds));
+		}
+		wasOpenRef.current = open;
 	}, [currentMemberIds, open]);
 
 	const toggleUser = useCallback((id: string) => {
@@ -249,11 +279,53 @@ function AddAgreementTeamMembersModal({
 	);
 }
 
+type RemoveMembersPending =
+	| { mode: "single"; teamId: string; memberId: string }
+	| { mode: "bulk"; memberCount: number }
+	| null;
+
+function TeamMemberSelectAllCheckbox({
+	teamId,
+	memberIds,
+	checkedKeys,
+	onToggleAll,
+}: {
+	teamId: string;
+	memberIds: string[];
+	checkedKeys: Set<string>;
+	onToggleAll: () => void;
+}) {
+	const ref = useRef<HTMLInputElement>(null);
+	const allSelected = memberIds.length > 0 && memberIds.every((id) => checkedKeys.has(memberSelectionKey(teamId, id)));
+	const someSelected = memberIds.some((id) => checkedKeys.has(memberSelectionKey(teamId, id)));
+
+	useEffect(() => {
+		const el = ref.current;
+		if (!el) return;
+		el.indeterminate = someSelected && !allSelected;
+	}, [allSelected, someSelected]);
+
+	if (memberIds.length === 0) return null;
+
+	return (
+		<input
+			ref={ref}
+			type="checkbox"
+			checked={allSelected}
+			onChange={onToggleAll}
+			className="theme-checkbox"
+			aria-label="Select all members in this team"
+		/>
+	);
+}
+
 export function AgreementTeamsStepPanel({ agreementId, readOnly = false }: AgreementTeamsStepPanelProps) {
 	const teamsQuery = useAgreementTeamsQuery({ agreementId, enabled: Boolean(agreementId) });
 	const patchMembersMutation = usePatchAgreementTeamMembersMutation();
 	const [collapsedById, setCollapsedById] = useState<Record<string, boolean>>({});
 	const [addMembersTarget, setAddMembersTarget] = useState<AddMembersTarget>(null);
+	const [checkedKeys, setCheckedKeys] = useState<Set<string>>(() => new Set());
+	const [removePending, setRemovePending] = useState<RemoveMembersPending>(null);
 
 	useEffect(() => {
 		if (!teamsQuery.isError) return;
@@ -263,6 +335,55 @@ export function AgreementTeamsStepPanel({ agreementId, readOnly = false }: Agree
 	}, [agreementId, teamsQuery.error, teamsQuery.isError]);
 
 	const teams = teamsQuery.data?.teams ?? [];
+
+	const validSelectionKeys = useMemo(() => {
+		const keys = new Set<string>();
+		for (const entry of teams) {
+			const teamId = teamRefId(entry);
+			if (!teamId) continue;
+			for (const member of entry.members ?? []) {
+				const memberId = userId(member.user);
+				if (memberId) keys.add(memberSelectionKey(teamId, memberId));
+			}
+		}
+		return keys;
+	}, [teams]);
+
+	useEffect(() => {
+		setCheckedKeys((prev) => {
+			const next = new Set<string>();
+			for (const key of prev) {
+				if (validSelectionKeys.has(key)) next.add(key);
+			}
+			return next.size === prev.size && [...prev].every((key) => next.has(key)) ? prev : next;
+		});
+	}, [validSelectionKeys]);
+
+	const clearSelection = useCallback(() => setCheckedKeys(new Set()), []);
+
+	const toggleMemberSelection = useCallback((teamId: string, memberId: string) => {
+		const key = memberSelectionKey(teamId, memberId);
+		setCheckedKeys((prev) => {
+			const next = new Set(prev);
+			if (next.has(key)) next.delete(key);
+			else next.add(key);
+			return next;
+		});
+	}, []);
+
+	const toggleTeamSelectAll = useCallback((teamId: string, memberIds: string[]) => {
+		setCheckedKeys((prev) => {
+			const keys = memberIds.map((id) => memberSelectionKey(teamId, id));
+			const allSelected = keys.length > 0 && keys.every((k) => prev.has(k));
+			const next = new Set(prev);
+			if (allSelected) {
+				for (const k of keys) next.delete(k);
+			} else {
+				for (const k of keys) next.add(k);
+			}
+			return next;
+		});
+	}, []);
 
 	const updateMembers = useCallback(
 		async (teamId: string, add: string[], remove: string[]) => {
@@ -290,16 +411,28 @@ export function AgreementTeamsStepPanel({ agreementId, readOnly = false }: Agree
 		[addMembersTarget?.teamId, updateMembers]
 	);
 
-	const handleRemoveMember = useCallback(
-		async (teamId: string, memberId: string) => {
-			try {
-				await updateMembers(teamId, [], [memberId]);
-			} catch (e) {
-				toast.error(formatUserFacingError(e, "Could not remove team member."));
+	const handleRemoveConfirm = useCallback(async () => {
+		if (!removePending) return;
+		try {
+			if (removePending.mode === "single") {
+				await updateMembers(removePending.teamId, [], [removePending.memberId]);
+				setCheckedKeys((prev) => {
+					const next = new Set(prev);
+					next.delete(memberSelectionKey(removePending.teamId, removePending.memberId));
+					return next;
+				});
+			} else {
+				const byTeam = groupMemberSelectionsByTeam(checkedKeys);
+				for (const [teamId, memberIds] of byTeam) {
+					await updateMembers(teamId, [], memberIds);
+				}
+				setCheckedKeys(new Set());
 			}
-		},
-		[updateMembers]
-	);
+			setRemovePending(null);
+		} catch (e) {
+			toast.error(formatUserFacingError(e, "Could not remove team member(s)."));
+		}
+	}, [checkedKeys, removePending, updateMembers]);
 
 	if (teamsQuery.isPending) {
 		return <AgreementTeamsSkeleton />;
@@ -323,11 +456,29 @@ export function AgreementTeamsStepPanel({ agreementId, readOnly = false }: Agree
 
 	return (
 		<div className="flex flex-col gap-4">
+			{!readOnly ? (
+				<FloatingBar
+					open={checkedKeys.size > 0}
+					selectedCount={checkedKeys.size}
+					onClearSelection={clearSelection}
+					deleteLabel="Remove"
+					deletePending={patchMembersMutation.isPending}
+					onDelete={() => {
+						if (checkedKeys.size === 0) return;
+						setRemovePending({
+							mode: "bulk",
+							memberCount: checkedKeys.size,
+						});
+					}}
+				/>
+			) : null}
+
 			{teams.map((entry) => {
 				const teamId = teamRefId(entry);
 				const key = entry.id || teamId || teamName(entry);
 				const collapsed = collapsedById[key] === true;
 				const members = (entry.members ?? []).filter((m) => userId(m.user));
+				const teamMemberIds = members.map((m) => userId(m.user)).filter(Boolean);
 				return (
 					<div
 						key={key}
@@ -389,11 +540,11 @@ export function AgreementTeamsStepPanel({ agreementId, readOnly = false }: Agree
 										<tr className="border-b border-neutral-200 dark:border-black-600">
 											{readOnly ? null : (
 												<th className="w-12 px-3 py-2.5">
-													<input
-														type="checkbox"
-														disabled
-														className="theme-checkbox"
-														aria-label={`Select all ${teamName(entry)} members`}
+													<TeamMemberSelectAllCheckbox
+														teamId={teamId}
+														memberIds={teamMemberIds}
+														checkedKeys={checkedKeys}
+														onToggleAll={() => toggleTeamSelectAll(teamId, teamMemberIds)}
 													/>
 												</th>
 											)}
@@ -426,6 +577,7 @@ export function AgreementTeamsStepPanel({ agreementId, readOnly = false }: Agree
 										) : (
 											members.map((member) => {
 												const memberId = userId(member.user);
+												const selectionKey = memberSelectionKey(teamId, memberId);
 												return (
 													<tr
 														key={memberId}
@@ -435,7 +587,8 @@ export function AgreementTeamsStepPanel({ agreementId, readOnly = false }: Agree
 															<td className="px-3 py-2.5">
 																<input
 																	type="checkbox"
-																	disabled
+																	checked={checkedKeys.has(selectionKey)}
+																	onChange={() => toggleMemberSelection(teamId, memberId)}
 																	className="theme-checkbox"
 																	aria-label={`Select ${userDisplayName(member.user)}`}
 																/>
@@ -456,7 +609,9 @@ export function AgreementTeamsStepPanel({ agreementId, readOnly = false }: Agree
 																	type="button"
 																	disabled={!teamId || patchMembersMutation.isPending}
 																	className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-error-600 transition-colors hover:bg-error-50 disabled:pointer-events-none disabled:opacity-50 dark:text-error-400 dark:hover:bg-error-950/30"
-																	onClick={() => void handleRemoveMember(teamId, memberId)}
+																	onClick={() =>
+																		setRemovePending({ mode: "single", teamId, memberId })
+																	}
 																>
 																	<DeleteOutlineOutlinedIcon sx={{ fontSize: 16 }} />
 																	Remove
@@ -484,6 +639,32 @@ export function AgreementTeamsStepPanel({ agreementId, readOnly = false }: Agree
 					onSave={handleSaveMembers}
 				/>
 			)}
+
+			<ConfirmModal
+				open={removePending !== null}
+				onClose={() => setRemovePending(null)}
+				title={
+					removePending?.mode === "bulk"
+						? `Remove ${removePending.memberCount} member${removePending.memberCount === 1 ? "" : "s"}?`
+						: "Remove this team member?"
+				}
+				confirmLabel="Remove"
+				cancelLabel="Cancel"
+				confirmDanger
+				pending={patchMembersMutation.isPending}
+				onConfirm={() => void handleRemoveConfirm()}
+			>
+				{removePending?.mode === "bulk" ? (
+					<p className="mb-0 text-neutral-700 dark:text-neutral-300">
+						{removePending.memberCount} selected member{removePending.memberCount === 1 ? "" : "s"} will be
+						removed from this agreement.
+					</p>
+				) : (
+					<p className="mb-0 text-neutral-700 dark:text-neutral-300">
+						This member will be removed from the agreement team. They are not deleted from the organization.
+					</p>
+				)}
+			</ConfirmModal>
 		</div>
 	);
 }

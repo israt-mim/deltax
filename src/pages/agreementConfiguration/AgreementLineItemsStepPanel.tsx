@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Dropdown } from "antd";
 import type { MenuProps } from "antd";
 import { toast } from "react-toastify";
@@ -11,8 +11,7 @@ import { Button } from "../../components/base/Button";
 import { ConfirmModal } from "../../components/base/ConfirmModal";
 import { FloatingBar } from "../../components/base/FloatingBar";
 import { SearchInput } from "../../components/form-input/SearchInput";
-import { AgreementTableSkeleton } from "../../components/skeletons";
-import { Typography } from "../../components/base/Typography";
+import { Skeleton } from "../../components/base/Skeleton";
 import { formatUserFacingError } from "../../lib/formatUserFacingError";
 import {
 	displayLineItemCell,
@@ -21,6 +20,18 @@ import {
 	isSelectableLineItemRowId,
 	resolveLineItemsTable,
 } from "./agreementLineItemsUtils";
+import type { AgreementLineItemsTableColumn } from "../../api";
+
+const LINE_ITEM_TABLE_SKELETON_ROWS = 6;
+const LINE_ITEM_FALLBACK_COLUMN_COUNT = 4;
+const LINE_ITEM_TR_CLASS =
+	"border-b border-neutral-100 bg-white dark:border-black-600 dark:bg-black-800";
+const LINE_ITEM_TD_CLASS = "px-4 py-2.5 align-middle";
+
+const LOADING_PLACEHOLDER_COLUMNS: AgreementLineItemsTableColumn[] = Array.from(
+	{ length: LINE_ITEM_FALLBACK_COLUMN_COUNT },
+	(_, i) => ({ fieldId: `placeholder-${i}`, label: undefined })
+);
 
 function LineItemRowMenu({
 	rowLabel,
@@ -194,84 +205,135 @@ export function AgreementLineItemsStepPanel({
 	}, [agreementId, deleteMutation, deletePendingIds, onRefresh]);
 
 	const hasLayout = Boolean(details?.sections?.length && columns.length > 0);
-	const dataColCount = Math.max(columns.length, 1);
 	const extraCols = (showSelection ? 1 : 0) + (showActions ? 1 : 0);
-	const colCount = dataColCount + extraCols;
-	const showNoSearchResults = !loading && allRows.length > 0 && filteredRows.length === 0;
-	const skeletonColumns = (columns.length > 0 ? columns.length : 4) + extraCols;
+	const showNoSearchResults = !loading && !errorMessage && allRows.length > 0 && filteredRows.length === 0;
+	const headerColumns = columns.length > 0 ? columns : LOADING_PLACEHOLDER_COLUMNS;
+	const headerColCount = headerColumns.length + extraCols;
+	const usePlaceholderHeaders = loading && columns.length === 0;
 
-	let tableContent: ReactNode;
-	if (loading) {
-		tableContent = <AgreementTableSkeleton columns={skeletonColumns} showToolbar={false} />;
-	} else if (errorMessage) {
-		tableContent = (
-			<Typography size="small" className="text-error-600 dark:text-error-400">
-				{errorMessage}
-			</Typography>
-		);
-	} else if (!hasLayout) {
-		tableContent = (
-			<p className="text-sm text-neutral-500 dark:text-neutral-400">
-				No line item fields are configured for this agreement. Update the agreement configuration to add columns
-				here.
-			</p>
-		);
-	} else {
-		tableContent = (
-			<div className="overflow-auto rounded-lg border border-neutral-200 dark:border-black-600">
-				<table className="w-full min-w-[640px] border-collapse text-left text-sm">
-					<thead className="bg-neutral-50 dark:bg-black-800">
-						<tr className="border-b border-neutral-200 dark:border-black-600">
-							{showSelection ? (
-								<th className="w-12 px-3 py-2.5">
-									{filteredSelectableIds.length > 0 ? (
-										<input
-											ref={selectAllRef}
-											type="checkbox"
-											checked={allFilteredSelected}
-											onChange={() => toggleSelectAllFiltered()}
-											className="theme-checkbox"
-											aria-label="Select all line items in this list"
-										/>
-									) : null}
-								</th>
-							) : null}
-							{columns.map((c) => (
-								<th
-									key={c.fieldId}
-									className="px-4 py-2.5 text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400"
-								>
-									{(c.label ?? c.fieldId).trim() || c.fieldId}
-								</th>
-							))}
-							{showActions ? (
-								<th className="w-12 px-3 py-2.5 text-right text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-									<span className="sr-only">Actions</span>
-								</th>
-							) : null}
-						</tr>
-					</thead>
-					<tbody>
-						{allRows.length === 0 ? (
-							<tr className="border-b border-neutral-100 bg-white dark:border-black-600 dark:bg-black-800">
-								<td
-									colSpan={colCount}
-									className="px-4 py-14 text-center text-sm text-neutral-500 dark:text-neutral-400"
-								>
-									No line items yet. Use New Line Item to add one.
-								</td>
+	return (
+		<div className="flex flex-col gap-4">
+			<div className="flex flex-wrap items-center justify-between gap-3">
+				<SearchInput
+					placeholder="Search line items…"
+					aria-label="Search line items"
+					value={tableSearch}
+					onChange={(e) => setTableSearch(e.target.value)}
+					className="min-w-[200px] max-w-md flex-1"
+				/>
+				{readOnly ? null : (
+					<Button type="button" size="md" status="primary" onClick={onNewClick}>
+						<AddOutlinedIcon sx={{ fontSize: 16 }} />
+						New Line Item
+					</Button>
+				)}
+			</div>
+
+			<FloatingBar
+				open={showSelection && !loading && checkedIds.size > 0}
+				selectedCount={checkedIds.size}
+				onClearSelection={clearSelection}
+				onDelete={() => {
+					const ids = [...checkedIds];
+					if (!ids.length) return;
+					setDeletePendingIds(ids);
+				}}
+				deletePending={isDeleting}
+			/>
+
+			{!loading && !errorMessage && !hasLayout ? (
+				<p className="text-sm text-neutral-500 dark:text-neutral-400">
+					No line item fields are configured for this agreement. Update the agreement configuration to add
+					columns here.
+				</p>
+			) : (
+				<div className="overflow-auto rounded-lg border border-neutral-200 dark:border-black-600">
+					<table className="w-full min-w-[640px] border-collapse text-left text-sm">
+						<thead className="bg-neutral-50 dark:bg-black-800">
+							<tr className="border-b border-neutral-200 dark:border-black-600">
+								{showSelection ? (
+									<th className="w-12 px-3 py-2.5">
+										{!loading && filteredSelectableIds.length > 0 ? (
+											<input
+												ref={selectAllRef}
+												type="checkbox"
+												checked={allFilteredSelected}
+												onChange={() => toggleSelectAllFiltered()}
+												className="theme-checkbox"
+												aria-label="Select all line items in this list"
+											/>
+										) : null}
+									</th>
+								) : null}
+								{headerColumns.map((c) => (
+									<th
+										key={c.fieldId}
+										className="px-4 py-2.5 text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400"
+									>
+										{usePlaceholderHeaders ? (
+											<Skeleton className="h-3 w-20" />
+										) : (
+											(c.label ?? c.fieldId).trim() || c.fieldId
+										)}
+									</th>
+								))}
+								{showActions ? (
+									<th className="w-12 px-3 py-2.5 text-right text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+										<span className="sr-only">Actions</span>
+									</th>
+								) : null}
 							</tr>
-						) : showNoSearchResults ? (
-							<tr className="border-b border-neutral-100 bg-white dark:border-black-600 dark:bg-black-800">
-								<td
-									colSpan={colCount}
-									className="px-4 py-14 text-center text-sm text-neutral-500 dark:text-neutral-400"
-								>
-									No line items match your search.
-								</td>
-							</tr>
-						) : (
-							filteredRows.map((row) => {
+						</thead>
+						<tbody>
+							{loading ? (
+								Array.from({ length: LINE_ITEM_TABLE_SKELETON_ROWS }).map((_, ri) => (
+									<tr key={`sk-${ri}`} className={LINE_ITEM_TR_CLASS} aria-hidden>
+										{showSelection ? (
+											<td className="px-3 py-2.5">
+												<Skeleton className="h-4 w-4" />
+											</td>
+										) : null}
+										{headerColumns.map((c) => (
+											<td key={c.fieldId} className={LINE_ITEM_TD_CLASS}>
+												<Skeleton className="h-4 w-[85%] max-w-[160px]" />
+											</td>
+										))}
+										{showActions ? (
+											<td className="px-3 py-2.5">
+												<Skeleton className="ml-auto h-4 w-4" />
+											</td>
+										) : null}
+									</tr>
+								))
+							) : errorMessage ? (
+								<tr className={LINE_ITEM_TR_CLASS}>
+									<td
+										colSpan={headerColCount}
+										className="px-4 py-14 text-center text-sm text-error-600 dark:text-error-400"
+									>
+										{errorMessage}
+									</td>
+								</tr>
+							) : allRows.length === 0 ? (
+								<tr className={LINE_ITEM_TR_CLASS}>
+									<td
+										colSpan={headerColCount}
+										className="px-4 py-14 text-center text-sm text-neutral-500 dark:text-neutral-400"
+									>
+										No line items yet. Use New Line Item to add one.
+									</td>
+								</tr>
+							) : showNoSearchResults ? (
+								<tr className={LINE_ITEM_TR_CLASS}>
+									<td
+										colSpan={headerColCount}
+										className="px-4 py-14 text-center text-sm text-neutral-500 dark:text-neutral-400"
+									>
+										No line items match your search.
+									</td>
+								</tr>
+							) : (
+								filteredRows.map((row) => {
 								const selectable = isSelectableLineItemRowId(row.id);
 								const rowLabel = columns
 									.map((c) =>
@@ -363,43 +425,10 @@ export function AgreementLineItemsStepPanel({
 								);
 							})
 						)}
-					</tbody>
-				</table>
-			</div>
-		);
-	}
-
-	return (
-		<div className="flex flex-col gap-4">
-			<div className="flex flex-wrap items-center justify-between gap-3">
-				<SearchInput
-					placeholder="Search line items…"
-					aria-label="Search line items"
-					value={tableSearch}
-					onChange={(e) => setTableSearch(e.target.value)}
-					className="min-w-[200px] max-w-md flex-1"
-				/>
-				{readOnly ? null : (
-					<Button type="button" size="md" status="primary" onClick={onNewClick}>
-						<AddOutlinedIcon sx={{ fontSize: 16 }} />
-						New Line Item
-					</Button>
-				)}
-			</div>
-
-			<FloatingBar
-				open={showSelection && !loading && checkedIds.size > 0}
-				selectedCount={checkedIds.size}
-				onClearSelection={clearSelection}
-				onDelete={() => {
-					const ids = [...checkedIds];
-					if (!ids.length) return;
-					setDeletePendingIds(ids);
-				}}
-				deletePending={isDeleting}
-			/>
-
-			{tableContent}
+						</tbody>
+					</table>
+				</div>
+			)}
 
 			<ConfirmModal
 				open={deletePendingIds !== null}

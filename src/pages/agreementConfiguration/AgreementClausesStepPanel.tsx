@@ -9,11 +9,11 @@ import MoreVertOutlinedIcon from "@mui/icons-material/MoreVertOutlined";
 import { Button } from "../../components/base/Button";
 import { ConfirmModal } from "../../components/base/ConfirmModal";
 import { FloatingBar } from "../../components/base/FloatingBar";
-import { AgreementTableSkeleton } from "../../components/skeletons";
-import { Typography } from "../../components/base/Typography";
+import { Skeleton } from "../../components/base/Skeleton";
 import { usePatchAgreementClausesMutation, type AgreementClauseBrief } from "../../api";
 import { formatUserFacingError } from "../../lib/formatUserFacingError";
 import { AddAgreementClausesModal } from "./AddAgreementClausesModal";
+import { ClauseDetailModal } from "./ClauseDetailModal";
 
 export interface AgreementClausesStepPanelProps {
 	agreementId: string;
@@ -78,6 +78,11 @@ type RemovePending =
 	| { mode: "bulk"; ids: string[] }
 	| null;
 
+const CLAUSE_TABLE_SKELETON_ROWS = 6;
+const CLAUSE_TR_CLASS =
+	"border-b border-neutral-100 bg-white dark:border-black-600 dark:bg-black-800";
+const CLAUSE_TD_CLASS = "px-4 py-2.5 align-middle";
+
 export function AgreementClausesStepPanel({
 	agreementId,
 	clauses,
@@ -91,7 +96,27 @@ export function AgreementClausesStepPanel({
 	const [addModalOpen, setAddModalOpen] = useState(false);
 	const [checkedIds, setCheckedIds] = useState<Set<string>>(() => new Set());
 	const [removePending, setRemovePending] = useState<RemovePending>(null);
+	const [viewClauseId, setViewClauseId] = useState<string | null>(null);
+	const [viewClauseBrief, setViewClauseBrief] = useState<AgreementClauseBrief | null>(null);
 	const selectAllRef = useRef<HTMLInputElement>(null);
+
+	const showSelection = !readOnly;
+	const showActions = !readOnly;
+	const dataColCount = 5;
+	const extraCols = (showSelection ? 1 : 0) + (showActions ? 1 : 0);
+	const colCount = dataColCount + extraCols;
+
+	const openClauseDetail = useCallback((clause: AgreementClauseBrief) => {
+		const id = briefId(clause);
+		if (!id) return;
+		setViewClauseBrief(clause);
+		setViewClauseId(id);
+	}, []);
+
+	const closeClauseDetail = useCallback(() => {
+		setViewClauseId(null);
+		setViewClauseBrief(null);
+	}, []);
 
 	const attachedIds = useMemo(() => {
 		const s = new Set<string>();
@@ -215,29 +240,24 @@ export function AgreementClausesStepPanel({
 				}}
 			/>
 
-			{loading ? (
-				<AgreementTableSkeleton columns={7} showToolbar={false} />
-			) : errorMessage ? (
-				<Typography size="small" className="text-error-600 dark:text-error-400">
-					{errorMessage}
-				</Typography>
-			) : (
 			<div className="overflow-auto rounded-lg border border-neutral-200 dark:border-black-600">
 				<table className="w-full min-w-[680px] border-collapse text-left text-sm">
 					<thead className="bg-neutral-50 dark:bg-black-800">
 						<tr className="border-b border-neutral-200 dark:border-black-600">
-							<th className="w-12 px-3 py-2.5">
-								{filteredRowIds.length > 0 ? (
-									<input
-										ref={selectAllRef}
-										type="checkbox"
-										checked={allFilteredSelected}
-										onChange={() => toggleSelectAllFiltered()}
-										className="theme-checkbox"
-										aria-label="Select all clauses in this list"
-									/>
-								) : null}
-							</th>
+							{showSelection ? (
+								<th className="w-12 px-3 py-2.5">
+									{!loading && filteredRowIds.length > 0 ? (
+										<input
+											ref={selectAllRef}
+											type="checkbox"
+											checked={allFilteredSelected}
+											onChange={() => toggleSelectAllFiltered()}
+											className="theme-checkbox"
+											aria-label="Select all clauses in this list"
+										/>
+									) : null}
+								</th>
+							) : null}
 							<th className="px-4 py-2.5 text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
 								Display ID
 							</th>
@@ -253,51 +273,118 @@ export function AgreementClausesStepPanel({
 							<th className="px-4 py-2.5 text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
 								Status
 							</th>
-							<th className="w-12 px-3 py-2.5 text-right text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-								<span className="sr-only">Actions</span>
-							</th>
+							{showActions ? (
+								<th className="w-12 px-3 py-2.5 text-right text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+									<span className="sr-only">Actions</span>
+								</th>
+							) : null}
 						</tr>
 					</thead>
 					<tbody>
-						{filteredClauses.length === 0 ? (
+						{loading ? (
+							Array.from({ length: CLAUSE_TABLE_SKELETON_ROWS }).map((_, ri) => (
+								<tr key={`sk-${ri}`} className={CLAUSE_TR_CLASS} aria-hidden>
+									{showSelection ? (
+										<td className="px-3 py-2.5">
+											<Skeleton className="h-4 w-4" />
+										</td>
+									) : null}
+									<td className={CLAUSE_TD_CLASS}>
+										<Skeleton className="h-4 w-24" />
+									</td>
+									<td className={CLAUSE_TD_CLASS}>
+										<Skeleton className="h-4 w-[85%] max-w-[200px]" />
+									</td>
+									<td className={CLAUSE_TD_CLASS}>
+										<Skeleton className="h-4 w-20" />
+									</td>
+									<td className={CLAUSE_TD_CLASS}>
+										<Skeleton className="h-4 w-16" />
+									</td>
+									<td className={CLAUSE_TD_CLASS}>
+										<Skeleton className="h-5 w-14 rounded-full" />
+									</td>
+									{showActions ? (
+										<td className="px-3 py-2.5">
+											<Skeleton className="ml-auto h-4 w-4" />
+										</td>
+									) : null}
+								</tr>
+							))
+						) : errorMessage ? (
+							<tr className={CLAUSE_TR_CLASS}>
+								<td
+									colSpan={colCount}
+									className="px-4 py-12 text-center text-sm text-error-600 dark:text-error-400"
+								>
+									{errorMessage}
+								</td>
+							</tr>
+						) : filteredClauses.length === 0 ? (
 							<tr className="border-b border-neutral-100 bg-white dark:border-black-600 dark:bg-black-800">
 								<td
-									colSpan={7}
+									colSpan={colCount}
 									className="px-4 py-12 text-center text-sm text-neutral-500 dark:text-neutral-400"
 								>
 									{tableSearch.trim()
 										? "No attached clauses match your search."
-										: "No clauses on this agreement yet. Use Add to pick clauses from the library."}
+										: readOnly
+											? "No clauses on this agreement yet."
+											: "No clauses on this agreement yet. Use Add to pick clauses from the library."}
 								</td>
 							</tr>
 						) : (
 							filteredClauses.map((c) => {
 								const id = briefId(c);
+								const canOpenDetail = Boolean(id);
 								return (
 									<tr
 										key={id || c.displayId}
-										className="border-b border-neutral-100 bg-white hover:bg-neutral-50 dark:border-black-600 dark:bg-black-800 dark:hover:bg-black-700/50"
+										role={canOpenDetail ? "button" : undefined}
+										tabIndex={canOpenDetail ? 0 : undefined}
+										className={
+											canOpenDetail
+												? "cursor-pointer border-b border-neutral-100 bg-white hover:bg-neutral-50 dark:border-black-600 dark:bg-black-800 dark:hover:bg-black-700/50"
+												: "border-b border-neutral-100 bg-white dark:border-black-600 dark:bg-black-800"
+										}
+										onClick={canOpenDetail ? () => openClauseDetail(c) : undefined}
+										onKeyDown={
+											canOpenDetail
+												? (e) => {
+														if (e.key === "Enter" || e.key === " ") {
+															e.preventDefault();
+															openClauseDetail(c);
+														}
+													}
+												: undefined
+										}
 									>
-										<td className="px-3 py-2.5 align-middle">
-											{id ? (
-												<input
-													type="checkbox"
-													checked={checkedIds.has(id)}
-													onChange={() => {
-														setCheckedIds((prev) => {
-															const next = new Set(prev);
-															if (next.has(id)) next.delete(id);
-															else next.add(id);
-															return next;
-														});
-													}}
-													className="theme-checkbox"
-													aria-label={`Select clause ${c.displayId?.trim() || c.title?.trim() || id}`}
-												/>
-											) : (
-												<span className="inline-block w-4" aria-hidden />
-											)}
-										</td>
+										{showSelection ? (
+											<td
+												className="px-3 py-2.5 align-middle"
+												onClick={(e) => e.stopPropagation()}
+												onKeyDown={(e) => e.stopPropagation()}
+											>
+												{id ? (
+													<input
+														type="checkbox"
+														checked={checkedIds.has(id)}
+														onChange={() => {
+															setCheckedIds((prev) => {
+																const next = new Set(prev);
+																if (next.has(id)) next.delete(id);
+																else next.add(id);
+																return next;
+															});
+														}}
+														className="theme-checkbox"
+														aria-label={`Select clause ${c.displayId?.trim() || c.title?.trim() || id}`}
+													/>
+												) : (
+													<span className="inline-block w-4" aria-hidden />
+												)}
+											</td>
+										) : null}
 										<td className="whitespace-nowrap px-4 py-2.5 font-medium text-neutral-900 dark:text-white">
 											{c.displayId?.trim() || id || "—"}
 										</td>
@@ -323,15 +410,21 @@ export function AgreementClausesStepPanel({
 												<span className="text-neutral-400">—</span>
 											)}
 										</td>
-										<td className="px-3 py-2.5 align-middle">
-											{id ? (
-												<ClauseRowMenu
-													clause={c}
-													readOnly={readOnly}
-													onRemoveRequest={(row) => setRemovePending({ mode: "single", clause: row })}
-												/>
-											) : null}
-										</td>
+										{showActions ? (
+											<td
+												className="px-3 py-2.5 align-middle"
+												onClick={(e) => e.stopPropagation()}
+												onKeyDown={(e) => e.stopPropagation()}
+											>
+												{id ? (
+													<ClauseRowMenu
+														clause={c}
+														readOnly={readOnly}
+														onRemoveRequest={(row) => setRemovePending({ mode: "single", clause: row })}
+													/>
+												) : null}
+											</td>
+										) : null}
 									</tr>
 								);
 							})
@@ -339,7 +432,6 @@ export function AgreementClausesStepPanel({
 					</tbody>
 				</table>
 			</div>
-			)}
 
 			<AddAgreementClausesModal
 				open={addModalOpen}
@@ -347,6 +439,13 @@ export function AgreementClausesStepPanel({
 				agreementId={agreementId}
 				attachedClauseIds={attachedIds}
 				onAdded={onRefresh}
+			/>
+
+			<ClauseDetailModal
+				open={viewClauseId !== null}
+				clauseId={viewClauseId}
+				clauseBrief={viewClauseBrief}
+				onClose={closeClauseDetail}
 			/>
 
 			<ConfirmModal

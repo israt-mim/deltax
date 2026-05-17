@@ -458,11 +458,14 @@ export default function AgreementDetailsPage() {
 
 	const cancelEditMode = useCallback(() => {
 		setIsEditMode(false);
-		setLineItemQuery(null);
+		setLineItemQuery((prev) => {
+			const q = prev?.trim();
+			if (!q || q.toLowerCase() === "list") return prev;
+			return null;
+		});
 		setPendingTabKey(null);
 		discardCurrentStepEdits();
-		refreshStepDetails();
-	}, [discardCurrentStepEdits, refreshStepDetails]);
+	}, [discardCurrentStepEdits]);
 
 	const handleSaveEdit = useCallback(async () => {
 		if (hideLineItemsWizardNav) {

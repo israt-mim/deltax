@@ -284,7 +284,7 @@ function StatusPill({ active }: { active: boolean | undefined }) {
 	return null;
 }
 
-function ClauseDetailBody({ detail }: { detail: ClauseDetailApi }) {
+export function ClauseDetailBody({ detail }: { detail: ClauseDetailApi }) {
 	const general = detail.sections?.find((s) => s.name === "general")?.fields?.[0] as ClauseSectionFields | undefined;
 	const gsa = detail.sections?.find((s) => s.name === "gsa")?.fields?.[0] as ClauseSectionFields | undefined;
 	const flow = detail.sections?.find((s) => s.name === "flowdown")?.fields?.[0] as ClauseSectionFields | undefined;
