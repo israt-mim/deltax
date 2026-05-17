@@ -22,6 +22,19 @@ export type ClausesListFilters = Pick<
 	limit?: number;
 };
 
+/** Total clause count from list pagination (`limit: 1`). */
+export function useClausesTotalCount(options: { sort?: string } = {}) {
+	const sort = options.sort ?? "-createdAt";
+	return useQuery({
+		queryKey: [...queryKeys.clauses.all, "total-count", { sort }] as const,
+		queryFn: async () => {
+			const res = await listClauses({ page: 1, limit: 1, sort });
+			return res.pagination.total;
+		},
+		staleTime: 30_000,
+	});
+}
+
 /** Paginated GET /api/clauses for the clauses table. */
 export function useClausesInfiniteList(options: ClausesListFilters = {}) {
 	const sort = options.sort ?? "-createdAt";
@@ -55,10 +68,10 @@ export function useClausesInfiniteList(options: ClausesListFilters = {}) {
 }
 
 export function useClauseDetailQuery(options: { id: string | undefined }) {
-	const id = options.id?.trim();
+	const id = options.id?.trim() ?? "";
 	return useQuery({
 		queryKey: [...queryKeys.clauses.all, "detail", id] as const,
-		queryFn: () => getClauseById(id as string),
+		queryFn: () => getClauseById(id),
 		enabled: Boolean(id),
 	});
 }

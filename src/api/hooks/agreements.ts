@@ -22,6 +22,19 @@ import {
 
 const AGREEMENTS_LIST_PAGE_SIZE = 20;
 
+/** Total agreement count from list pagination (`limit: 1`). */
+export function useAgreementsTotalCount(options: { sort?: string } = {}) {
+	const sort = options.sort ?? "-createdAt";
+	return useQuery({
+		queryKey: [...queryKeys.agreements.all, "total-count", { sort }] as const,
+		queryFn: async () => {
+			const res = await listAgreements({ page: 1, limit: 1, sort });
+			return res.pagination.total;
+		},
+		staleTime: 30_000,
+	});
+}
+
 export type AgreementsListFilters = Pick<
 	AgreementsListParams,
 	| "search"

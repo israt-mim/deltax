@@ -187,7 +187,8 @@ export type {
 	ClausesListParams,
 } from "./services/clauses";
 
-export { useClauseDetailQuery, useClausesInfiniteList } from "./hooks/clauses";
+export { useClauseDetailQuery, useClausesInfiniteList, useClausesTotalCount } from "./hooks/clauses";
+export { useDashboardChartData } from "./hooks/dashboard";
 export type { ClausesListFilters } from "./hooks/clauses";
 
 export { getAgreementDetails } from "./services/agreementDetails";
@@ -278,6 +279,7 @@ export {
 	useAgreementDashboardQuery,
 	useAgreementTeamsQuery,
 	useAgreementsInfiniteList,
+	useAgreementsTotalCount,
 	useBulkDeleteAgreementsMutation,
 	useCreateAgreementMutation,
 	useDeleteAgreementMutation,
