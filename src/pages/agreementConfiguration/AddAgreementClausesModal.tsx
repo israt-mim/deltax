@@ -5,6 +5,7 @@ import { Button } from "../../components/base/Button";
 import { Modal } from "../../components/base/Modal";
 import { useClausesInfiniteList, usePatchAgreementClausesMutation, type ClauseListItem } from "../../api";
 import { formatUserFacingError } from "../../lib/formatUserFacingError";
+import { AgreementTableSkeleton } from "../../components/skeletons";
 
 export interface AddAgreementClausesModalProps {
 	open: boolean;
@@ -136,7 +137,7 @@ export function AddAgreementClausesModal({
 
 				<div className="min-h-0 flex-1 overflow-auto rounded-lg border border-neutral-200 dark:border-black-600">
 					{isInitialLoading ? (
-						<div className="flex items-center justify-center py-16 text-sm text-neutral-500">Loading…</div>
+						<AgreementTableSkeleton rows={8} columns={4} showToolbar={false} />
 					) : rows.length === 0 ? (
 						<div className="py-12 text-center text-sm text-neutral-500 dark:text-neutral-400">
 							No clauses match your search.

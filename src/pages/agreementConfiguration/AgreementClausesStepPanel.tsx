@@ -9,7 +9,7 @@ import MoreVertOutlinedIcon from "@mui/icons-material/MoreVertOutlined";
 import { Button } from "../../components/base/Button";
 import { ConfirmModal } from "../../components/base/ConfirmModal";
 import { FloatingBar } from "../../components/base/FloatingBar";
-import { PageLoader } from "../../components/base/PageLoader";
+import { AgreementTableSkeleton } from "../../components/skeletons";
 import { Typography } from "../../components/base/Typography";
 import { usePatchAgreementClausesMutation, type AgreementClauseBrief } from "../../api";
 import { formatUserFacingError } from "../../lib/formatUserFacingError";
@@ -184,22 +184,6 @@ export function AgreementClausesStepPanel({
 		}
 	}, [agreementId, onRefresh, patchMutation, removePending]);
 
-	if (loading) {
-		return (
-			<div className="flex min-h-[200px] items-center justify-center py-8">
-				<PageLoader mode="embedded" />
-			</div>
-		);
-	}
-
-	if (errorMessage) {
-		return (
-			<Typography size="small" className="text-error-600 dark:text-error-400">
-				{errorMessage}
-			</Typography>
-		);
-	}
-
 	return (
 		<div className="flex flex-col gap-4">
 			<div className="flex flex-wrap items-center justify-between gap-3">
@@ -219,7 +203,7 @@ export function AgreementClausesStepPanel({
 			</div>
 
 			<FloatingBar
-				open={!readOnly && checkedIds.size > 0}
+				open={!loading && !readOnly && checkedIds.size > 0}
 				selectedCount={checkedIds.size}
 				onClearSelection={clearSelection}
 				items={
@@ -238,6 +222,13 @@ export function AgreementClausesStepPanel({
 				}
 			/>
 
+			{loading ? (
+				<AgreementTableSkeleton columns={7} showToolbar={false} />
+			) : errorMessage ? (
+				<Typography size="small" className="text-error-600 dark:text-error-400">
+					{errorMessage}
+				</Typography>
+			) : (
 			<div className="overflow-auto rounded-lg border border-neutral-200 dark:border-black-600">
 				<table className="w-full min-w-[680px] border-collapse text-left text-sm">
 					<thead className="bg-neutral-50 dark:bg-black-800">
@@ -249,7 +240,7 @@ export function AgreementClausesStepPanel({
 										type="checkbox"
 										checked={allFilteredSelected}
 										onChange={() => toggleSelectAllFiltered()}
-										className="h-4 w-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-400 dark:border-black-500"
+										className="theme-checkbox"
 										aria-label="Select all clauses in this list"
 									/>
 								) : null}
@@ -307,7 +298,7 @@ export function AgreementClausesStepPanel({
 															return next;
 														});
 													}}
-													className="h-4 w-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-400 dark:border-black-500"
+													className="theme-checkbox"
 													aria-label={`Select clause ${c.displayId?.trim() || c.title?.trim() || id}`}
 												/>
 											) : (
@@ -355,6 +346,7 @@ export function AgreementClausesStepPanel({
 					</tbody>
 				</table>
 			</div>
+			)}
 
 			<AddAgreementClausesModal
 				open={addModalOpen}

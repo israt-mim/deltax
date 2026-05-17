@@ -333,8 +333,9 @@ button:focus-visible {
   font-size: 18px !important;
 }
 
-/* InfiniteTable — primary fill + white mark (checked / indeterminate); unchecked neutral border */
+/* Bulk / table checkboxes — theme primary fill + white mark (checked / indeterminate) */
 @layer components {
+  .theme-checkbox,
   .infinite-table-checkbox {
     @apply h-4 w-4 shrink-0 cursor-pointer rounded border border-neutral-300 bg-white align-middle dark:border-neutral-600 dark:bg-black-800;
     appearance: none;
@@ -343,24 +344,29 @@ button:focus-visible {
     vertical-align: middle;
   }
 
+  .theme-checkbox:checked,
   .infinite-table-checkbox:checked {
-    @apply border-primary-500 bg-primary-500;
+    border-color: var(--color-bluegray-500, theme("colors.primary.500"));
+    background-color: var(--color-bluegray-500, theme("colors.primary.500"));
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpolyline points='3.5 8.2 6.8 11.5 12.5 4.8' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: center;
     background-size: 11px 11px;
   }
 
+  .theme-checkbox:indeterminate,
   .infinite-table-checkbox:indeterminate {
-    @apply border-primary-500 bg-primary-500;
+    border-color: var(--color-bluegray-500, theme("colors.primary.500"));
+    background-color: var(--color-bluegray-500, theme("colors.primary.500"));
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cline x1='4' y1='8' x2='12' y2='8' stroke='%23ffffff' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: center;
     background-size: 11px 11px;
   }
 
+  .theme-checkbox:focus-visible,
   .infinite-table-checkbox:focus-visible {
-    outline: 2px solid theme("colors.primary.500");
+    outline: 2px solid var(--color-bluegray-500, theme("colors.primary.500"));
     outline-offset: 2px;
   }
 }

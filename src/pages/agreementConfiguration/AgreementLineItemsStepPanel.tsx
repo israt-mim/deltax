@@ -1,9 +1,16 @@
+import { useMemo, useState, type ReactNode } from "react";
 import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
 import type { AgreementStepDetailsData } from "../../api";
 import { Button } from "../../components/base/Button";
-import { PageLoader } from "../../components/base/PageLoader";
+import { SearchInput } from "../../components/form-input/SearchInput";
+import { AgreementTableSkeleton } from "../../components/skeletons";
 import { Typography } from "../../components/base/Typography";
-import { displayLineItemCell, findFieldDefById, resolveLineItemsTable } from "./agreementLineItemsUtils";
+import {
+	displayLineItemCell,
+	filterLineItemTableRows,
+	findFieldDefById,
+	resolveLineItemsTable,
+} from "./agreementLineItemsUtils";
 
 export interface AgreementLineItemsStepPanelProps {
 	details: AgreementStepDetailsData | null;
@@ -22,48 +29,40 @@ export function AgreementLineItemsStepPanel({
 	onNewClick,
 	onRowClick,
 }: AgreementLineItemsStepPanelProps) {
+	const [tableSearch, setTableSearch] = useState("");
 	const table = resolveLineItemsTable(details);
 	const columns = table?.columns ?? [];
+	const allRows = table?.rows ?? [];
 
+	const filteredRows = useMemo(() => {
+		if (!details || columns.length === 0) return allRows;
+		return filterLineItemTableRows(allRows, columns, details, tableSearch);
+	}, [allRows, columns, details, tableSearch]);
+
+	const hasLayout = Boolean(details?.sections?.length && columns.length > 0);
+	const colCount = Math.max(columns.length, 1);
+	const showNoSearchResults = !loading && allRows.length > 0 && filteredRows.length === 0;
+
+	let tableContent: ReactNode;
 	if (loading) {
-		return (
-			<div className="flex min-h-[200px] items-center justify-center py-8">
-				<PageLoader mode="embedded" />
-			</div>
+		tableContent = (
+			<AgreementTableSkeleton columns={columns.length > 0 ? columns.length : 4} showToolbar={false} />
 		);
-	}
-
-	if (errorMessage) {
-		return (
+	} else if (errorMessage) {
+		tableContent = (
 			<Typography size="small" className="text-error-600 dark:text-error-400">
 				{errorMessage}
 			</Typography>
 		);
-	}
-
-	if (!details?.sections?.length || columns.length === 0) {
-		return (
+	} else if (!hasLayout) {
+		tableContent = (
 			<p className="text-sm text-neutral-500 dark:text-neutral-400">
 				No line item fields are configured for this agreement. Update the agreement configuration to add columns
 				here.
 			</p>
 		);
-	}
-
-	const rows = table?.rows ?? [];
-	const colCount = columns.length;
-
-	return (
-		<div className="flex flex-col gap-4">
-			{readOnly ? null : (
-				<div className="flex justify-end">
-					<Button type="button" size="md" status="primary" onClick={onNewClick}>
-						<AddOutlinedIcon sx={{ fontSize: 16 }} />
-						New Line Item
-					</Button>
-				</div>
-			)}
-
+	} else {
+		tableContent = (
 			<div className="overflow-auto rounded-lg border border-neutral-200 dark:border-black-600">
 				<table className="w-full min-w-[640px] border-collapse text-left text-sm">
 					<thead className="bg-neutral-50 dark:bg-black-800">
@@ -79,7 +78,7 @@ export function AgreementLineItemsStepPanel({
 						</tr>
 					</thead>
 					<tbody>
-						{rows.length === 0 ? (
+						{allRows.length === 0 ? (
 							<tr className="border-b border-neutral-100 bg-white dark:border-black-600 dark:bg-black-800">
 								<td
 									colSpan={colCount}
@@ -88,8 +87,17 @@ export function AgreementLineItemsStepPanel({
 									No line items yet. Use New Line Item to add one.
 								</td>
 							</tr>
+						) : showNoSearchResults ? (
+							<tr className="border-b border-neutral-100 bg-white dark:border-black-600 dark:bg-black-800">
+								<td
+									colSpan={colCount}
+									className="px-4 py-14 text-center text-sm text-neutral-500 dark:text-neutral-400"
+								>
+									No line items match your search.
+								</td>
+							</tr>
 						) : (
-							rows.map((row) => (
+							filteredRows.map((row) => (
 								<tr
 									key={row.id}
 									role={readOnly ? undefined : "button"}
@@ -131,6 +139,27 @@ export function AgreementLineItemsStepPanel({
 					</tbody>
 				</table>
 			</div>
+		);
+	}
+
+	return (
+		<div className="flex flex-col gap-4">
+			<div className="flex flex-wrap items-center justify-between gap-3">
+				<SearchInput
+					placeholder="Search line items…"
+					aria-label="Search line items"
+					value={tableSearch}
+					onChange={(e) => setTableSearch(e.target.value)}
+					className="min-w-[200px] max-w-md flex-1"
+				/>
+				{readOnly ? null : (
+					<Button type="button" size="md" status="primary" onClick={onNewClick}>
+						<AddOutlinedIcon sx={{ fontSize: 16 }} />
+						New Line Item
+					</Button>
+				)}
+			</div>
+			{tableContent}
 		</div>
 	);
 }

@@ -8,7 +8,7 @@ import {
 	type AgreementStepDetailsData,
 	type AgreementStepDetailsField,
 } from "../../api";
-import { PageLoader } from "../../components/base/PageLoader";
+import { Skeleton } from "../../components/base/Skeleton";
 import { Typography } from "../../components/base/Typography";
 import { formatUsDateTime } from "../../lib/formatDateTime";
 import { formatUserFacingError } from "../../lib/formatUserFacingError";
@@ -164,9 +164,7 @@ export function AgreementDashboardPanel({
 					</h3>
 				</div>
 				{dashboardLoading ? (
-					<div className="flex items-center justify-center py-8">
-						<PageLoader mode="embedded" />
-					</div>
+					<Skeleton rounded="full" className="h-7 w-20" />
 				) : dashboardError ? (
 					<Typography size="small" className="text-error-600 dark:text-error-400">
 						{dashboardError}
@@ -203,8 +201,13 @@ export function AgreementDashboardPanel({
 				</div>
 
 				{headerLoading ? (
-					<div className="flex items-center justify-center py-8">
-						<PageLoader mode="embedded" />
+					<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+						{Array.from({ length: 6 }).map((_, i) => (
+							<div key={i} className="flex flex-col gap-2">
+								<Skeleton className="h-3 w-28" />
+								<Skeleton className="h-4 w-full" />
+							</div>
+						))}
 					</div>
 				) : headerError ? (
 					<Typography size="small" className="text-error-600 dark:text-error-400">

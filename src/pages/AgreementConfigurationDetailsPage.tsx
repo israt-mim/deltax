@@ -43,7 +43,7 @@ import { Button } from "../components/base/Button";
 import { Card } from "../components/base/Card";
 import { CardMain } from "../components/base/CardMain";
 import { Modal } from "../components/base/Modal";
-import { PageLoader } from "../components/base/PageLoader";
+import { AgreementConfigurationPageSkeleton } from "../components/skeletons";
 import { FormInput } from "../components/form-input/FormInput";
 import { FormMultiSelect } from "../components/form-input/FormMultiSelect";
 import { FormSelect } from "../components/form-input/FormSelect";
@@ -756,11 +756,7 @@ export const AgreementConfigurationDetailsPage = () => {
 	}
 
 	if (configQuery.isPending) {
-		return (
-			<CardMain className="flex min-h-[min(360px,calc(100vh-200px))] flex-1 items-center justify-center">
-				<PageLoader mode="embedded" />
-			</CardMain>
-		);
+		return <AgreementConfigurationPageSkeleton />;
 	}
 
 	const config = configQuery.data;

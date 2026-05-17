@@ -1,16 +1,24 @@
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { queryKeys } from "../queryKeys";
+import { ApiError } from "../client/http";
+import { formatUserFacingError } from "../../lib/formatUserFacingError";
+import { isMongoObjectIdString } from "../services/agreementCatalog";
 import {
+	agreementStepDetailsOfQuery,
 	bulkDeleteAgreements,
 	createAgreement,
 	getAgreementDashboard,
+	getAgreementStepDetails,
+	getAgreementSteps,
 	getAgreementTeams,
+	isAuthoringOrModificationAgreementCreationStep,
 	listAgreements,
 	patchAgreementClauses,
 	patchAgreementFieldValues,
 	patchAgreementLineItem,
 	patchAgreementTeamMembers,
 	postAgreementLineItem,
+	type AgreementDocumentStep,
 	type AgreementsListParams,
 	type CreateAgreementBody,
 	type PatchAgreementClausesBody,
@@ -19,6 +27,45 @@ import {
 	type PatchAgreementTeamMembersBody,
 	type PostAgreementLineItemBody,
 } from "../services/agreements";
+
+export function normalizeAgreementLineItemIdForQuery(
+	lineItemQuery: string | null | undefined
+): string | undefined {
+	const q = lineItemQuery?.trim();
+	if (!q || q.toLowerCase() === "list") return undefined;
+	return q;
+}
+
+export function agreementStepDetailsQueryKey(
+	agreementId: string,
+	of: string,
+	lineItemId?: string
+) {
+	return [
+		...queryKeys.agreements.all,
+		"step-details",
+		agreementId.trim(),
+		of.trim(),
+		lineItemId?.trim() || "list",
+	] as const;
+}
+
+export function formatAgreementStepDetailsQueryError(error: unknown): string | null {
+	if (!error) return null;
+	if (error instanceof ApiError && error.status === 404) {
+		return error.message.trim() || "No layout found for this step.";
+	}
+	return formatUserFacingError(error, "Could not load fields for this step.");
+}
+
+export function invalidateAgreementStepDetailsQueries(
+	queryClient: QueryClient,
+	agreementId: string
+) {
+	void queryClient.invalidateQueries({
+		queryKey: [...queryKeys.agreements.all, "step-details", agreementId.trim()],
+	});
+}
 
 const AGREEMENTS_LIST_PAGE_SIZE = 20;
 
@@ -108,6 +155,55 @@ export function useAgreementTeamsQuery(options: { agreementId: string | undefine
 	});
 }
 
+/** Wizard/document steps for one agreement (`GET /api/agreements/:id/steps`). */
+export function useAgreementDocumentStepsQuery(options: {
+	agreementId: string;
+	enabled?: boolean;
+	/** When true (default), hides Authoring / Modification catalog steps. */
+	hideAuthoringSteps?: boolean;
+}) {
+	const id = options.agreementId.trim();
+	const hideAuthoring = options.hideAuthoringSteps !== false;
+	const canFetch = Boolean(id) && isMongoObjectIdString(id) && options.enabled !== false;
+
+	return useQuery({
+		queryKey: [...queryKeys.agreements.all, "steps", id, { hideAuthoring }] as const,
+		queryFn: async () => {
+			const res = await getAgreementSteps(id);
+			const raw = Array.isArray(res.steps) ? res.steps : [];
+			return hideAuthoring
+				? raw.filter((s) => !isAuthoringOrModificationAgreementCreationStep(s))
+				: raw;
+		},
+		enabled: canFetch,
+	});
+}
+
+/** Step layout + values for one agreement tab (`GET /api/agreements/:id/details?of=…`). */
+export function useAgreementStepDetailsQuery(options: {
+	agreementId: string;
+	step: AgreementDocumentStep | null | undefined;
+	lineItemId?: string | null;
+	enabled?: boolean;
+}) {
+	const agreementId = options.agreementId.trim();
+	const step = options.step;
+	const of = step ? agreementStepDetailsOfQuery(step) : "";
+	const lineItemId = normalizeAgreementLineItemIdForQuery(options.lineItemId);
+	const canFetch =
+		Boolean(agreementId) &&
+		isMongoObjectIdString(agreementId) &&
+		Boolean(step) &&
+		Boolean(of) &&
+		options.enabled !== false;
+
+	return useQuery({
+		queryKey: agreementStepDetailsQueryKey(agreementId, of, lineItemId),
+		queryFn: () => getAgreementStepDetails(agreementId, of, { lineItemId }),
+		enabled: canFetch,
+	});
+}
+
 export function useCreateAgreementMutation() {
 	const queryClient = useQueryClient();
 	return useMutation({
@@ -151,6 +247,7 @@ export function usePatchAgreementFieldValuesMutation() {
 				void queryClient.invalidateQueries({
 					queryKey: [...queryKeys.agreements.all, "detail", args.agreementId] as const,
 				});
+				invalidateAgreementStepDetailsQueries(queryClient, args.agreementId);
 			}
 		},
 	});
@@ -167,6 +264,7 @@ export function usePatchAgreementClausesMutation() {
 				void queryClient.invalidateQueries({
 					queryKey: [...queryKeys.agreements.all, "detail", args.agreementId] as const,
 				});
+				invalidateAgreementStepDetailsQueries(queryClient, args.agreementId);
 			}
 		},
 	});
@@ -202,6 +300,7 @@ export function usePostAgreementLineItemMutation() {
 				void queryClient.invalidateQueries({
 					queryKey: [...queryKeys.agreements.all, "detail", args.agreementId] as const,
 				});
+				invalidateAgreementStepDetailsQueries(queryClient, args.agreementId);
 			}
 		},
 	});
@@ -218,6 +317,7 @@ export function usePatchAgreementLineItemMutation() {
 				void queryClient.invalidateQueries({
 					queryKey: [...queryKeys.agreements.all, "detail", args.agreementId] as const,
 				});
+				invalidateAgreementStepDetailsQueries(queryClient, args.agreementId);
 			}
 		},
 	});

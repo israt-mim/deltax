@@ -3,7 +3,7 @@ import { toast } from "react-toastify";
 import ArrowBackOutlinedIcon from "@mui/icons-material/ArrowBackOutlined";
 import type { AgreementStepDetailsData } from "../../api";
 import { Button } from "../../components/base/Button";
-import { PageLoader } from "../../components/base/PageLoader";
+import { AgreementLineItemEditorSkeleton } from "../../components/skeletons";
 import { AgreementStepDetailsForm } from "./AgreementStepDetailsForm";
 import { buildInitialFieldValues, validateRequiredAgreementFields } from "./agreementStepDetailsValidation";
 
@@ -66,11 +66,7 @@ export function AgreementLineItemEditorView({
 	}, [details, draft, onSave]);
 
 	if (!details?.sections?.length) {
-		return (
-			<div className="flex min-h-[200px] items-center justify-center py-8">
-				<PageLoader mode="embedded" />
-			</div>
-		);
+		return <AgreementLineItemEditorSkeleton />;
 	}
 
 	const title = mode === "create" ? "New Line Item" : "Edit Line Item";

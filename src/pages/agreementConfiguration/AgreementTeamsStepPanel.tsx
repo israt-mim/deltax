@@ -14,7 +14,7 @@ import {
 } from "../../api";
 import { Button } from "../../components/base/Button";
 import { Modal } from "../../components/base/Modal";
-import { PageLoader } from "../../components/base/PageLoader";
+import { AgreementTeamsSkeleton } from "../../components/skeletons";
 import { Typography } from "../../components/base/Typography";
 import { formatUserFacingError } from "../../lib/formatUserFacingError";
 import { useDebouncedValue } from "../../lib/useDebouncedValue";
@@ -213,7 +213,7 @@ function AddAgreementTeamMembersModal({
 													type="checkbox"
 													checked={selectedIds.has(id)}
 													onChange={() => toggleUser(id)}
-													className="h-4 w-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-400 dark:border-black-500"
+													className="theme-checkbox"
 													aria-label={`Select ${userDisplayName(u)}`}
 												/>
 											</td>
@@ -302,11 +302,7 @@ export function AgreementTeamsStepPanel({ agreementId, readOnly = false }: Agree
 	);
 
 	if (teamsQuery.isPending) {
-		return (
-			<div className="flex min-h-[240px] items-center justify-center py-8">
-				<PageLoader mode="embedded" />
-			</div>
-		);
+		return <AgreementTeamsSkeleton />;
 	}
 
 	if (teamsQuery.isError) {
@@ -396,7 +392,7 @@ export function AgreementTeamsStepPanel({ agreementId, readOnly = false }: Agree
 													<input
 														type="checkbox"
 														disabled
-														className="h-4 w-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-400 dark:border-black-500"
+														className="theme-checkbox"
 														aria-label={`Select all ${teamName(entry)} members`}
 													/>
 												</th>
@@ -440,7 +436,7 @@ export function AgreementTeamsStepPanel({ agreementId, readOnly = false }: Agree
 																<input
 																	type="checkbox"
 																	disabled
-																	className="h-4 w-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-400 dark:border-black-500"
+																	className="theme-checkbox"
 																	aria-label={`Select ${userDisplayName(member.user)}`}
 																/>
 															</td>

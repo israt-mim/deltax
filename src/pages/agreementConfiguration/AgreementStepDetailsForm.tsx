@@ -11,6 +11,7 @@ import { FormNumber } from "../../components/form-input/FormNumber";
 import { FormSelect } from "../../components/form-input/FormSelect";
 import { FormSwitch } from "../../components/form-input/FormSwitch";
 import { Typography } from "../../components/base/Typography";
+import { AgreementStepFormSkeleton } from "../../components/skeletons";
 
 function normalizeChoiceOptions(raw: unknown): string[] {
 	if (!Array.isArray(raw)) return [];
@@ -276,13 +277,7 @@ export function AgreementStepDetailsForm({
 	}, []);
 
 	if (loading) {
-		return (
-			<div className="flex flex-col gap-3 py-6">
-				{[0, 1, 2].map((i) => (
-					<div key={i} className="h-10 animate-pulse rounded-md bg-neutral-100 dark:bg-black-600" />
-				))}
-			</div>
-		);
+		return <AgreementStepFormSkeleton />;
 	}
 
 	if (errorMessage) {

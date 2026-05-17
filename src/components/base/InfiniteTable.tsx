@@ -19,6 +19,7 @@ import {
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import cn from "classnames";
+import { Skeleton } from "./Skeleton";
 import type { StickyColumnMeta } from "../../hooks/useColumns";
 
 export interface InfiniteTableProps<TData> {
@@ -443,9 +444,9 @@ export function InfiniteTable<TData>({
 														style={getSkeletonTdStyle(header)}
 													>
 														{header.column.id === "_select" || header.column.id === "_checkbox" ? (
-															<div className="mx-auto h-4 w-4 animate-pulse rounded bg-neutral-200 dark:bg-neutral-700" />
+															<Skeleton className="mx-auto h-4 w-4" rounded="sm" />
 														) : (
-															<div className="h-3 w-[85%] max-w-[160px] animate-pulse rounded-md bg-neutral-200 dark:bg-neutral-700" />
+															<Skeleton className="h-3 w-[85%] max-w-[160px]" />
 														)}
 													</td>
 												))}

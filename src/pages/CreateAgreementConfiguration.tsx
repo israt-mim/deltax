@@ -13,7 +13,7 @@ import { formatUserFacingError } from "../lib/formatUserFacingError";
 import { Button } from "../components/base/Button";
 import { ConfirmModal } from "../components/base/ConfirmModal";
 import { CardMain } from "../components/base/CardMain";
-import { PageLoader } from "../components/base/PageLoader";
+import { AgreementConfigurationPageSkeleton } from "../components/skeletons";
 import { Modal } from "../components/base/Modal";
 import { Stepper, type StepperStep } from "../components/base/Stepper";
 import { Typography } from "../components/base/Typography";
@@ -283,11 +283,7 @@ const CreateAgreementConfiguration = () => {
 	}
 
 	if (configQuery.isPending) {
-		return (
-			<CardMain className="flex min-h-[min(360px,calc(100vh-200px))] flex-1 items-center justify-center">
-				<PageLoader mode="embedded" />
-			</CardMain>
-		);
+		return <AgreementConfigurationPageSkeleton />;
 	}
 
 	if (!config) {

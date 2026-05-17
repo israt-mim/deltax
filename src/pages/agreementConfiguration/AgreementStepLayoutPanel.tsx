@@ -10,7 +10,7 @@ import cn from "classnames";
 import { getFieldById, type FieldConfigurationApiDocument } from "../../api";
 import { queryKeys } from "../../api/queryKeys";
 import { Card } from "../../components/base/Card";
-import { PageLoader } from "../../components/base/PageLoader";
+import { SkeletonInline } from "../../components/skeletons";
 import { Typography } from "../../components/base/Typography";
 import { FormInput } from "../../components/form-input/FormInput";
 import type { ConfigureFieldOverrides } from "./buildConfigureAgreementPayload";
@@ -51,7 +51,7 @@ function FieldTile({
 			<DragIndicatorOutlinedIcon sx={{ fontSize: 18 }} className="mt-0.5 shrink-0 text-neutral-400" />
 			<div className="min-w-0 flex-1 text-sm font-medium text-neutral-900 dark:text-neutral-100">
 				{loading ? (
-					<PageLoader mode="embedded" compact className="items-start !py-0" />
+					<SkeletonInline />
 				) : (
 					fieldCardLabel(fieldId, doc)
 				)}

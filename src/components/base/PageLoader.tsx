@@ -14,7 +14,8 @@ export interface PageLoaderProps {
 }
 
 /**
- * Centered DeltaX logo with a thin indeterminate progress bar (splash / session bootstrap).
+ * Centered DeltaX logo with a thin indeterminate progress bar.
+ * Use only for full-page / auth bootstrap (login, session resolve). Prefer skeletons for in-app content loading.
  */
 export function PageLoader({
 	variant = "light",

@@ -283,7 +283,13 @@ export type {
 	PostAgreementLineItemResponse,
 } from "./services/agreements";
 export {
+	agreementStepDetailsQueryKey,
+	formatAgreementStepDetailsQueryError,
+	invalidateAgreementStepDetailsQueries,
+	normalizeAgreementLineItemIdForQuery,
 	useAgreementDashboardQuery,
+	useAgreementDocumentStepsQuery,
+	useAgreementStepDetailsQuery,
 	useAgreementTeamsQuery,
 	useAgreementsInfiniteList,
 	useAgreementsTotalCount,

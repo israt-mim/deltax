@@ -1,36 +1,37 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import {
-	ApiError,
 	agreementStepDetailsOfQuery,
 	agreementStepEditorHideWizardNav,
 	buildAgreementFieldValuesPatchList,
 	fieldValuesPatchOfParam,
-	getAgreementStepDetails,
-	getAgreementSteps,
+	formatAgreementStepDetailsQueryError,
+	invalidateAgreementStepDetailsQueries,
 	isAgreementFieldValuesStep,
-	isAuthoringOrModificationAgreementCreationStep,
 	isClausesWizardStepName,
 	isLineItemsAgreementStep,
 	isLineItemsWizardStepName,
 	isMongoObjectIdString,
+	normalizeAgreementLineItemIdForQuery,
 	useAgreementDashboardQuery,
+	useAgreementDocumentStepsQuery,
+	useAgreementStepDetailsQuery,
 	useDeleteAgreementMutation,
 	usePatchAgreementFieldValuesMutation,
 	usePatchAgreementLineItemMutation,
 	usePostAgreementLineItemMutation,
 	type AgreementDashboardData,
 	type AgreementDocumentStep,
-	type AgreementStepDetailsData,
 } from "../api";
 import { formatUserFacingError } from "../lib/formatUserFacingError";
 import { Button } from "../components/base/Button";
 import { Card } from "../components/base/Card";
 import { CardMain } from "../components/base/CardMain";
 import { ConfirmModal } from "../components/base/ConfirmModal";
-import { PageLoader } from "../components/base/PageLoader";
+import { AgreementDetailsPageSkeleton } from "../components/skeletons";
 import { Stepper, type StepperStep } from "../components/base/Stepper";
 import { Typography } from "../components/base/Typography";
 import { AgreementClausesStepPanel } from "./agreementConfiguration/AgreementClausesStepPanel";
@@ -64,37 +65,46 @@ function isAgreementTeamsWizardStep(step: AgreementDocumentStep | null | undefin
 export default function CreateAgreementDetailsPage() {
 	const { id: agreementIdParam } = useParams<{ id: string }>();
 	const navigate = useNavigate();
+	const queryClient = useQueryClient();
 	const deleteAgreementMutation = useDeleteAgreementMutation();
 	const patchFieldValuesMutation = usePatchAgreementFieldValuesMutation();
 	const postLineItemMutation = usePostAgreementLineItemMutation();
 	const patchLineItemMutation = usePatchAgreementLineItemMutation();
 
 	const agreementId = agreementIdParam?.trim() ?? "";
+	const agreementIdValid = Boolean(agreementId) && isMongoObjectIdString(agreementId);
 
 	const dashboardQuery = useAgreementDashboardQuery({
 		agreementId,
-		enabled: Boolean(agreementId) && isMongoObjectIdString(agreementId),
+		enabled: agreementIdValid,
 	});
 	const dashboard: AgreementDashboardData | undefined = dashboardQuery.data;
 
-	const [steps, setSteps] = useState<AgreementDocumentStep[]>([]);
-	const [stepsLoading, setStepsLoading] = useState(true);
-	const [stepsError, setStepsError] = useState<string | null>(null);
+	const stepsQuery = useAgreementDocumentStepsQuery({
+		agreementId,
+		enabled: agreementIdValid,
+	});
+	const steps = stepsQuery.data ?? [];
+	const stepsLoading = stepsQuery.isPending;
+	const stepsError = useMemo(() => {
+		if (!stepsQuery.error) return null;
+		if (!agreementId) return "Missing agreement id.";
+		if (!isMongoObjectIdString(agreementId)) return "Invalid agreement id.";
+		return formatUserFacingError(stepsQuery.error, "Could not load agreement steps.");
+	}, [agreementId, stepsQuery.error]);
+
 	const [activeStepIndex, setActiveStepIndex] = useState(0);
 	const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false);
 
-	const [stepDetails, setStepDetails] = useState<AgreementStepDetailsData | null>(null);
-	const [stepDetailsLoading, setStepDetailsLoading] = useState(false);
-	const [stepDetailsError, setStepDetailsError] = useState<string | null>(null);
 	const [fieldValuesByStepId, setFieldValuesByStepId] = useState<Record<string, Record<string, unknown>>>({});
 	const [fieldErrorsById, setFieldErrorsById] = useState<Record<string, string>>({});
 	/** `null` = Line Items list/table; `"new"` or line-item `_id` = editor GET modes. */
 	const [lineItemQuery, setLineItemQuery] = useState<string | null>(null);
-	const [stepDetailsNonce, setStepDetailsNonce] = useState(0);
 
 	const refreshStepDetails = useCallback(() => {
-		setStepDetailsNonce((n) => n + 1);
-	}, []);
+		if (!agreementIdValid) return;
+		invalidateAgreementStepDetailsQueries(queryClient, agreementId);
+	}, [agreementId, agreementIdValid, queryClient]);
 
 	useEffect(() => {
 		setFieldValuesByStepId({});
@@ -103,37 +113,11 @@ export default function CreateAgreementDetailsPage() {
 	}, [agreementId]);
 
 	useEffect(() => {
-		if (!agreementId || !isMongoObjectIdString(agreementId)) {
-			setSteps([]);
-			setStepsLoading(false);
-			setStepsError(!agreementId ? "Missing agreement id." : "Invalid agreement id.");
-			return;
-		}
-
-		let cancelled = false;
-		setStepsLoading(true);
-		setStepsError(null);
-
-		void getAgreementSteps(agreementId)
-			.then((res) => {
-				if (cancelled) return;
-				const raw = Array.isArray(res.steps) ? res.steps : [];
-				setSteps(raw.filter((s) => !isAuthoringOrModificationAgreementCreationStep(s)));
-				setStepsLoading(false);
-			})
-			.catch((err: unknown) => {
-				if (cancelled) return;
-				setSteps([]);
-				setStepsLoading(false);
-				const message = formatUserFacingError(err, "Could not load agreement steps.");
-				setStepsError(message);
-				toast.error(message, { toastId: `agreement-steps-${agreementId}` });
-			});
-
-		return () => {
-			cancelled = true;
-		};
-	}, [agreementId]);
+		if (!stepsQuery.isError || !stepsQuery.error) return;
+		toast.error(formatUserFacingError(stepsQuery.error, "Could not load agreement steps."), {
+			toastId: `agreement-steps-${agreementId}`,
+		});
+	}, [agreementId, stepsQuery.error, stepsQuery.isError]);
 
 	const wizardSteps = useMemo(() => [...steps, AGREEMENT_TEAMS_STEP], [steps]);
 
@@ -143,6 +127,39 @@ export default function CreateAgreementDetailsPage() {
 
 	const currentStep = wizardSteps[activeStepIndex];
 	const stepStorageKey = currentStep?.id ?? "";
+
+	const stepDetailsFetchEnabled =
+		agreementIdValid && Boolean(currentStep) && !isAgreementTeamsWizardStep(currentStep);
+
+	const stepDetailsQuery = useAgreementStepDetailsQuery({
+		agreementId,
+		step: currentStep,
+		lineItemId: lineItemQuery,
+		enabled: stepDetailsFetchEnabled,
+	});
+	const stepDetails = stepDetailsQuery.data ?? null;
+	const stepDetailsLoading = stepDetailsQuery.isFetching;
+	const stepDetailsError = useMemo(
+		() => formatAgreementStepDetailsQueryError(stepDetailsQuery.error),
+		[stepDetailsQuery.error]
+	);
+
+	useEffect(() => {
+		if (!stepDetailsQuery.isError || !stepDetailsQuery.error || !currentStep) return;
+		const of = agreementStepDetailsOfQuery(currentStep);
+		const lineItemIdParam = normalizeAgreementLineItemIdForQuery(lineItemQuery);
+		const message = formatAgreementStepDetailsQueryError(stepDetailsQuery.error);
+		if (!message) return;
+		toast.error(message, {
+			toastId: `agreement-details-${agreementId}-${of}-${lineItemIdParam ?? "list"}`,
+		});
+	}, [
+		agreementId,
+		currentStep,
+		lineItemQuery,
+		stepDetailsQuery.error,
+		stepDetailsQuery.isError,
+	]);
 
 	useEffect(() => {
 		if (!currentStep || !isLineItemsWizardStepName(currentStep)) {
@@ -244,10 +261,6 @@ export default function CreateAgreementDetailsPage() {
 				setActiveStepIndex(nextIndex);
 				return;
 			}
-			if (stepDetailsLoading) {
-				toast.info("Please wait for this step to finish loading.");
-				return;
-			}
 			if (!assertCurrentStepValid()) return;
 			const saved = await persistCurrentStepFieldValues();
 			if (!saved) return;
@@ -258,62 +271,9 @@ export default function CreateAgreementDetailsPage() {
 			assertCurrentStepValid,
 			hideLineItemsWizardNav,
 			persistCurrentStepFieldValues,
-			stepDetailsLoading,
 			wizardSteps.length,
 		]
 	);
-
-	useEffect(() => {
-		if (!agreementId || !isMongoObjectIdString(agreementId) || !currentStep) {
-			setStepDetails(null);
-			setStepDetailsError(null);
-			setStepDetailsLoading(false);
-			return;
-		}
-		if (isAgreementTeamsWizardStep(currentStep)) {
-			setStepDetails(null);
-			setStepDetailsError(null);
-			setStepDetailsLoading(false);
-			setFieldErrorsById({});
-			return;
-		}
-
-		const of = agreementStepDetailsOfQuery(currentStep);
-		let cancelled = false;
-		setStepDetailsLoading(true);
-		setStepDetailsError(null);
-		setStepDetails(null);
-		setFieldErrorsById({});
-
-		const lineItemIdParam =
-			lineItemQuery != null && lineItemQuery.trim() !== "" && lineItemQuery.trim().toLowerCase() !== "list"
-				? lineItemQuery.trim()
-				: undefined;
-
-		void getAgreementStepDetails(agreementId, of, { lineItemId: lineItemIdParam })
-			.then((data) => {
-				if (cancelled) return;
-				setStepDetails(data);
-				setStepDetailsLoading(false);
-			})
-			.catch((err: unknown) => {
-				if (cancelled) return;
-				setStepDetails(null);
-				setStepDetailsLoading(false);
-				const message =
-					err instanceof ApiError && err.status === 404
-						? err.message.trim() || "No layout found for this step."
-						: formatUserFacingError(err, "Could not load fields for this step.");
-				setStepDetailsError(message);
-				toast.error(message, {
-					toastId: `agreement-details-${agreementId}-${of}-${lineItemIdParam ?? "list"}`,
-				});
-			});
-
-		return () => {
-			cancelled = true;
-		};
-	}, [agreementId, currentStep?.id, currentStep?.name, lineItemQuery, stepDetailsNonce]);
 
 	const stepperSteps: StepperStep[] = useMemo(
 		() => wizardSteps.map((s) => ({ key: s.id, label: s.name })),
@@ -485,11 +445,7 @@ export default function CreateAgreementDetailsPage() {
 	}
 
 	if (stepsLoading) {
-		return (
-			<div className="flex min-h-[min(360px,calc(100vh-200px))] flex-1 items-center justify-center">
-				<PageLoader mode="embedded" />
-			</div>
-		);
+		return <AgreementDetailsPageSkeleton />;
 	}
 
 	if (stepsError && steps.length === 0) {
@@ -565,7 +521,7 @@ export default function CreateAgreementDetailsPage() {
 							) : isLineItemsWizardStepName(currentStep) ? (
 								lineItemQuery ? (
 									<AgreementLineItemEditorView
-										key={`${lineItemQuery}-${stepDetailsNonce}`}
+										key={`${lineItemQuery}-${stepDetailsQuery.dataUpdatedAt}`}
 										details={stepDetails}
 										mode={lineItemEditorMode}
 										initialValuesByFieldId={lineItemEditorInitialValues}

@@ -103,3 +103,21 @@ export function resolveLineItemsTable(details: AgreementStepDetailsData | null):
 	if (details.table?.columns?.length && Array.isArray(details.table.rows)) return details.table;
 	return fallbackTableFromDetails(details);
 }
+
+/** Client-side filter across displayed column values. */
+export function filterLineItemTableRows(
+	rows: AgreementLineItemsTableRow[],
+	columns: AgreementLineItemsTableColumn[],
+	details: AgreementStepDetailsData,
+	query: string
+): AgreementLineItemsTableRow[] {
+	const q = query.trim().toLowerCase();
+	if (!q) return rows;
+	return rows.filter((row) => {
+		const hay = columns
+			.map((c) => displayLineItemCell(findFieldDefById(details, c.fieldId), row.cells[c.fieldId]))
+			.join(" ")
+			.toLowerCase();
+		return hay.includes(q);
+	});
+}

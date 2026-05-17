@@ -9,7 +9,7 @@ import { formatUsDateTime } from "../lib/formatDateTime";
 import { formatUserFacingError } from "../lib/formatUserFacingError";
 import { Card } from "../components/base/Card";
 import { CardMain } from "../components/base/CardMain";
-import { PageLoader } from "../components/base/PageLoader";
+import { DetailPageSkeleton } from "../components/skeletons";
 import { Title } from "../components/base/Title";
 import { usePageBreadcrumb } from "../hooks/usePageBreadcrumb";
 import { crumb } from "../lib/breadcrumb";
@@ -360,11 +360,7 @@ export const ClauseDetailPage = () => {
 	}
 
 	if (clauseQuery.isPending) {
-		return (
-			<CardMain className="flex min-h-[min(360px,calc(100vh-200px))] flex-1 items-center justify-center">
-				<PageLoader mode="embedded" />
-			</CardMain>
-		);
+		return <DetailPageSkeleton />;
 	}
 
 	if (!clauseQuery.data) {
