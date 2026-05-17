@@ -4,7 +4,6 @@ import { useNavigate } from "react-router";
 import PersonOutlinedIcon from "@mui/icons-material/PersonOutlined";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import DarkModeOutlinedIcon from "@mui/icons-material/DarkModeOutlined";
-import LocalOfferOutlinedIcon from "@mui/icons-material/LocalOfferOutlined";
 import LogoutOutlinedIcon from "@mui/icons-material/LogoutOutlined";
 import KeyboardArrowDownOutlinedIcon from "@mui/icons-material/KeyboardArrowDownOutlined";
 import { useAuth } from "../auth/AuthContext";
@@ -24,22 +23,35 @@ function UserAvatar({ initials, size = "md" }: { initials: string; size?: "md" |
 	);
 }
 
+const MENU_ITEM_LABEL = "text-neutral-700 dark:text-neutral-200";
+const MENU_ITEM_ICON = "text-neutral-500 dark:text-neutral-400";
+
 type MenuRowProps = {
 	icon: ReactNode;
 	label: string;
 	onClick?: () => void;
 	labelClassName?: string;
+	iconClassName?: string;
 	trailing?: ReactNode;
 };
 
-function MenuRow({ icon, label, onClick, labelClassName = "text-neutral-700", trailing }: MenuRowProps) {
+function MenuRow({
+	icon,
+	label,
+	onClick,
+	labelClassName = MENU_ITEM_LABEL,
+	iconClassName = MENU_ITEM_ICON,
+	trailing,
+}: MenuRowProps) {
 	return (
 		<button
 			type="button"
 			onClick={onClick}
 			className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors hover:bg-neutral-100 dark:hover:bg-black-700"
 		>
-			<span className="flex h-5 w-5 shrink-0 items-center justify-center text-neutral-500">{icon}</span>
+			<span className={`flex h-5 w-5 shrink-0 items-center justify-center ${iconClassName} [&_svg]:text-inherit`}>
+				{icon}
+			</span>
 			<span className={`min-w-0 flex-1 font-medium ${labelClassName}`}>{label}</span>
 			{trailing}
 		</button>
@@ -82,9 +94,8 @@ function UserMenuPanel({
 
 			<div className="p-2">
 				<MenuRow
-					icon={<PersonOutlinedIcon sx={{ fontSize: 20, color: "#16a34a" }} />}
+					icon={<PersonOutlinedIcon sx={{ fontSize: 20 }} />}
 					label="Profile"
-					labelClassName="text-success-700 dark:text-success-400"
 					onClick={() => go("/profile")}
 				/>
 				<MenuRow
@@ -92,27 +103,18 @@ function UserMenuPanel({
 					label="Settings"
 					onClick={() => go("/settings")}
 				/>
-				<div className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm">
-					<span className="flex h-5 w-5 shrink-0 items-center justify-center text-neutral-500">
+				<div className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors hover:bg-neutral-100 dark:hover:bg-black-700">
+					<span className={`flex h-5 w-5 shrink-0 items-center justify-center ${MENU_ITEM_ICON}`}>
 						<DarkModeOutlinedIcon sx={{ fontSize: 20 }} />
 					</span>
-					<span className="min-w-0 flex-1 font-medium text-neutral-700 dark:text-neutral-300">Dark Mode</span>
+					<span className={`min-w-0 flex-1 font-medium ${MENU_ITEM_LABEL}`}>Dark Mode</span>
 					<Switch size="small" checked={isDark} onChange={toggle} />
 				</div>
 				<MenuRow
-					icon={
-						<span className="relative">
-							<LocalOfferOutlinedIcon sx={{ fontSize: 20 }} />
-							<span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-error-500" aria-hidden />
-						</span>
-					}
-					label="Release Notes"
-					onClick={onClose}
-				/>
-				<MenuRow
-					icon={<LogoutOutlinedIcon sx={{ fontSize: 20, color: "#dc2626" }} />}
+					icon={<LogoutOutlinedIcon sx={{ fontSize: 20, color: "currentColor" }} />}
 					label="Log out"
 					labelClassName="text-error-600 dark:text-error-400"
+					iconClassName="text-error-600 dark:text-error-400"
 					onClick={onLogout}
 				/>
 			</div>

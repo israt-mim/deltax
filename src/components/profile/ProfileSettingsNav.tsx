@@ -26,13 +26,13 @@ export function ProfileSettingsNav({ active, onChange }: ProfileSettingsNavProps
 						className={cn(
 							"relative rounded-lg px-4 py-3 text-left text-sm font-medium transition-colors",
 							isActive
-								? "bg-white text-success-700 shadow-100 dark:bg-black-800 dark:text-success-400 dark:shadow-none dark:ring-1 dark:ring-white/5"
+								? "bg-white text-primary-600 shadow-100 dark:bg-black-800 dark:text-primary-300 dark:shadow-none dark:ring-1 dark:ring-white/5"
 								: "text-neutral-600 hover:bg-white/80 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-black-800/60 dark:hover:text-neutral-200"
 						)}
 					>
 						{isActive ? (
 							<span
-								className="absolute bottom-2 left-0 top-2 w-1 rounded-r bg-success-500 dark:bg-success-400"
+								className="absolute bottom-2 left-0 top-2 w-1 rounded-r bg-primary-500 dark:bg-primary-400"
 								aria-hidden
 							/>
 						) : null}
