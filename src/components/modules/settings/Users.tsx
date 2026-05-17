@@ -18,6 +18,7 @@ import { formatUsDateTime } from "../../../lib/formatDateTime";
 import { useDebouncedValue } from "../../../lib/useDebouncedValue";
 import { formatUserFacingError } from "../../../lib/formatUserFacingError";
 import { SearchInput } from "../../form-input/SearchInput";
+import { UserIdentity } from "../../UserIdentity";
 import type { SettingsUserListRow } from "../../../schemas/settingsUser";
 import {
 	listGroups,
@@ -34,7 +35,28 @@ import { NewUserModal } from "./NewUserModal";
 import { createStickyActionsColumn } from "./stickyActionsColumn";
 
 const userColumnConfigs: ColumnConfig<SettingsUserListRow>[] = [
-	{ key: "displayName", name: "User", width: 200, minWidth: 120 },
+	{
+		key: "displayName",
+		name: "User",
+		width: 240,
+		minWidth: 140,
+		cell: ({ row }) => {
+			const u = row.original;
+			return (
+				<UserIdentity
+					user={{
+						_id: u.id,
+						firstName: u.firstName,
+						lastName: u.lastName,
+						email: u.email,
+						username: u.username,
+						profilePictureUrl: u.profilePictureUrl,
+					}}
+					className="font-medium text-neutral-800 dark:text-neutral-100"
+				/>
+			);
+		},
+	},
 	{ key: "username", name: "Username", width: 160, minWidth: 100 },
 	{ key: "email", name: "Email", width: 220, minWidth: 160 },
 	{ key: "groupName", name: "Group", width: 160, minWidth: 100 },

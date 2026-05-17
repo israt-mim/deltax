@@ -3,9 +3,11 @@ import {
 	bulkDeleteUsers,
 	createUser,
 	deleteUser,
+	deleteUserAvatar,
 	getUserById,
 	listUsers,
 	updateUser,
+	uploadUserAvatar,
 	type UpdateUserBody,
 } from "../services/users";
 import { queryKeys } from "../queryKeys";
@@ -97,6 +99,32 @@ export function useDeleteUserMutation() {
 			void queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
 			void queryClient.invalidateQueries({ queryKey: queryKeys.groups.all });
 			void queryClient.invalidateQueries({ queryKey: queryKeys.teams.all });
+		},
+	});
+}
+
+export function useUploadUserAvatarMutation() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({ id, file }: { id: string; file: File }) => uploadUserAvatar(id, file),
+		onSettled: (_data, _err, variables) => {
+			void queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
+			if (variables?.id) {
+				void queryClient.invalidateQueries({ queryKey: [...queryKeys.users.all, "detail", variables.id] });
+			}
+		},
+	});
+}
+
+export function useDeleteUserAvatarMutation() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (id: string) => deleteUserAvatar(id),
+		onSettled: (_data, _err, id) => {
+			void queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
+			if (id) {
+				void queryClient.invalidateQueries({ queryKey: [...queryKeys.users.all, "detail", id] });
+			}
 		},
 	});
 }

@@ -7,6 +7,8 @@ export interface AuthUser {
 	lastName?: string;
 	email: string;
 	username: string;
+	/** Full URL to the avatar image, or null when none is set. */
+	profilePictureUrl?: string | null;
 	group?: unknown;
 	teams?: unknown[];
 	mustChangePassword?: boolean;

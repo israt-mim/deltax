@@ -22,5 +22,6 @@ export interface SettingsUserListRow {
 	/** Team ObjectIds when API populates `teams`. */
 	teamIds?: string[];
 	role: string;
+	profilePictureUrl?: string | null;
 	createdAt: string;
 }

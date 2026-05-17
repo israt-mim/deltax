@@ -9,19 +9,8 @@ import KeyboardArrowDownOutlinedIcon from "@mui/icons-material/KeyboardArrowDown
 import { useAuth } from "../auth/AuthContext";
 import { APP_VERSION } from "../constants/app";
 import { useAppTheme } from "../context/AppThemeContext";
+import { UserAvatar } from "./UserAvatar";
 import { userDisplayName, userInitials, userShortName } from "../lib/userDisplay";
-
-function UserAvatar({ initials, size = "md" }: { initials: string; size?: "md" | "lg" }) {
-	const dim = size === "lg" ? "h-11 w-11 text-base" : "h-8 w-8 text-sm";
-	return (
-		<span
-			className={`inline-flex shrink-0 items-center justify-center rounded-full bg-success-100 font-semibold text-success-800 ${dim}`}
-			aria-hidden
-		>
-			{initials}
-		</span>
-	);
-}
 
 const MENU_ITEM_LABEL = "text-neutral-700 dark:text-neutral-200";
 const MENU_ITEM_ICON = "text-neutral-500 dark:text-neutral-400";
@@ -84,7 +73,12 @@ function UserMenuPanel({
 		<div className="w-[min(100vw-24px,300px)] overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-[0_12px_40px_rgba(0,0,0,0.18)] dark:border-black-600 dark:bg-black-800">
 			<div className="bg-primary-500 px-4 py-4">
 				<div className="flex items-center gap-3">
-					<UserAvatar initials={initials} size="lg" />
+					<UserAvatar
+						initials={initials}
+						profilePictureUrl={user.profilePictureUrl}
+						size="lg"
+						alt=""
+					/>
 					<div className="min-w-0">
 						<p className="truncate text-base font-semibold text-white">{displayName}</p>
 						<p className="truncate text-sm text-white/75">{email}</p>
@@ -162,7 +156,7 @@ export function NavbarUserMenu() {
 				aria-label="Open account menu"
 				aria-haspopup="menu"
 			>
-				<UserAvatar initials={initials} />
+				<UserAvatar initials={initials} profilePictureUrl={user.profilePictureUrl} alt="" />
 				<span className="truncate text-sm font-semibold">{triggerLabel}</span>
 				<KeyboardArrowDownOutlinedIcon sx={{ fontSize: 18, color: "white", opacity: 0.9 }} />
 			</button>

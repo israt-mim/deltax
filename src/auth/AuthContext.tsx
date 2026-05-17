@@ -29,6 +29,8 @@ export type AuthContextValue = {
 	logout: () => Promise<void>;
 	/** Re-fetch session from the server (e.g. after profile updates). */
 	refreshUser: () => Promise<void>;
+	/** Apply session user from an endpoint that returns `{ user }` (e.g. avatar upload/delete). */
+	updateSessionUser: (user: AuthUser) => void;
 	/** After forced password change; updates session user from API response. */
 	changePassword: (newPassword: string, confirmNewPassword: string) => Promise<void>;
 };
@@ -82,6 +84,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 		setUser(_user);
 	}, []);
 
+	const updateSessionUser = useCallback((_user: AuthUser) => {
+		setUser(_user);
+	}, []);
+
 	const value = useMemo<AuthContextValue>(
 		() => ({
 			isAuthResolved,
@@ -90,9 +96,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 			login,
 			logout,
 			refreshUser,
+			updateSessionUser,
 			changePassword,
 		}),
-		[isAuthResolved, user, login, logout, refreshUser, changePassword]
+		[isAuthResolved, user, login, logout, refreshUser, updateSessionUser, changePassword]
 	);
 
 	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

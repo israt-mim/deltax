@@ -39,17 +39,18 @@ function errorMessageFromBody(data: unknown, fallback: string): string {
 export async function request<T>(method: HttpMethod, path: string, options: RequestOptions = {}): Promise<T> {
 	const { body, headers, ...rest } = options;
 	const url = buildApiUrl(path);
+	const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
 
 	const initHeaders: HeadersInit = {
 		Accept: "application/json",
-		...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+		...(body !== undefined && !isFormData ? { "Content-Type": "application/json" } : {}),
 		...headers,
 	};
 
 	const response = await fetch(url, {
 		method,
 		headers: initHeaders,
-		body: body !== undefined ? JSON.stringify(body) : undefined,
+		body: body === undefined ? undefined : isFormData ? body : JSON.stringify(body),
 		credentials: "include",
 		...rest,
 	});

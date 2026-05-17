@@ -2,8 +2,10 @@ import { Dropdown } from "antd";
 import type { MenuProps } from "antd";
 import MoreVertOutlinedIcon from "@mui/icons-material/MoreVertOutlined";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
-import type { AgreementListItem } from "../../api";
+import type { AgreementListItem, AgreementListUser } from "../../api";
+import { UserIdentity } from "../../components/UserIdentity";
 import { formatUsDateTime } from "../../lib/formatDateTime";
+import { apiUserDisplayName } from "../../lib/userDisplay";
 import type { ColumnConfig } from "../../hooks/useColumns";
 
 export type AgreementListPageRow = {
@@ -12,6 +14,8 @@ export type AgreementListPageRow = {
 	displayName: string;
 	typeName: string;
 	subtypeName: string;
+	createdBy: AgreementListUser | null;
+	modifiedBy: AgreementListUser | null;
 	createdByLabel: string;
 	modifiedByLabel: string;
 	createdOnLabel: string;
@@ -42,10 +46,10 @@ const AGREEMENT_LIST_STATUS_COLORS: Record<string, string> = {
 export function agreementListItemToListPageRow(item: AgreementListItem): AgreementListPageRow {
 	const displayId = (item.displayId?.trim() || item._id).trim();
 	const displayName = item.agreement_display_name?.trim() || "—";
-	const createdByLabel = [item.createdBy?.firstName, item.createdBy?.lastName].filter(Boolean).join(" ").trim();
-	const modifiedByLabel = [item.modifiedBy?.firstName, item.modifiedBy?.lastName].filter(Boolean)
-		.join(" ")
-		.trim();
+	const createdBy = item.createdBy ?? null;
+	const modifiedBy = item.modifiedBy ?? null;
+	const createdByLabel = dashIfEmpty(apiUserDisplayName(createdBy));
+	const modifiedByLabel = dashIfEmpty(apiUserDisplayName(modifiedBy));
 	const statusLabel = formatAgreementStatusLabel(item.status);
 
 	return {
@@ -54,8 +58,10 @@ export function agreementListItemToListPageRow(item: AgreementListItem): Agreeme
 		displayName,
 		typeName: dashIfEmpty(item.agreement_type?.name),
 		subtypeName: dashIfEmpty(item.agreement_subtype?.name),
-		createdByLabel: dashIfEmpty(createdByLabel || item.createdBy?.username || item.createdBy?.email),
-		modifiedByLabel: dashIfEmpty(modifiedByLabel || item.modifiedBy?.username || item.modifiedBy?.email),
+		createdBy,
+		modifiedBy,
+		createdByLabel,
+		modifiedByLabel,
 		createdOnLabel: item.createdAt ? formatUsDateTime(item.createdAt) : "—",
 		modifiedOnLabel: item.modifiedAt ? formatUsDateTime(item.modifiedAt) : "—",
 		statusLabel,
@@ -130,9 +136,23 @@ export const agreementListPageColumnConfigs: ColumnConfig<AgreementListPageRow>[
 	{ key: "displayName", name: "Display Name", width: 200, minWidth: 140, sortable: true },
 	{ key: "typeName", name: "Type", width: 140, minWidth: 100, sortable: true },
 	{ key: "subtypeName", name: "Subtype", width: 180, minWidth: 120, sortable: true },
-	{ key: "createdByLabel", name: "Created By", width: 140, minWidth: 100, sortable: true },
+	{
+		key: "createdByLabel",
+		name: "Created By",
+		width: 180,
+		minWidth: 120,
+		sortable: true,
+		cell: ({ row }) => <UserIdentity user={row.original.createdBy} />,
+	},
 	{ key: "createdOnLabel", name: "Created on", width: 180, minWidth: 140, sortable: true },
-	{ key: "modifiedByLabel", name: "Modified By", width: 140, minWidth: 100, sortable: true },
+	{
+		key: "modifiedByLabel",
+		name: "Modified By",
+		width: 180,
+		minWidth: 120,
+		sortable: true,
+		cell: ({ row }) => <UserIdentity user={row.original.modifiedBy} />,
+	},
 	{ key: "modifiedOnLabel", name: "Modified on", width: 180, minWidth: 140, sortable: true },
 	{
 		key: "statusLabel",

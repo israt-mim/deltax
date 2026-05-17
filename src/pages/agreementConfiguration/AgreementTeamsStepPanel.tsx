@@ -13,6 +13,7 @@ import {
 	type AgreementTeamUser,
 } from "../../api";
 import { Button } from "../../components/base/Button";
+import { UserIdentity } from "../../components/UserIdentity";
 import { ConfirmModal } from "../../components/base/ConfirmModal";
 import { FloatingBar } from "../../components/base/FloatingBar";
 import { Modal } from "../../components/base/Modal";
@@ -87,6 +88,7 @@ function rowToAgreementUser(row: SettingsUserListRow): AgreementTeamUser {
 		lastName: row.lastName,
 		email: row.email,
 		username: row.username === "—" ? undefined : row.username,
+		profilePictureUrl: row.profilePictureUrl,
 	};
 }
 
@@ -248,7 +250,7 @@ function AddAgreementTeamMembersModal({
 												/>
 											</td>
 											<td className="px-4 py-2.5 font-medium text-neutral-900 dark:text-white">
-												{userDisplayName(u)}
+												<UserIdentity user={u} />
 											</td>
 											<td className="px-4 py-2.5 text-neutral-600 dark:text-neutral-300">{userEmail(u)}</td>
 											<td className="px-4 py-2.5 text-neutral-600 dark:text-neutral-300">{u.username?.trim() || "—"}</td>
@@ -595,7 +597,7 @@ export function AgreementTeamsStepPanel({ agreementId, readOnly = false }: Agree
 															</td>
 														)}
 														<td className="px-4 py-2.5 font-medium text-neutral-900 dark:text-white">
-															{userDisplayName(member.user)}
+															<UserIdentity user={member.user} />
 														</td>
 														<td className="px-4 py-2.5 text-neutral-600 dark:text-neutral-300">
 															{userEmail(member.user)}

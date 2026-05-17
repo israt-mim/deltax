@@ -1,4 +1,5 @@
-import { del, get, patch, post } from "../client/http";
+import type { AuthUser } from "./auth";
+import { del, get, patch, post, request } from "../client/http";
 import type { BulkDeleteResult } from "../types/bulkDelete";
 import { buildQueryString } from "../client/queryString";
 import type { BaseListQuery, ListResponse } from "../types/list";
@@ -68,6 +69,7 @@ export interface UserApiListItem {
 	email: string;
 	username?: string;
 	role?: string;
+	profilePictureUrl?: string | null;
 	createdAt: string;
 	updatedAt?: string;
 	group?: UserGroupPopulated | string | null;
@@ -119,8 +121,25 @@ export function mapUserListItem(u: UserApiListItem): SettingsUserListRow {
 		groupId: groupIdFromApi(u.group),
 		teamIds: teamIdsFromApi(u.teams),
 		role: u.role ?? "—",
+		profilePictureUrl: u.profilePictureUrl ?? null,
 		createdAt: u.createdAt,
 	};
+}
+
+/** POST /api/users/:id/avatar — multipart field name must be `avatar`. */
+export async function uploadUserAvatar(id: string, file: File): Promise<AuthUser> {
+	const formData = new FormData();
+	formData.append("avatar", file);
+	const res = await request<{ user: AuthUser }>("POST", `/api/users/${encodeURIComponent(id)}/avatar`, {
+		body: formData,
+	});
+	return res.user;
+}
+
+/** DELETE /api/users/:id/avatar */
+export async function deleteUserAvatar(id: string): Promise<AuthUser> {
+	const res = await del<{ user: AuthUser }>(`/api/users/${encodeURIComponent(id)}/avatar`);
+	return res.user;
 }
 
 export interface ListUsersParams extends BaseListQuery {

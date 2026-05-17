@@ -52,6 +52,7 @@ export interface AgreementDashboardUser {
 	lastName?: string;
 	email?: string;
 	username?: string;
+	profilePictureUrl?: string | null;
 }
 
 /** Populated catalog reference (category/domain/type/subtype) returned by the dashboard endpoint. */
@@ -97,6 +98,7 @@ export interface AgreementTeamUser {
 	lastName?: string;
 	email?: string;
 	username?: string;
+	profilePictureUrl?: string | null;
 }
 
 export interface AgreementTeamRef {
@@ -697,6 +699,7 @@ export interface AgreementListUser {
 	lastName?: string;
 	email?: string;
 	username?: string;
+	profilePictureUrl?: string | null;
 }
 
 export interface AgreementListItem {

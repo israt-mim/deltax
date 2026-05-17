@@ -1,7 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "react-toastify";
 import DarkModeOutlinedIcon from "@mui/icons-material/DarkModeOutlined";
-import FileUploadOutlinedIcon from "@mui/icons-material/FileUploadOutlined";
 import LightModeOutlinedIcon from "@mui/icons-material/LightModeOutlined";
 import SettingsBrightnessOutlinedIcon from "@mui/icons-material/SettingsBrightnessOutlined";
 import { useAuth } from "../auth/AuthContext";
@@ -12,6 +11,7 @@ import { Button } from "../components/base/Button";
 import { FormInput } from "../components/form-input/FormInput";
 import { FormSelect } from "../components/form-input/FormSelect";
 import { ChangePasswordForm } from "../components/profile/ChangePasswordForm";
+import { ProfilePictureSection } from "../components/profile/ProfilePictureSection";
 import { ThemePicker } from "../components/profile/ThemePicker";
 import {
 	ProfileSettingsNav,
@@ -23,7 +23,6 @@ import { useAppTheme } from "../context/AppThemeContext";
 import type { AppearanceMode } from "../lib/appThemeStorage";
 import { crumb } from "../lib/breadcrumb";
 import { formatUserFacingError } from "../lib/formatUserFacingError";
-import { userInitials } from "../lib/userDisplay";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -71,7 +70,6 @@ export const ProfilePage = () => {
 	if (!user) return null;
 
 	const profile = profileQuery.data;
-	const initials = userInitials(user);
 
 	const validateProfile = () => {
 		const fn = firstName.trim();
@@ -141,29 +139,7 @@ export const ProfilePage = () => {
 				</Button>
 			}
 		>
-			<div className="flex flex-col gap-4 border-b border-neutral-200 pb-6 dark:border-black-600 sm:flex-row sm:items-center sm:justify-between">
-				<div className="flex items-center gap-4">
-					<span
-						className="inline-flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-neutral-200 text-xl font-semibold text-neutral-600 dark:bg-black-700 dark:text-neutral-300"
-						aria-hidden
-					>
-						{initials}
-					</span>
-					<p className="text-sm font-medium text-neutral-800 dark:text-neutral-200">Profile Picture</p>
-				</div>
-				<Button
-					type="button"
-					appearance="outlined"
-					status="secondary-neutral"
-					className="shrink-0"
-					onClick={() => toast.info("Profile picture upload is not available yet.")}
-				>
-					<span className="flex items-center gap-2">
-						<FileUploadOutlinedIcon sx={{ fontSize: 18 }} />
-						Upload
-					</span>
-				</Button>
-			</div>
+			<ProfilePictureSection />
 
 			<form id="profile-form" onSubmit={onSaveProfile} className="flex flex-col gap-6">
 				<div>

@@ -12,6 +12,7 @@ import { Skeleton } from "../../components/base/Skeleton";
 import { Typography } from "../../components/base/Typography";
 import { formatUsDateTime } from "../../lib/formatDateTime";
 import { formatUserFacingError } from "../../lib/formatUserFacingError";
+import { UserIdentity } from "../../components/UserIdentity";
 import { displayLineItemCell } from "./agreementLineItemsUtils";
 import { AgreementTeamsStepPanel } from "./AgreementTeamsStepPanel";
 
@@ -20,12 +21,6 @@ export interface AgreementDashboardPanelProps {
 	dashboard: AgreementDashboardData | undefined;
 	dashboardLoading: boolean;
 	dashboardError: string | null;
-}
-
-function userDisplayName(user: AgreementDashboardUser | null | undefined): string {
-	if (!user) return "—";
-	const fullName = [user.firstName, user.lastName].filter(Boolean).join(" ").trim();
-	return fullName || user.username?.trim() || user.email?.trim() || "—";
 }
 
 function MetaItem({ label, children }: { label: string; children: React.ReactNode }) {
@@ -48,11 +43,7 @@ function MetaUserItem({
 }) {
 	return (
 		<MetaItem label={label}>
-			{user ? (
-				<span className="truncate">{userDisplayName(user)}</span>
-			) : (
-				<span>—</span>
-			)}
+			<UserIdentity user={user} />
 		</MetaItem>
 	);
 }

@@ -70,8 +70,10 @@ export {
 	useCreateUserMutation,
 	useCurrentUserQuery,
 	useDeleteUserMutation,
+	useDeleteUserAvatarMutation,
 	useUpdateProfileMutation,
 	useUpdateUserMutation,
+	useUploadUserAvatarMutation,
 	useUsersInfiniteList,
 } from "./hooks/users";
 export type { UpdateProfileBody } from "./hooks/users";
