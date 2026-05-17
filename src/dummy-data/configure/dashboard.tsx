@@ -5,12 +5,12 @@ import InputOutlinedIcon from "@mui/icons-material/InputOutlined";
 export const configureDashboardCards = [
 	{
 		name: "Agreement",
-		icon: <DescriptionOutlinedIcon sx={{ fontSize: 24 }} />,
+		icon: <DescriptionOutlinedIcon sx={{ fontSize: 24 }} className="text-primary-600 dark:text-primary-300" />,
 		to: "/configure/agreements" as const,
 	},
 	{
 		name: "Field",
-		icon: <InputOutlinedIcon sx={{ fontSize: 24 }} />,
+		icon: <InputOutlinedIcon sx={{ fontSize: 24 }} className="text-primary-600 dark:text-primary-300" />,
 		to: "/configure/fields" as const,
 	},
 ] as const;

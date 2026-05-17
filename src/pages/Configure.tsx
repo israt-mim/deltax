@@ -145,7 +145,7 @@ export const Configure = () => {
 						className="cursor-pointer max-w-60 flex flex-row gap-3 transition-all hover:shadow-200 hover:scale-[1.02]"
 						onClick={() => void navigate(item.to)}
 					>
-						<div className="flex items-center justify-center bg-primary-50 p-2 rounded border border-primary-100">
+						<div className="flex items-center justify-center rounded-lg border border-primary-100 bg-primary-50 p-2 dark:border-black-500 dark:bg-black-700">
 							{item.icon}
 						</div>
 						<div className="flex flex-col">

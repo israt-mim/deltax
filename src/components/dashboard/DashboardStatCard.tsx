@@ -16,7 +16,7 @@ export function DashboardStatCard({ label, value, icon, loading, onClick }: Dash
 			className={`flex flex-row gap-3 transition-all ${onClick ? "cursor-pointer hover:scale-[1.02] hover:shadow-200 dark:hover:border-primary-800 dark:hover:bg-black-700/80" : ""}`}
 			onClick={onClick}
 		>
-			<div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-primary-100 bg-primary-50 dark:border-primary-800 dark:bg-primary-950/60">
+			<div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-primary-100 bg-primary-50 dark:border-black-500 dark:bg-black-700">
 				{icon}
 			</div>
 			<div className="flex min-w-0 flex-col justify-center">

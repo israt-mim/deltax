@@ -176,6 +176,53 @@ export const Home = () => {
 			</section>
 
 			<section>
+				<Typography
+					size="medium"
+					variant="semibold"
+					appearance="custom"
+					className="mb-3 text-neutral-800 dark:text-neutral-200"
+				>
+					Quick Access
+				</Typography>
+				<div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+					{QUICK_LINKS.map((link) => (
+						<Card
+							key={link.to}
+							className="group cursor-pointer transition-all hover:scale-[1.02] hover:shadow-200 dark:hover:border-primary-800 dark:hover:bg-black-700/80"
+							onClick={() => void navigate(link.to)}
+						>
+							<div className="flex gap-3">
+								<div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-primary-100 bg-primary-50 transition-colors group-hover:border-primary-200 group-hover:bg-primary-100 dark:border-black-500 dark:bg-black-700 dark:group-hover:border-primary-800 dark:group-hover:bg-black-600">
+									{link.icon}
+								</div>
+								<div className="min-w-0">
+									<Typography
+										size="small"
+										variant="semibold"
+										appearance="custom"
+										className="text-neutral-900 dark:text-white"
+									>
+										{link.label}
+									</Typography>
+									<p className="mt-1 text-xs leading-snug text-neutral-500 dark:text-neutral-400">
+										{link.description}
+									</p>
+								</div>
+							</div>
+						</Card>
+					))}
+				</div>
+			</section>
+
+			<section>
+				<Typography
+					size="medium"
+					variant="semibold"
+					appearance="custom"
+					className="mb-3 text-neutral-800 dark:text-neutral-200"
+				>
+					Analytics
+				</Typography>
 				{chartsQuery.isError ? (
 					<p className="mb-3 text-sm text-error-500">
 						{formatUserFacingError(chartsQuery.error, "Could not load chart data.")}{" "}
@@ -197,45 +244,6 @@ export const Home = () => {
 					agreementsByMonth={chartsQuery.data?.agreementsByMonth ?? []}
 					topCategories={chartsQuery.data?.topCategories ?? []}
 				/>
-			</section>
-
-			<section>
-				<Typography
-					size="medium"
-					variant="semibold"
-					appearance="custom"
-					className="mb-3 text-neutral-800 dark:text-neutral-200"
-				>
-					Quick access
-				</Typography>
-				<div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-					{QUICK_LINKS.map((link) => (
-						<Card
-							key={link.to}
-							className="group cursor-pointer transition-all hover:scale-[1.02] hover:shadow-200 dark:hover:border-primary-800 dark:hover:bg-black-700/80"
-							onClick={() => void navigate(link.to)}
-						>
-							<div className="flex gap-3">
-								<div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-primary-100 bg-primary-50 transition-colors group-hover:border-primary-200 group-hover:bg-primary-100 dark:border-primary-800 dark:bg-primary-950/60 dark:group-hover:border-primary-700 dark:group-hover:bg-primary-900/50">
-									{link.icon}
-								</div>
-								<div className="min-w-0">
-									<Typography
-										size="small"
-										variant="semibold"
-										appearance="custom"
-										className="text-neutral-900 dark:text-white"
-									>
-										{link.label}
-									</Typography>
-									<p className="mt-1 text-xs leading-snug text-neutral-500 dark:text-neutral-400">
-										{link.description}
-									</p>
-								</div>
-							</div>
-						</Card>
-					))}
-				</div>
 			</section>
 		</CardMain>
 	);

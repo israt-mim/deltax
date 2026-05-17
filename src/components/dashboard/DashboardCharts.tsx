@@ -10,7 +10,6 @@ import {
 	Pie,
 	PieChart,
 	ResponsiveContainer,
-	Tooltip,
 	XAxis,
 	YAxis,
 } from "recharts";
@@ -51,52 +50,27 @@ function useChartTheme() {
 	return {
 		grid: isDark ? "#2d3748" : "#e5e7eb",
 		axis: isDark ? "#9ca3af" : "#6b7280",
-		tooltipBg: isDark ? "#1f2937" : "#ffffff",
-		tooltipBorder: isDark ? "#374151" : "#e5e7eb",
-		tooltipText: isDark ? "#f3f4f6" : "#111827",
-		tooltipMuted: isDark ? "#9ca3af" : "#6b7280",
 		stroke: isDark ? "#0077E3" : "#016DCF",
+		dotStroke: isDark ? "#1f2937" : "#ffffff",
 	};
 }
 
-function chartTooltipStyle(theme: ReturnType<typeof useChartTheme>) {
-	return {
-		backgroundColor: theme.tooltipBg,
-		border: `1px solid ${theme.tooltipBorder}`,
-		borderRadius: 8,
-		color: theme.tooltipText,
-		fontSize: 12,
-	};
+const CHART_INTERACTION_PROPS = {
+	style: { pointerEvents: "none" as const },
+} as const;
+
+function ChartSurface({ children }: { children: ReactNode }) {
+	return (
+		<div className="h-full w-full select-none [&_.recharts-active-shape]:hidden [&_.recharts-cursor]:hidden [&_.recharts-tooltip-cursor]:hidden [&_.recharts-tooltip-wrapper]:hidden">
+			{children}
+		</div>
+	);
 }
 
 function EmptyChart({ message }: { message: string }) {
 	return (
 		<div className="flex h-full items-center justify-center rounded-xl border border-dashed border-neutral-200 bg-gradient-to-b from-primary-50/30 to-transparent dark:border-black-600 dark:from-primary-950/20">
 			<p className="text-sm text-neutral-500 dark:text-neutral-400">{message}</p>
-		</div>
-	);
-}
-
-type TrendTooltipProps = {
-	active?: boolean;
-	payload?: Array<{ value?: number; payload?: MonthlyCount }>;
-	label?: string;
-};
-
-function TrendTooltip({ active, payload, label }: TrendTooltipProps) {
-	const theme = useChartTheme();
-	if (!active || !payload?.length) return null;
-	const count = payload[0]?.value ?? 0;
-
-	return (
-		<div className="rounded-lg border px-3 py-2 shadow-200" style={chartTooltipStyle(theme)}>
-			<p className="text-xs font-medium" style={{ color: theme.tooltipMuted }}>
-				{label}
-			</p>
-			<p className="mt-0.5 text-lg font-semibold tabular-nums">{count.toLocaleString()}</p>
-			<p className="text-xs" style={{ color: theme.tooltipMuted }}>
-				agreements created
-			</p>
 		</div>
 	);
 }
@@ -121,8 +95,9 @@ function AgreementTrendChart({ data }: AgreementTrendChartProps) {
 				created in the last 6 months
 			</p>
 			<div className="min-h-0 flex-1">
-				<ResponsiveContainer width="100%" height="100%">
-					<AreaChart data={data} margin={{ top: 12, right: 12, left: -12, bottom: 0 }}>
+				<ChartSurface>
+					<ResponsiveContainer width="100%" height="100%">
+						<AreaChart data={data} margin={{ top: 12, right: 12, left: -12, bottom: 0 }} {...CHART_INTERACTION_PROPS}>
 						<defs>
 							<linearGradient id="agreementTrendFill" x1="0" y1="0" x2="0" y2="1">
 								<stop offset="0%" stopColor={theme.stroke} stopOpacity={0.35} />
@@ -144,21 +119,19 @@ function AgreementTrendChart({ data }: AgreementTrendChartProps) {
 							tickLine={false}
 							width={32}
 						/>
-						<Tooltip
-							content={<TrendTooltip />}
-							cursor={{ stroke: theme.stroke, strokeWidth: 1, strokeDasharray: "4 4" }}
-						/>
 						<Area
 							type="monotone"
 							dataKey="count"
 							stroke={theme.stroke}
 							strokeWidth={2.5}
 							fill="url(#agreementTrendFill)"
-							dot={{ r: 4, fill: theme.stroke, strokeWidth: 2, stroke: theme.tooltipBg }}
-							activeDot={{ r: 6, fill: theme.stroke, strokeWidth: 2, stroke: theme.tooltipBg }}
+							dot={{ r: 4, fill: theme.stroke, strokeWidth: 2, stroke: theme.dotStroke }}
+							activeDot={false}
+							isAnimationActive={false}
 						/>
-					</AreaChart>
-				</ResponsiveContainer>
+						</AreaChart>
+					</ResponsiveContainer>
+				</ChartSurface>
 			</div>
 		</div>
 	);
@@ -170,26 +143,29 @@ function StatusPieChart({ data, emptyMessage = "No data yet" }: { data: ChartSli
 	if (data.length === 0) return <EmptyChart message={emptyMessage} />;
 
 	return (
-		<ResponsiveContainer width="100%" height="100%">
-			<PieChart>
-				<Pie
-					data={data}
-					dataKey="value"
-					nameKey="name"
-					cx="50%"
-					cy="50%"
-					innerRadius={48}
-					outerRadius={72}
-					paddingAngle={2}
-				>
-					{data.map((entry) => (
-						<Cell key={entry.name} fill={entry.fill ?? "#016DCF"} />
-					))}
-				</Pie>
-				<Tooltip contentStyle={chartTooltipStyle(theme)} />
-				<Legend wrapperStyle={{ fontSize: 12, color: theme.axis }} />
-			</PieChart>
-		</ResponsiveContainer>
+		<ChartSurface>
+			<ResponsiveContainer width="100%" height="100%">
+				<PieChart {...CHART_INTERACTION_PROPS}>
+					<Pie
+						data={data}
+						dataKey="value"
+						nameKey="name"
+						cx="50%"
+						cy="50%"
+						innerRadius={48}
+						outerRadius={72}
+						paddingAngle={2}
+						activeShape={false}
+						isAnimationActive={false}
+					>
+						{data.map((entry) => (
+							<Cell key={entry.name} fill={entry.fill ?? "#016DCF"} />
+						))}
+					</Pie>
+					<Legend wrapperStyle={{ fontSize: 12, color: theme.axis }} />
+				</PieChart>
+			</ResponsiveContainer>
+		</ChartSurface>
 	);
 }
 
@@ -199,15 +175,16 @@ function MonthlyBarChart({ data }: { data: MonthlyCount[] }) {
 	if (!hasData) return <EmptyChart message="No agreements in the last 6 months" />;
 
 	return (
-		<ResponsiveContainer width="100%" height="100%">
-			<BarChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
-				<CartesianGrid strokeDasharray="3 3" stroke={theme.grid} vertical={false} />
-				<XAxis dataKey="month" tick={{ fill: theme.axis, fontSize: 11 }} axisLine={false} tickLine={false} />
-				<YAxis allowDecimals={false} tick={{ fill: theme.axis, fontSize: 11 }} axisLine={false} tickLine={false} />
-				<Tooltip contentStyle={chartTooltipStyle(theme)} />
-				<Bar dataKey="count" name="Agreements" fill="#016DCF" radius={[4, 4, 0, 0]} />
-			</BarChart>
-		</ResponsiveContainer>
+		<ChartSurface>
+			<ResponsiveContainer width="100%" height="100%">
+				<BarChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }} {...CHART_INTERACTION_PROPS}>
+					<CartesianGrid strokeDasharray="3 3" stroke={theme.grid} vertical={false} />
+					<XAxis dataKey="month" tick={{ fill: theme.axis, fontSize: 11 }} axisLine={false} tickLine={false} />
+					<YAxis allowDecimals={false} tick={{ fill: theme.axis, fontSize: 11 }} axisLine={false} tickLine={false} />
+					<Bar dataKey="count" name="Agreements" fill="#016DCF" radius={[4, 4, 0, 0]} activeBar={false} isAnimationActive={false} />
+				</BarChart>
+			</ResponsiveContainer>
+		</ChartSurface>
 	);
 }
 
@@ -216,22 +193,23 @@ function CategoryBarChart({ data }: { data: CategoryCount[] }) {
 	if (data.length === 0) return <EmptyChart message="No category data yet" />;
 
 	return (
-		<ResponsiveContainer width="100%" height="100%">
-			<BarChart layout="vertical" data={data} margin={{ top: 4, right: 12, left: 4, bottom: 4 }}>
-				<CartesianGrid strokeDasharray="3 3" stroke={theme.grid} horizontal={false} />
-				<XAxis type="number" allowDecimals={false} tick={{ fill: theme.axis, fontSize: 11 }} axisLine={false} tickLine={false} />
-				<YAxis
-					type="category"
-					dataKey="name"
-					width={100}
-					tick={{ fill: theme.axis, fontSize: 11 }}
-					axisLine={false}
-					tickLine={false}
-				/>
-				<Tooltip contentStyle={chartTooltipStyle(theme)} />
-				<Bar dataKey="count" name="Agreements" fill="#0054A1" radius={[0, 4, 4, 0]} />
-			</BarChart>
-		</ResponsiveContainer>
+		<ChartSurface>
+			<ResponsiveContainer width="100%" height="100%">
+				<BarChart layout="vertical" data={data} margin={{ top: 4, right: 12, left: 4, bottom: 4 }} {...CHART_INTERACTION_PROPS}>
+					<CartesianGrid strokeDasharray="3 3" stroke={theme.grid} horizontal={false} />
+					<XAxis type="number" allowDecimals={false} tick={{ fill: theme.axis, fontSize: 11 }} axisLine={false} tickLine={false} />
+					<YAxis
+						type="category"
+						dataKey="name"
+						width={100}
+						tick={{ fill: theme.axis, fontSize: 11 }}
+						axisLine={false}
+						tickLine={false}
+					/>
+					<Bar dataKey="count" name="Agreements" fill="#0054A1" radius={[0, 4, 4, 0]} activeBar={false} isAnimationActive={false} />
+				</BarChart>
+			</ResponsiveContainer>
+		</ChartSurface>
 	);
 }
 
