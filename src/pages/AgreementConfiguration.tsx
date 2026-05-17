@@ -21,12 +21,19 @@ import {
 import { useAgreementConfigsInfiniteList, useBulkDeleteAgreementConfigsMutation } from "../api";
 import { formatUserFacingError } from "../lib/formatUserFacingError";
 import { FormInput } from "../components/form-input/FormInput";
+import { usePageBreadcrumb } from "../hooks/usePageBreadcrumb";
+import { crumb } from "../lib/breadcrumb";
 
 export type { AgreementConfigTableRow } from "./agreementConfiguration/agreementListTableShared";
 
 const AGREEMENT_ACTIONS_COL_WIDTH = 44;
 
 export const AgreementConfiguration = () => {
+	usePageBreadcrumb([
+		crumb("Configure", "/configure"),
+		crumb("Agreements", "/configure/agreements"),
+	]);
+
 	const navigate = useNavigate();
 	const scrollableColumns = useColumns(agreementListScrollableColumnConfigs);
 	const columns = useMemo(

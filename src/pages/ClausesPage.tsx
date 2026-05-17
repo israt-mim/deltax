@@ -11,6 +11,8 @@ import { formatUsDateTime } from "../lib/formatDateTime";
 import { formatUserFacingError } from "../lib/formatUserFacingError";
 import { FormInput } from "../components/form-input/FormInput";
 import { CLAUSE_SCROLL_COLUMN_SPECS } from "./clauses/clauseListColumns";
+import { usePageBreadcrumb } from "../hooks/usePageBreadcrumb";
+import { crumb } from "../lib/breadcrumb";
 
 const DATE_IDS = new Set(["createdAt", "updatedAt", "validFrom", "validTo"]);
 
@@ -123,6 +125,8 @@ export const ClausesPage = () => {
 	const navigate = useNavigate();
 	const [searchInput, setSearchInput] = useState("");
 	const [debouncedSearch, setDebouncedSearch] = useState("");
+
+	usePageBreadcrumb([crumb("Clauses", "/clauses")]);
 
 	useEffect(() => {
 		const t = window.setTimeout(() => setDebouncedSearch(searchInput.trim()), 400);

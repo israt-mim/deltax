@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { CardMain } from "../components/base/CardMain";
 import { Title } from "../components/base/Title";
+import { usePageBreadcrumb } from "../hooks/usePageBreadcrumb";
+import { crumb } from "../lib/breadcrumb";
 import { Tabs } from "../components/base/Tabs";
 import { Users } from "../components/modules/settings/Users";
 import { Groups } from "../components/modules/settings/Groups";
@@ -21,6 +23,8 @@ const tabLabel = (text: string) => (
 export const Settings = () => {
 	const [activeTab, setActiveTab] = useState<TabKey>(TAB_KEYS.groups);
 	const [search, setSearch] = useState("");
+
+	usePageBreadcrumb([crumb("Settings", "/settings")]);
 
 	useEffect(() => {
 		setSearch("");

@@ -25,6 +25,8 @@ import {
 } from "../api";
 import type { AgreementConfigApi, AgreementConfiguredStep } from "../api/services/agreementConfigs";
 import { formatUserFacingError } from "../lib/formatUserFacingError";
+import { usePageBreadcrumb } from "../hooks/usePageBreadcrumb";
+import { crumb } from "../lib/breadcrumb";
 import {
 	buildConfigureAgreementPayload,
 	type ConfigureDraftSection,
@@ -161,6 +163,17 @@ function agreementConfigWithStepOrder(
 export const AgreementConfigurationDetailsPage = () => {
 	const { id } = useParams<{ id: string }>();
 	const configQuery = useAgreementConfigQuery({ id });
+	const configForBreadcrumb = configQuery.data;
+
+	const navbarBreadcrumb = useMemo(() => {
+		const base = [
+			crumb("Configure", "/configure"),
+			crumb("Agreements", "/configure/agreements"),
+		];
+		if (!configForBreadcrumb) return base;
+		return [...base, crumb(configForBreadcrumb.displayId?.trim() || configForBreadcrumb._id)];
+	}, [configForBreadcrumb]);
+	usePageBreadcrumb(navbarBreadcrumb);
 	const [detailTab, setDetailTab] = useState<AgreementDetailTabKey>(AGREEMENT_DETAIL_TAB_KEYS.general);
 	const [generalSubTab, setGeneralSubTab] = useState<GeneralSubTabKey>(GENERAL_SUB_TAB_KEYS.configurationType);
 	/** Wizard step `_id` for Configuration tab sub-tabs (excludes Authoring / Clauses). */

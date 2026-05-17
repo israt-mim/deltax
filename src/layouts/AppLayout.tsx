@@ -4,11 +4,13 @@ import Sidebar from '../components/Sidebar'
 import { EXPANDED_SIDEBAR_WIDTH, NAVBAR_HEIGHT, SIDEBAR_WIDTH } from '../constants/global'
 import { Outlet } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import { BreadcrumbProvider } from '../context/BreadcrumbContext'
 
 export const AppLayout = () => {
 	const [sidebarExpanded, setSidebarExpanded] = useState(false)
 
 	return (
+		<BreadcrumbProvider>
 		<div className="min-h-screen">
 			<Navbar
 				sidebarExpanded={sidebarExpanded}
@@ -41,5 +43,6 @@ export const AppLayout = () => {
 					<Outlet />
 			</motion.main>
 		</div>
+		</BreadcrumbProvider>
 	)
 }

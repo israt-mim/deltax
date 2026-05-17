@@ -24,6 +24,8 @@ import {
 import { toastBulkDeleteResult } from "../lib/bulkDeleteFeedback";
 import { formatUserFacingError } from "../lib/formatUserFacingError";
 import { useDebouncedValue } from "../lib/useDebouncedValue";
+import { usePageBreadcrumb } from "../hooks/usePageBreadcrumb";
+import { crumb } from "../lib/breadcrumb";
 
 const fieldColumnConfigs: ColumnConfig<FieldRow>[] = [
 	{
@@ -135,6 +137,11 @@ function FieldRowMenu({ field, onDeleteRequest }: { field: FieldRow; onDeleteReq
 }
 
 export const FieldConfiguration = () => {
+	usePageBreadcrumb([
+		crumb("Configure", "/configure"),
+		crumb("Fields", "/configure/fields"),
+	]);
+
 	const navigate = useNavigate();
 	const columns = useColumns(fieldColumnConfigs);
 	const [searchInput, setSearchInput] = useState("");

@@ -17,6 +17,8 @@ import {
 } from "./agreementConfiguration/agreementListTableShared";
 import { Tabs } from "../components/base/Tabs";
 import { formatUserFacingError } from "../lib/formatUserFacingError";
+import { usePageBreadcrumb } from "../hooks/usePageBreadcrumb";
+import { crumb } from "../lib/breadcrumb";
 
 const fieldColumnConfigs: ColumnConfig<FieldRow>[] = [
 	{ key: "name", name: "Name", width: 180 },
@@ -32,6 +34,8 @@ function formatCount(n: number | undefined, loading: boolean): string {
 }
 
 export const Configure = () => {
+	usePageBreadcrumb([crumb("Configure", "/configure")]);
+
 	const navigate = useNavigate();
 	const [activeTab, setActiveTab] = useState<"fields" | "agreements">("agreements");
 

@@ -47,6 +47,8 @@ import {
 	buildInitialFieldValues,
 	validateRequiredAgreementFields,
 } from "./agreementConfiguration/agreementStepDetailsValidation";
+import { usePageBreadcrumb } from "../hooks/usePageBreadcrumb";
+import { buildAgreementBreadcrumb } from "../lib/breadcrumb";
 
 const AGREEMENT_TEAMS_STEP: AgreementDocumentStep = {
 	id: "__agreement-teams__",
@@ -361,6 +363,25 @@ export default function CreateAgreementDetailsPage() {
 		dashboard?.agreement_subtype?.name,
 		dashboard?.agreement_type?.name,
 	]);
+
+	const navbarBreadcrumb = useMemo(
+		() =>
+			buildAgreementBreadcrumb({
+				categoryId: dashboard?.agreement_category?._id,
+				categoryName: dashboard?.agreement_category?.name,
+				domainId: dashboard?.agreement_domain?._id,
+				domainName: dashboard?.agreement_domain?.name,
+				displayName: headerDisplayName,
+			}),
+		[
+			dashboard?.agreement_category?._id,
+			dashboard?.agreement_category?.name,
+			dashboard?.agreement_domain?._id,
+			dashboard?.agreement_domain?.name,
+			headerDisplayName,
+		]
+	);
+	usePageBreadcrumb(navbarBreadcrumb);
 
 	const handleLineItemSave = useCallback(
 		async (values: Record<string, unknown>) => {

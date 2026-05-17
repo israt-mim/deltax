@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "react-toastify";
@@ -31,6 +31,8 @@ import {
 	FieldDetailsSectionReadOnly,
 	FieldTypesSectionReadOnly,
 } from "./fieldConfiguration/FieldFormShared";
+import { usePageBreadcrumb } from "../hooks/usePageBreadcrumb";
+import { crumb } from "../lib/breadcrumb";
 
 function formatDefaultValueDisplay(dataType: string, raw: unknown): string {
 	if (raw === null || raw === undefined || raw === "") return "—";
@@ -178,6 +180,16 @@ export const FieldDetailPage = () => {
 		: "—";
 
 	const pageTitle = isEditing ? name.trim() || "Edit field" : doc?.details?.name?.trim() || "Field";
+
+	const navbarBreadcrumb = useMemo(
+		() => [
+			crumb("Configure", "/configure"),
+			crumb("Fields", "/configure/fields"),
+			crumb(pageTitle),
+		],
+		[pageTitle]
+	);
+	usePageBreadcrumb(navbarBreadcrumb);
 
 	const handleStartEdit = useCallback(() => {
 		if (!fieldQuery.data) return;

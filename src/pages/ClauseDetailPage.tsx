@@ -11,6 +11,9 @@ import { Card } from "../components/base/Card";
 import { CardMain } from "../components/base/CardMain";
 import { PageLoader } from "../components/base/PageLoader";
 import { Title } from "../components/base/Title";
+import { usePageBreadcrumb } from "../hooks/usePageBreadcrumb";
+import { crumb } from "../lib/breadcrumb";
+
 const LONG_TEXT_THRESHOLD = 200;
 
 type GridCell = {
@@ -320,9 +323,23 @@ function ClauseDetailBody({ detail }: { detail: ClauseDetailApi }) {
 	);
 }
 
+function clauseDetailTitle(detail: ClauseDetailApi | undefined): string {
+	if (!detail) return "Clause";
+	const general = detail.sections?.find((s) => s.name === "general")?.fields?.[0] as
+		| ClauseSectionFields
+		| undefined;
+	return strVal(general?.title) || detail.displayId || "Clause";
+}
+
 export const ClauseDetailPage = () => {
 	const { id } = useParams<{ id: string }>();
 	const clauseQuery = useClauseDetailQuery({ id });
+
+	const navbarBreadcrumb = useMemo(
+		() => [crumb("Clauses", "/clauses"), crumb(clauseDetailTitle(clauseQuery.data))],
+		[clauseQuery.data]
+	);
+	usePageBreadcrumb(navbarBreadcrumb);
 
 	useEffect(() => {
 		if (!clauseQuery.isError || !clauseQuery.error) return;

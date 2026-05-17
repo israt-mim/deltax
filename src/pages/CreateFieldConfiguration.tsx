@@ -23,6 +23,8 @@ import {
 	type DetailsStepErrors,
 	type TypeStepErrors,
 } from "./fieldConfiguration/FieldFormShared";
+import { usePageBreadcrumb } from "../hooks/usePageBreadcrumb";
+import { crumb } from "../lib/breadcrumb";
 
 const STEPS: StepperStep[] = [
 	{ key: "details", label: "Details" },
@@ -162,6 +164,12 @@ const PreviewStep = ({
 };
 
 const CreateFieldConfiguration = () => {
+	usePageBreadcrumb([
+		crumb("Configure", "/configure"),
+		crumb("Fields", "/configure/fields"),
+		crumb("New Field Configuration"),
+	]);
+
 	const navigate = useNavigate();
 	const [activeStep, setActiveStep] = useState(0);
 

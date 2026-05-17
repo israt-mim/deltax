@@ -22,6 +22,8 @@ import {
 import { useAgreementsInfiniteList, useBulkDeleteAgreementsMutation } from "../api";
 import { formatUserFacingError } from "../lib/formatUserFacingError";
 import { useAppSelector } from "../store/hooks";
+import { usePageBreadcrumb } from "../hooks/usePageBreadcrumb";
+import { buildAgreementBreadcrumb, resolveAgreementCatalogLabels } from "../lib/breadcrumb";
 
 export type { AgreementListPageRow } from "./agreementConfiguration/agreementListPageTable";
 
@@ -48,6 +50,12 @@ export function AgreementListPage() {
 		}
 		return "Agreements";
 	}, [categories, agreementDomain]);
+
+	const navbarBreadcrumb = useMemo(() => {
+		const catalog = resolveAgreementCatalogLabels(categories, agreementCategory, agreementDomain);
+		return buildAgreementBreadcrumb(catalog);
+	}, [categories, agreementCategory, agreementDomain]);
+	usePageBreadcrumb(navbarBreadcrumb);
 
 	const [checkedIds, setCheckedIds] = useState<Set<string>>(() => new Set());
 	const [agreementPendingDelete, setAgreementPendingDelete] = useState<AgreementListPageRow | null>(null);

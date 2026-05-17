@@ -3,12 +3,14 @@ import NotificationsOutlinedIcon from '@mui/icons-material/NotificationsOutlined
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import MenuOutlinedIcon from '@mui/icons-material/MenuOutlined';
 import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
-import { useNavigate } from 'react-router';
+import ArrowForwardIosOutlinedIcon from '@mui/icons-material/ArrowForwardIosOutlined';
+import { Link, useNavigate } from 'react-router';
 import { NavItem } from './base/NavItem';
 import { NAVBAR_HEIGHT } from '../constants/global';
 import type { ReactNode } from 'react';
 import { Logo } from './icons/logo';
 import { useAuth } from '../auth/AuthContext';
+import { useBreadcrumbContext } from '../context/BreadcrumbContext';
 
 
 interface NavItemDetails {
@@ -25,6 +27,7 @@ interface NavbarProps {
 export default function Navbar({ sidebarExpanded, onSidebarToggle }: NavbarProps) {
   const navigate = useNavigate();
   const { logout } = useAuth();
+  const { items: breadcrumbItems } = useBreadcrumbContext();
 
   const NAVBAR_ITEMS: NavItemDetails[] = [
     {
@@ -67,6 +70,44 @@ export default function Navbar({ sidebarExpanded, onSidebarToggle }: NavbarProps
           <MenuOutlinedIcon sx={{ fontSize: 18, color: 'white', opacity: sidebarExpanded ? '' : '0.7' }} />
         </NavItem>
         <Logo size={80} primaryColor='#FFFFFF' secondaryColor='#CC5500' />
+        {breadcrumbItems.length > 0 ? (
+          <>
+            <span className="text-white select-none" aria-hidden="true">|</span>
+            <nav
+              className="flex min-w-0 max-w-[min(52vw,640px)] items-center gap-0.5 text-sm font-semibold text-white"
+              aria-label="Breadcrumb"
+            >
+              {breadcrumbItems.map((item, index) => {
+                const crumbClass =
+                  "truncate rounded-md px-2 py-0.5 text-white transition-colors";
+                return (
+                  <span key={`${item.label}-${index}`} className="flex min-w-0 items-center">
+                    {index > 0 ? (
+                      <ArrowForwardIosOutlinedIcon
+                        sx={{ fontSize: 12, color: 'white', opacity: 0.85 }}
+                        className="shrink-0 mx-0.5"
+                        aria-hidden
+                      />
+                    ) : null}
+                    {item.href ? (
+                      <Link
+                        to={item.href}
+                        className={`${crumbClass} no-underline hover:bg-primary-150 hover:text-primary-900`}
+                        title={item.label}
+                      >
+                        {item.label}
+                      </Link>
+                    ) : (
+                      <span className={crumbClass} title={item.label}>
+                        {item.label}
+                      </span>
+                    )}
+                  </span>
+                );
+              })}
+            </nav>
+          </>
+        ) : null}
       </div>
 
       <div className="flex items-center gap-2">

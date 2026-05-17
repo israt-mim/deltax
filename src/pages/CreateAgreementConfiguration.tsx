@@ -25,6 +25,8 @@ import {
 	type ConfigureDraftSection,
 	type ConfigureFieldOverrides,
 } from "./agreementConfiguration/buildConfigureAgreementPayload";
+import { usePageBreadcrumb } from "../hooks/usePageBreadcrumb";
+import { crumb } from "../lib/breadcrumb";
 
 function statusBadgeClass(isActive: boolean | undefined) {
 	if (isActive) {
@@ -72,6 +74,16 @@ const CreateAgreementConfiguration = () => {
 	const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false);
 
 	const config = configQuery.data;
+
+	const navbarBreadcrumb = useMemo(() => {
+		const base = [
+			crumb("Configure", "/configure"),
+			crumb("Agreements", "/configure/agreements"),
+		];
+		if (!config) return [...base, crumb("Create")];
+		return [...base, crumb(config.displayId ?? config._id)];
+	}, [config]);
+	usePageBreadcrumb(navbarBreadcrumb);
 
 	const visibleWizardSteps = useMemo(() => {
 		if (!config?.steps?.length) return [];

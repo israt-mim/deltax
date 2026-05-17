@@ -1,6 +1,10 @@
 import { CardMain } from "../components/base/CardMain"
+import { usePageBreadcrumb } from "../hooks/usePageBreadcrumb"
+import { crumb } from "../lib/breadcrumb"
 
 export const Home = () => {
+	usePageBreadcrumb([crumb("Dashboard", "/")]);
+
 	return (
 		<CardMain>
 			<div className="text-2xl font-semibold text-neutral-900">
