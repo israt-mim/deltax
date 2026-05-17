@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Input } from "antd";
-import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
+import { SearchInput } from "../../components/form-input/SearchInput";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { Modal } from "../../components/base/Modal";
@@ -152,10 +151,9 @@ export const AddFieldsModal = ({ open, sectionKey, excludeFieldIds = [], onClose
 			aria-labelledby={titleId}
 		>
 			<div className="flex flex-col gap-3">
-				<Input
-					allowClear
-					prefix={<SearchOutlinedIcon className="text-neutral-400" />}
-					placeholder="Search (use * as a wildcard)"
+				<SearchInput
+					placeholder="Search fields…"
+					aria-label="Search fields"
 					value={searchInput}
 					onChange={(e) => setSearchInput(e.target.value)}
 					className="w-full max-w-md min-w-[12rem]"

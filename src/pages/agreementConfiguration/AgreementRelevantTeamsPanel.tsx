@@ -3,7 +3,7 @@ import { Dropdown } from "antd";
 import type { MenuProps } from "antd";
 import { Switch } from "antd";
 import MoreVertOutlinedIcon from "@mui/icons-material/MoreVertOutlined";
-import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
+import { SearchInput } from "../../components/form-input/SearchInput";
 import type { ColumnDef } from "@tanstack/react-table";
 import { toast } from "react-toastify";
 import { useTeamsInfiniteList } from "../../api";
@@ -272,18 +272,13 @@ export function AgreementRelevantTeamsPanel({
 	return (
 		<div className="flex flex-col gap-3">
 			<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-				<div className="flex flex-1 flex-wrap items-center gap-2">
-					<div className="flex min-w-[200px] max-w-md flex-1 items-center gap-2 rounded-md border border-neutral-200 bg-white px-3 py-1.5 dark:border-black-600 dark:bg-black-800">
-						<SearchOutlinedIcon sx={{ fontSize: 18 }} className="text-neutral-400 shrink-0" />
-						<input
-							type="search"
-							value={search}
-							onChange={(e) => setSearch(e.target.value)}
-							placeholder="Search (use * as a wildcard)"
-							className="min-w-0 flex-1 bg-transparent text-sm text-neutral-800 outline-none placeholder:text-neutral-400 dark:text-neutral-200 dark:placeholder:text-neutral-500"
-						/>
-					</div>
-				</div>
+				<SearchInput
+					placeholder="Search teams…"
+					aria-label="Search teams"
+					value={search}
+					onChange={(e) => setSearch(e.target.value)}
+					className="max-w-md flex-1"
+				/>
 			</div>
 
 			<FloatingBar open={checkedIds.size > 0} selectedCount={checkedIds.size} onClearSelection={clearSelection} items={<></>} />

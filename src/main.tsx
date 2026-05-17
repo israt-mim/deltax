@@ -6,7 +6,9 @@ import "react-toastify/dist/ReactToastify.css";
 import "./toastify-theme.css";
 import { App } from './App.tsx'
 import { store } from "./store";
+import { initDarkModeFromStorage } from "./hooks/useDarkMode";
 
+initDarkModeFromStorage();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

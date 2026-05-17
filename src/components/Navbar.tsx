@@ -1,16 +1,14 @@
 import FullscreenOutlinedIcon from '@mui/icons-material/FullscreenOutlined';
 import NotificationsOutlinedIcon from '@mui/icons-material/NotificationsOutlined';
-import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import MenuOutlinedIcon from '@mui/icons-material/MenuOutlined';
-import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
 import ArrowForwardIosOutlinedIcon from '@mui/icons-material/ArrowForwardIosOutlined';
-import { Link, useNavigate } from 'react-router';
+import { Link } from 'react-router';
 import { NavItem } from './base/NavItem';
 import { NAVBAR_HEIGHT } from '../constants/global';
 import type { ReactNode } from 'react';
 import { Logo } from './icons/logo';
-import { useAuth } from '../auth/AuthContext';
 import { useBreadcrumbContext } from '../context/BreadcrumbContext';
+import { NavbarUserMenu } from './NavbarUserMenu';
 
 
 interface NavItemDetails {
@@ -25,8 +23,6 @@ interface NavbarProps {
 }
 
 export default function Navbar({ sidebarExpanded, onSidebarToggle }: NavbarProps) {
-  const navigate = useNavigate();
-  const { logout } = useAuth();
   const { items: breadcrumbItems } = useBreadcrumbContext();
 
   const NAVBAR_ITEMS: NavItemDetails[] = [
@@ -38,29 +34,16 @@ export default function Navbar({ sidebarExpanded, onSidebarToggle }: NavbarProps
       }
     },
     {
-      icon: <SettingsOutlinedIcon sx={{ fontSize: 20 }} />,
-      label: 'Settings',
-      onClick: () => {
-        console.log('Settings');
-      }
-    },
-    {
       icon: <FullscreenOutlinedIcon sx={{ fontSize: 20 }} />,
       label: 'Fullscreen',
       onClick: () => {
-        console.log('Fullscreen');
+        if (!document.fullscreenElement) {
+          void document.documentElement.requestFullscreen();
+        } else {
+          void document.exitFullscreen();
+        }
       }
     },
-    {
-      icon: <LogoutOutlinedIcon sx={{ fontSize: 20 }} />,
-      label: 'Sign out',
-      onClick: () => {
-        void (async () => {
-          await logout();
-          navigate('/login', { replace: true });
-        })();
-      }
-    }
   ];
 
   return (
@@ -116,6 +99,7 @@ export default function Navbar({ sidebarExpanded, onSidebarToggle }: NavbarProps
             {item.icon}
           </NavItem>
         ))}
+        <NavbarUserMenu />
       </div>
     </header>
   )

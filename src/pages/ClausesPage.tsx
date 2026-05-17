@@ -9,7 +9,7 @@ import type { StickyColumnMeta } from "../hooks/useColumns";
 import { type ClauseListItem, useClausesInfiniteList } from "../api";
 import { formatUsDateTime } from "../lib/formatDateTime";
 import { formatUserFacingError } from "../lib/formatUserFacingError";
-import { FormInput } from "../components/form-input/FormInput";
+import { SearchInput } from "../components/form-input/SearchInput";
 import { CLAUSE_SCROLL_COLUMN_SPECS } from "./clauses/clauseListColumns";
 import { usePageBreadcrumb } from "../hooks/usePageBreadcrumb";
 import { crumb } from "../lib/breadcrumb";
@@ -171,8 +171,9 @@ export const ClausesPage = () => {
 			)}
 
 			<Card className="flex flex-col gap-3">
-				<FormInput
+				<SearchInput
 					placeholder="Search clauses…"
+					aria-label="Search clauses"
 					value={searchInput}
 					onChange={(e) => setSearchInput(e.target.value)}
 					className="max-w-md"

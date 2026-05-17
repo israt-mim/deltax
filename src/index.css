@@ -65,6 +65,53 @@ button:focus-visible {
   display: none;
 }
 
+/* Ant Design form controls — dark mode */
+@layer components {
+  .dark .ant-input,
+  .dark .ant-input-outlined,
+  .dark .ant-input-affix-wrapper,
+  .dark .ant-input-number,
+  .dark .ant-input-number-input,
+  .dark .ant-select-selector,
+  .dark .ant-picker {
+    background-color: #141414 !important;
+    border-color: #262626 !important;
+    color: #f5f5f5 !important;
+    box-shadow: none !important;
+  }
+
+  .dark .ant-input::placeholder,
+  .dark .ant-input-affix-wrapper input::placeholder,
+  .dark .ant-input-number-input::placeholder {
+    @apply text-neutral-500;
+  }
+
+  .dark .ant-input-affix-wrapper .ant-input {
+    @apply bg-transparent;
+  }
+
+  .dark .ant-input:hover,
+  .dark .ant-input-affix-wrapper:not(.ant-input-affix-wrapper-disabled):hover,
+  .dark .ant-select:not(.ant-select-disabled):hover .ant-select-selector,
+  .dark .ant-picker:hover {
+    @apply border-primary-700;
+  }
+
+  .dark .ant-input:focus,
+  .dark .ant-input-focused,
+  .dark .ant-input-affix-wrapper-focused,
+  .dark .ant-select-focused .ant-select-selector,
+  .dark .ant-picker-focused {
+    @apply border-primary-500 shadow-[0_0_0_2px_rgba(127,169,197,0.2)];
+  }
+
+  .dark .ant-input-affix-wrapper .anticon,
+  .dark .ant-input-prefix,
+  .dark .ant-input-suffix {
+    @apply text-neutral-400;
+  }
+}
+
 /* Ant Design Dropdown menu shrinks `.ant-dropdown-menu-item-icon`; bump MUI icons to match design */
 .actions-dropdown-icon .ant-dropdown-menu-item-icon {
   font-size: 18px !important;

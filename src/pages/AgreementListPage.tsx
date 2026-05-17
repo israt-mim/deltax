@@ -2,9 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
-import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
 import { toast } from "react-toastify";
 import { Button } from "../components/base/Button";
+import { SearchInput } from "../components/form-input/SearchInput";
 import { CardMain } from "../components/base/CardMain";
 import { Title } from "../components/base/Title";
 import { Card } from "../components/base/Card";
@@ -165,20 +165,13 @@ export function AgreementListPage() {
 			</div>
 
 			<Card className="flex flex-col gap-3">
-				<div className="relative max-w-xl">
-					<SearchOutlinedIcon
-						className="pointer-events-none absolute left-3 top-1/2 z-[1] -translate-y-1/2 text-neutral-400"
-						sx={{ fontSize: 18 }}
-					/>
-					<input
-						type="search"
-						value={searchInput}
-						onChange={(e) => setSearchInput(e.target.value)}
-						placeholder="Search (use * as a wildcard)"
-						className="h-10 w-full rounded-md border border-neutral-200 bg-white pl-10 pr-3 text-sm text-neutral-900 outline-none placeholder:text-neutral-400 focus:border-primary-400 focus:ring-2 focus:ring-primary-400/20 dark:border-black-600 dark:bg-black-800 dark:text-neutral-100 dark:placeholder:text-neutral-500 dark:focus:border-primary-500"
-						autoComplete="off"
-					/>
-				</div>
+				<SearchInput
+					placeholder="Search agreements…"
+					aria-label="Search agreements"
+					value={searchInput}
+					onChange={(e) => setSearchInput(e.target.value)}
+					className="max-w-md"
+				/>
 
 				<FloatingBar
 					open={bulkSelectedCount > 0}

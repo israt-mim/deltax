@@ -3,7 +3,7 @@ import { toast } from "react-toastify";
 import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import ExpandMoreOutlinedIcon from "@mui/icons-material/ExpandMoreOutlined";
-import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
+import { SearchInput } from "../../components/form-input/SearchInput";
 import cn from "classnames";
 import {
 	useAgreementTeamsQuery,
@@ -170,16 +170,13 @@ function AddAgreementTeamMembersModal({
 			}
 		>
 			<div className="flex flex-col gap-3">
-				<div className="flex min-w-[200px] items-center gap-2 rounded-md border border-neutral-200 bg-white px-3 py-1.5 dark:border-black-600 dark:bg-black-800">
-					<SearchOutlinedIcon sx={{ fontSize: 18 }} className="shrink-0 text-neutral-400" />
-					<input
-						type="search"
-						value={search}
-						onChange={(e) => setSearch(e.target.value)}
-						placeholder="Search members"
-						className="min-w-0 flex-1 bg-transparent text-sm text-neutral-800 outline-none placeholder:text-neutral-400 dark:text-neutral-200 dark:placeholder:text-neutral-500"
-					/>
-				</div>
+				<SearchInput
+					placeholder="Search members…"
+					aria-label="Search members"
+					value={search}
+					onChange={(e) => setSearch(e.target.value)}
+					className="max-w-md"
+				/>
 
 				<div className="max-h-[420px] overflow-auto rounded-lg border border-neutral-200 dark:border-black-600">
 					<table className="w-full min-w-[560px] border-collapse text-left text-sm">

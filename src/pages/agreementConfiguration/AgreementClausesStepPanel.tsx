@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Dropdown } from "antd";
 import type { MenuProps } from "antd";
 import { toast } from "react-toastify";
-import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
+import { SearchInput } from "../../components/form-input/SearchInput";
 import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import MoreVertOutlinedIcon from "@mui/icons-material/MoreVertOutlined";
@@ -198,20 +198,13 @@ export function AgreementClausesStepPanel({
 	return (
 		<div className="flex flex-col gap-4">
 			<div className="flex flex-wrap items-center justify-between gap-3">
-				<div className="relative min-w-[200px] max-w-md flex-1">
-					<SearchOutlinedIcon
-						className="pointer-events-none absolute left-3 top-1/2 z-[1] -translate-y-1/2 text-neutral-400"
-						sx={{ fontSize: 18 }}
-					/>
-					<input
-						type="search"
-						value={tableSearch}
-						onChange={(e) => setTableSearch(e.target.value)}
-						placeholder="Search attached clauses…"
-						className="h-10 w-full rounded-md border border-neutral-200 bg-white pl-10 pr-3 text-sm text-neutral-900 outline-none placeholder:text-neutral-400 focus:border-primary-400 focus:ring-2 focus:ring-primary-400/20 dark:border-black-600 dark:bg-black-800 dark:text-neutral-100 dark:placeholder:text-neutral-500 dark:focus:border-primary-500"
-						autoComplete="off"
-					/>
-				</div>
+				<SearchInput
+					placeholder="Search attached clauses…"
+					aria-label="Search attached clauses"
+					value={tableSearch}
+					onChange={(e) => setTableSearch(e.target.value)}
+					className="min-w-[200px] max-w-md flex-1"
+				/>
 				<Button type="button" size="md" status="primary" onClick={() => setAddModalOpen(true)}>
 					<AddOutlinedIcon sx={{ fontSize: 16 }} />
 					Add

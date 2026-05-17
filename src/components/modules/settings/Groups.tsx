@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Dropdown } from "antd";
 import type { MenuProps } from "antd";
 import { toast } from "react-toastify";
-import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
 import ModeEditOutlinedIcon from "@mui/icons-material/ModeEditOutlined";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
@@ -16,6 +15,7 @@ import { useColumns, type ColumnConfig } from "../../../hooks/useColumns";
 import { formatUsDateTime } from "../../../lib/formatDateTime";
 import { useDebouncedValue } from "../../../lib/useDebouncedValue";
 import { formatUserFacingError } from "../../../lib/formatUserFacingError";
+import { SearchInput } from "../../form-input/SearchInput";
 import type { Group } from "../../../schemas/group";
 import {
 	useBulkDeleteGroupsMutation,
@@ -189,18 +189,13 @@ export const Groups = ({ search, onSearchChange }: SettingsGroupsProps) => {
 	return (
 		<Card className="flex flex-col gap-3">
 			<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-				<div className="flex flex-1 flex-wrap items-center gap-2">
-					<div className="flex min-w-[200px] max-w-md flex-1 items-center gap-2 rounded-md border border-neutral-200 bg-white px-3 py-1.5 dark:border-black-600 dark:bg-black-800">
-						<SearchOutlinedIcon sx={{ fontSize: 18 }} className="text-neutral-400 shrink-0" />
-						<input
-							type="search"
-							value={search}
-							onChange={(e) => onSearchChange(e.target.value)}
-							placeholder="Search groups (name or description)"
-							className="min-w-0 flex-1 bg-transparent text-sm text-neutral-800 outline-none placeholder:text-neutral-400 dark:text-neutral-200 dark:placeholder:text-neutral-500"
-						/>
-					</div>
-				</div>
+				<SearchInput
+					placeholder="Search groups (name or description)…"
+					aria-label="Search groups"
+					value={search}
+					onChange={(e) => onSearchChange(e.target.value)}
+					className="max-w-md flex-1"
+				/>
 				<Button
 					type="button"
 					size="md"

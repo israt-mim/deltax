@@ -13,6 +13,7 @@ import { useColumns } from "../hooks/useColumns";
 import { createStickyActionsColumn } from "../components/modules/settings/stickyActionsColumn";
 import { NewAgreementConfigurationModal } from "./agreementConfiguration/NewAgreementConfigurationModal";
 import {
+	agreementConfigRowMatchesSearch,
 	agreementConfigToTableRow,
 	agreementListScrollableColumnConfigs,
 	agreementStatusColumnDef,
@@ -20,7 +21,7 @@ import {
 } from "./agreementConfiguration/agreementListTableShared";
 import { useAgreementConfigsInfiniteList, useBulkDeleteAgreementConfigsMutation } from "../api";
 import { formatUserFacingError } from "../lib/formatUserFacingError";
-import { FormInput } from "../components/form-input/FormInput";
+import { SearchInput } from "../components/form-input/SearchInput";
 import { usePageBreadcrumb } from "../hooks/usePageBreadcrumb";
 import { crumb } from "../lib/breadcrumb";
 
@@ -54,7 +55,6 @@ export const AgreementConfiguration = () => {
 	}, [searchInput]);
 
 	const listQuery = useAgreementConfigsInfiniteList({
-		search: debouncedSearch || undefined,
 		sort: "-createdAt",
 	});
 	const bulkDeleteMutation = useBulkDeleteAgreementConfigsMutation();
@@ -63,6 +63,18 @@ export const AgreementConfiguration = () => {
 		() => listQuery.data?.pages.flatMap((p) => p.data.map(agreementConfigToTableRow)) ?? [],
 		[listQuery.data]
 	);
+
+	const filteredRows = useMemo(() => {
+		if (!debouncedSearch) return rows;
+		return rows.filter((row) => agreementConfigRowMatchesSearch(row, debouncedSearch));
+	}, [rows, debouncedSearch]);
+
+	/** Load remaining pages while searching so taxonomy filter spans the full list. */
+	useEffect(() => {
+		if (!debouncedSearch) return;
+		if (!listQuery.hasNextPage || listQuery.isFetchingNextPage) return;
+		void listQuery.fetchNextPage();
+	}, [debouncedSearch, listQuery.hasNextPage, listQuery.isFetchingNextPage, listQuery.fetchNextPage]);
 
 	const loadMore = useCallback(() => {
 		if (listQuery.hasNextPage && !listQuery.isFetchingNextPage) {
@@ -126,8 +138,9 @@ export const AgreementConfiguration = () => {
 			)}
 
 			<Card className="flex flex-col gap-3">
-				<FormInput
-					placeholder="Search by display ID…"
+				<SearchInput
+					placeholder="Search category, domain, type, subtype…"
+					aria-label="Search agreement configurations by category, domain, type, or subtype"
 					value={searchInput}
 					onChange={(e) => setSearchInput(e.target.value)}
 					className="max-w-md"
@@ -150,7 +163,7 @@ export const AgreementConfiguration = () => {
 					}
 				/>
 				<InfiniteTable
-					data={rows}
+					data={filteredRows}
 					columns={columns}
 					height="calc(100vh - 260px)"
 					onLoadMore={loadMore}

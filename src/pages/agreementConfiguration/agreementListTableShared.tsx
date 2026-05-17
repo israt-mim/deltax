@@ -19,6 +19,17 @@ function dashIfEmpty(value: string | undefined): string {
 	return t ? t : "—";
 }
 
+/** Case-insensitive match against display ID and taxonomy labels shown in the list table. */
+export function agreementConfigRowMatchesSearch(
+	row: AgreementConfigTableRow,
+	query: string
+): boolean {
+	const q = query.trim().toLowerCase();
+	if (!q) return true;
+	const values = [row.displayId, row.categoryName, row.domainName, row.typeName, row.subtypeName];
+	return values.some((value) => value !== "—" && value.toLowerCase().includes(q));
+}
+
 export function agreementConfigToTableRow(item: AgreementConfigListItem): AgreementConfigTableRow {
 	const displayId = (item.displayId?.trim() || item._id).trim();
 	let statusLabel = "Draft";

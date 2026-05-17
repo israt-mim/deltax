@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
+import { SearchInput } from "../../components/form-input/SearchInput";
 import type { ColumnDef } from "@tanstack/react-table";
 import { toast } from "react-toastify";
 import { useTeamsInfiniteList } from "../../api";
@@ -137,16 +137,13 @@ export function AddRelevantTeamsModal({
 			aria-labelledby={titleId}
 		>
 			<div className="flex flex-col gap-3">
-				<div className="flex min-w-0 items-center gap-2 rounded-md border border-neutral-200 bg-white px-3 py-1.5 dark:border-black-600 dark:bg-black-800">
-					<SearchOutlinedIcon sx={{ fontSize: 18 }} className="shrink-0 text-neutral-400" />
-					<input
-						type="search"
-						value={search}
-						onChange={(e) => setSearch(e.target.value)}
-						placeholder="Search (use * as a wildcard)"
-						className="min-w-0 flex-1 bg-transparent text-sm text-neutral-800 outline-none placeholder:text-neutral-400 dark:text-neutral-200 dark:placeholder:text-neutral-500"
-					/>
-				</div>
+				<SearchInput
+					placeholder="Search teams…"
+					aria-label="Search teams"
+					value={search}
+					onChange={(e) => setSearch(e.target.value)}
+					className="w-full max-w-md"
+				/>
 				<InfiniteTable
 					data={rows}
 					columns={columns}

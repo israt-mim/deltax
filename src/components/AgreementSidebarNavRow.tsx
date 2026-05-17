@@ -183,22 +183,23 @@ export function AgreementSidebarNavRow({ expanded }: AgreementSidebarNavRowProps
 					>
 						<div
 							ref={categoriesPanelRef}
-							className="h-fit max-h-[calc(100vh-5rem)] w-40 overflow-y-auto overflow-x-hidden rounded-lg border border-teal-800/50 bg-teal-900 p-2 shadow-xl dark:border-teal-800/60"
+							className="h-fit max-h-[calc(100vh-5rem)] w-40 overflow-y-auto overflow-x-hidden rounded-lg border border-primary-700 bg-primary-600 p-2 shadow-xl"
 						>
-							<div className="flex items-center gap-1.5 border-b border-teal-800/60 px-2 py-1.5">
-								<SearchOutlinedIcon sx={{ fontSize: 16 }} className="shrink-0 text-teal-200/80" />
+							<div className="mb-2 flex items-center gap-1.5 rounded-md border border-white/25 bg-primary-700 px-2 py-1.5">
+								<SearchOutlinedIcon sx={{ fontSize: 16 }} className="shrink-0 text-white/70" />
 								<input
 									type="search"
+									aria-label="Search categories"
 									value={search}
 									onChange={(e) => setSearch(e.target.value)}
-									placeholder="Search"
-									className="min-w-0 flex-1 bg-transparent text-sm text-teal-50 outline-none placeholder:text-teal-300/70"
+									placeholder="Search categories…"
+									className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/50"
 									autoComplete="off"
 								/>
 							</div>
 							<div className="py-0.5">
 								{filteredCategories.length === 0 ? (
-									<p className="px-2 py-3 text-center text-xs text-teal-200/80">No categories</p>
+									<p className="px-2 py-3 text-center text-xs text-white/70">No categories</p>
 								) : (
 									filteredCategories.map((cat) => {
 										const active = cat._id === hoverCategoryId;
@@ -210,16 +211,16 @@ export function AgreementSidebarNavRow({ expanded }: AgreementSidebarNavRowProps
 													else categoryBtnRefs.current.delete(cat._id);
 												}}
 												type="button"
-												className={`flex w-full items-center gap-0.5 px-2 py-1.5 text-left text-xs transition-colors ${
+												className={`flex w-full items-center gap-0.5 rounded px-2 py-1.5 text-left text-xs transition-colors ${
 													active
-														? "bg-teal-700 text-white"
-														: "text-teal-50 hover:bg-teal-800/90"
+														? "bg-white/20 text-white"
+														: "text-white/90 hover:bg-white/15 hover:text-white"
 												}`}
 												onMouseEnter={() => onCategoryEnter(cat._id)}
 												onFocus={() => onCategoryEnter(cat._id)}
 											>
 												<span className="min-w-0 flex-1 truncate">{cat.name}</span>
-												<ChevronRightIcon sx={{ fontSize: 16 }} className="shrink-0 text-teal-200/90" />
+												<ChevronRightIcon sx={{ fontSize: 16 }} className="shrink-0 text-white/80" />
 											</button>
 										);
 									})
@@ -244,10 +245,10 @@ export function AgreementSidebarNavRow({ expanded }: AgreementSidebarNavRowProps
 						onMouseEnter={cancelClose}
 						onMouseLeave={scheduleClose}
 					>
-						<div className="h-fit max-h-[min(calc(100vh-5rem),480px)] overflow-y-auto overflow-x-hidden rounded-lg border border-teal-800/50 bg-teal-900 p-2 shadow-xl dark:border-teal-800/60">
+						<div className="h-fit max-h-[min(calc(100vh-5rem),480px)] overflow-y-auto overflow-x-hidden rounded-lg border border-primary-700 bg-primary-600 p-2 shadow-xl">
 							<div className="h-fit py-0.5">
 								{hoverCategory.domains.length === 0 ? (
-									<p className="px-2 py-3 text-center text-xs text-teal-100/70">No domains</p>
+									<p className="px-2 py-3 text-center text-xs text-white/70">No domains</p>
 								) : (
 									hoverCategory.domains.map((d) => {
 										const count = d.types?.length ?? 0;
@@ -255,11 +256,11 @@ export function AgreementSidebarNavRow({ expanded }: AgreementSidebarNavRowProps
 											<button
 												key={d._id}
 												type="button"
-												className="flex w-full items-center gap-1 px-2 py-1.5 text-left text-xs text-teal-50 transition-colors hover:bg-teal-700/90"
+												className="flex w-full items-center gap-1 rounded px-2 py-1.5 text-left text-xs text-white/90 transition-colors hover:bg-white/15 hover:text-white"
 												onClick={() => handleDomainClick(hoverCategory._id, d._id)}
 											>
 												<span className="min-w-0 flex-1 truncate">{d.name}</span>
-												<span className="shrink-0 rounded bg-teal-900/50 px-1.5 py-0.5 text-[10px] tabular-nums text-teal-100">
+												<span className="shrink-0 rounded bg-primary-800/80 px-1.5 py-0.5 text-[10px] tabular-nums text-white/90">
 													{count}
 												</span>
 											</button>

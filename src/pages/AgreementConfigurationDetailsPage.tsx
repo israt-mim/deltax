@@ -1101,7 +1101,6 @@ export const AgreementConfigurationDetailsPage = () => {
 												error={additionalStepsFieldError}
 												loading={agreementStepsCatalogQuery.isPending}
 												showSearch
-												placeholder="Search or select steps…"
 												optionFilterProp="label"
 												options={additionalStepSelectOptions}
 												value={

@@ -9,7 +9,13 @@ export interface CardProps {
 
 export const Card = ({ className, children, onClick }: CardProps) => {
 	return (
-		<div className={cn(`bg-white dark:bg-black-800 border border-neutal-200 dark-border-black-600 rounded-lg shadow-100 w-full p-3`, className)} onClick={onClick}>
+		<div
+			className={cn(
+				"w-full rounded-lg border border-neutral-200 bg-white p-3 shadow-100 dark:border-black-600 dark:bg-black-800 dark:shadow-none dark:ring-1 dark:ring-white/5",
+				className
+			)}
+			onClick={onClick}
+		>
 			{children}
 		</div>
 	);

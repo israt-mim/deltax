@@ -2,7 +2,6 @@ import { useCallback, useMemo, useState } from "react";
 import { Dropdown } from "antd";
 import type { MenuProps } from "antd";
 import { toast } from "react-toastify";
-import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
 import MoreVertOutlinedIcon from "@mui/icons-material/MoreVertOutlined";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
@@ -26,6 +25,7 @@ import { formatUserFacingError } from "../lib/formatUserFacingError";
 import { useDebouncedValue } from "../lib/useDebouncedValue";
 import { usePageBreadcrumb } from "../hooks/usePageBreadcrumb";
 import { crumb } from "../lib/breadcrumb";
+import { SearchInput } from "../components/form-input/SearchInput";
 
 const fieldColumnConfigs: ColumnConfig<FieldRow>[] = [
 	{
@@ -238,19 +238,13 @@ export const FieldConfiguration = () => {
 			)}
 
 			<Card className="flex flex-col gap-3">
-				<div className="flex flex-wrap items-center gap-2">
-					<div className="flex min-w-[200px] max-w-md flex-1 items-center gap-2 rounded-md border border-neutral-200 bg-white px-3 py-1.5 dark:border-black-600 dark:bg-black-800">
-						<SearchOutlinedIcon sx={{ fontSize: 18 }} className="shrink-0 text-neutral-400" />
-						<input
-							type="search"
-							value={searchInput}
-							onChange={(e) => setSearchInput(e.target.value)}
-							placeholder="Search fields (name, group, context, type…)"
-							className="min-w-0 flex-1 bg-transparent text-sm text-neutral-800 outline-none placeholder:text-neutral-400 dark:text-neutral-200 dark:placeholder:text-neutral-500"
-							aria-label="Search fields"
-						/>
-					</div>
-				</div>
+				<SearchInput
+					placeholder="Search fields (name, group, context, type)…"
+					aria-label="Search fields"
+					value={searchInput}
+					onChange={(e) => setSearchInput(e.target.value)}
+					className="max-w-md flex-1"
+				/>
 
 				<FloatingBar
 					open={checkedIds.size > 0}

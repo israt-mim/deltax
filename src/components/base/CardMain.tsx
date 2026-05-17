@@ -8,7 +8,13 @@ export interface CardMainProps {
 }
 export const CardMain = ({ className, children }: CardMainProps) => {
 	return (
-		<div className={cn('p-6 bg-neutral-50 dark:bg-black-700', className)} style={{ minHeight: `calc(100vh - ${NAVBAR_HEIGHT}px)` }}>
+		<div
+			className={cn(
+				"p-6 bg-neutral-50 dark:bg-black-900",
+				className
+			)}
+			style={{ minHeight: `calc(100vh - ${NAVBAR_HEIGHT}px)` }}
+		>
 			{children}
 		</div>
 	)

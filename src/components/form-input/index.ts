@@ -1,5 +1,7 @@
 export { FormField } from "./FormField";
 export { FormInput } from "./FormInput";
+export { SearchInput } from "./SearchInput";
+export type { SearchInputProps } from "./SearchInput";
 export { FormPassword } from "./FormPassword";
 export { FormNumber } from "./FormNumber";
 export { FormTextarea } from "./FormTextarea";

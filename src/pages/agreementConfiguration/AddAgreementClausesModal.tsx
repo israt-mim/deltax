@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
-import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
+import { SearchInput } from "../../components/form-input/SearchInput";
 import { Button } from "../../components/base/Button";
 import { Modal } from "../../components/base/Modal";
 import { useClausesInfiniteList, usePatchAgreementClausesMutation, type ClauseListItem } from "../../api";
@@ -120,20 +120,13 @@ export function AddAgreementClausesModal({
 			}
 		>
 			<div className="flex max-h-[min(520px,70vh)] flex-col gap-3">
-				<div className="relative max-w-xl shrink-0">
-					<SearchOutlinedIcon
-						className="pointer-events-none absolute left-3 top-1/2 z-[1] -translate-y-1/2 text-neutral-400"
-						sx={{ fontSize: 18 }}
-					/>
-					<input
-						type="search"
-						value={searchInput}
-						onChange={(e) => setSearchInput(e.target.value)}
-						placeholder="Search clauses (display id, title, category…)"
-						className="h-10 w-full rounded-md border border-neutral-200 bg-white pl-10 pr-3 text-sm text-neutral-900 outline-none placeholder:text-neutral-400 focus:border-primary-400 focus:ring-2 focus:ring-primary-400/20 dark:border-black-600 dark:bg-black-800 dark:text-neutral-100 dark:placeholder:text-neutral-500 dark:focus:border-primary-500"
-						autoComplete="off"
-					/>
-				</div>
+				<SearchInput
+					placeholder="Search clauses (display ID, title, category)…"
+					aria-label="Search clauses"
+					value={searchInput}
+					onChange={(e) => setSearchInput(e.target.value)}
+					className="max-w-xl shrink-0"
+				/>
 
 				{listQuery.isError && (
 					<p className="text-sm text-error-600 dark:text-error-400">
