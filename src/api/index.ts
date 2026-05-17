@@ -295,6 +295,7 @@ export {
 	useAgreementsTotalCount,
 	useBulkDeleteAgreementsMutation,
 	useCreateAgreementMutation,
+	useDeleteAgreementLineItemMutation,
 	useDeleteAgreementMutation,
 	usePatchAgreementClausesMutation,
 	usePatchAgreementFieldValuesMutation,

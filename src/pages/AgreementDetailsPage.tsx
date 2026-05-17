@@ -771,10 +771,12 @@ export default function AgreementDetailsPage() {
 									/>
 								) : (
 									<AgreementLineItemsStepPanel
+										agreementId={agreementId}
 										details={stepDetails}
 										loading={stepDetailsLoading}
 										errorMessage={stepDetailsError}
 										readOnly={!isEditMode}
+										onRefresh={refreshStepDetails}
 										onNewClick={() => setLineItemQuery("new")}
 										onRowClick={(rowId) => setLineItemQuery(rowId)}
 									/>

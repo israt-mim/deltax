@@ -3,6 +3,10 @@ import cn from "classnames";
 import CloseOutlinedIcon from "@mui/icons-material/CloseOutlined";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
 
+/** Destructive action on the themed primary floating bar — red label on a light chip for contrast. */
+export const floatingBarDangerActionClass =
+	"inline-flex items-center gap-1.5 rounded-md bg-white px-2.5 py-1 text-sm font-semibold text-red-600 shadow-sm transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 disabled:pointer-events-none disabled:opacity-50 dark:bg-white dark:text-red-600 dark:hover:bg-red-50";
+
 export interface FloatingBarProps {
 	/** When true and `selectedCount` > 0, the bar is shown. */
 	open: boolean;
@@ -14,6 +18,10 @@ export interface FloatingBarProps {
 	 * Ignored when `items` is passed — use `items` for fully custom actions (you can include your own delete there).
 	 */
 	onDelete?: () => void;
+	/** Label for the default delete control (default: `Delete`). */
+	deleteLabel?: string;
+	/** Disables the default delete control and shows a pending label when set. */
+	deletePending?: boolean;
 	/**
 	 * Custom right-side toolbar (icons, buttons, etc.). When set (including an empty fragment),
 	 * replaces the default **Delete** control — omit or pass `null` to use `onDelete` instead.
@@ -31,6 +39,8 @@ export function FloatingBar({
 	selectedCount,
 	onClearSelection,
 	onDelete,
+	deleteLabel = "Delete",
+	deletePending = false,
 	items,
 	className,
 }: FloatingBarProps) {
@@ -44,10 +54,11 @@ export function FloatingBar({
 			<button
 				type="button"
 				onClick={onDelete}
-				className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium text-red-200 transition-colors hover:bg-white/10 hover:text-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+				disabled={deletePending}
+				className={floatingBarDangerActionClass}
 			>
 				<DeleteOutlineOutlinedIcon sx={{ fontSize: 18 }} />
-				Delete
+				{deletePending ? "Deleting…" : deleteLabel}
 			</button>
 		) : null;
 

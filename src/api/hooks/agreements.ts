@@ -7,6 +7,7 @@ import {
 	agreementStepDetailsOfQuery,
 	bulkDeleteAgreements,
 	createAgreement,
+	deleteAgreementLineItem,
 	getAgreementDashboard,
 	getAgreementStepDetails,
 	getAgreementSteps,
@@ -311,6 +312,23 @@ export function usePatchAgreementLineItemMutation() {
 	return useMutation({
 		mutationFn: (args: { agreementId: string; lineItemId: string; body: PatchAgreementLineItemBody }) =>
 			patchAgreementLineItem(args.agreementId, args.lineItemId, args.body),
+		onSettled: (_data, _err, args) => {
+			void queryClient.invalidateQueries({ queryKey: queryKeys.agreements.all });
+			if (args?.agreementId) {
+				void queryClient.invalidateQueries({
+					queryKey: [...queryKeys.agreements.all, "detail", args.agreementId] as const,
+				});
+				invalidateAgreementStepDetailsQueries(queryClient, args.agreementId);
+			}
+		},
+	});
+}
+
+export function useDeleteAgreementLineItemMutation() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (args: { agreementId: string; lineItemId: string }) =>
+			deleteAgreementLineItem(args.agreementId, args.lineItemId),
 		onSettled: (_data, _err, args) => {
 			void queryClient.invalidateQueries({ queryKey: queryKeys.agreements.all });
 			if (args?.agreementId) {

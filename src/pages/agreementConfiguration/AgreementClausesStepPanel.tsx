@@ -206,20 +206,13 @@ export function AgreementClausesStepPanel({
 				open={!loading && !readOnly && checkedIds.size > 0}
 				selectedCount={checkedIds.size}
 				onClearSelection={clearSelection}
-				items={
-					<button
-						type="button"
-						onClick={() => {
-							const ids = [...checkedIds];
-							if (!ids.length) return;
-							setRemovePending({ mode: "bulk", ids });
-						}}
-						className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium text-red-200 transition-colors hover:bg-white/10 hover:text-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
-					>
-						<DeleteOutlineOutlinedIcon sx={{ fontSize: 18 }} />
-						Remove
-					</button>
-				}
+				deleteLabel="Remove"
+				deletePending={patchMutation.isPending}
+				onDelete={() => {
+					const ids = [...checkedIds];
+					if (!ids.length) return;
+					setRemovePending({ mode: "bulk", ids });
+				}}
 			/>
 
 			{loading ? (

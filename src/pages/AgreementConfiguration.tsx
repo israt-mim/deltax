@@ -150,17 +150,8 @@ export const AgreementConfiguration = () => {
 					open={checkedIds.size > 0}
 					selectedCount={checkedIds.size}
 					onClearSelection={clearSelection}
-					items={
-						<button
-							type="button"
-							disabled={bulkDeleteMutation.isPending}
-							onClick={() => void handleBulkDelete()}
-							className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium text-red-200 transition-colors hover:bg-white/10 hover:text-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 disabled:pointer-events-none disabled:opacity-50"
-						>
-							<DeleteOutlineOutlinedIcon sx={{ fontSize: 18 }} />
-							{bulkDeleteMutation.isPending ? "Deleting…" : "Delete"}
-						</button>
-					}
+					onDelete={() => void handleBulkDelete()}
+					deletePending={bulkDeleteMutation.isPending}
 				/>
 				<InfiniteTable
 					data={filteredRows}

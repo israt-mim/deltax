@@ -1,10 +1,11 @@
-import type {
-	AgreementLineItemsTableBlock,
-	AgreementLineItemsTableColumn,
-	AgreementLineItemsTableRow,
-	AgreementStepDetailsData,
-	AgreementStepDetailsField,
-	PatchAgreementFieldValueItem,
+import {
+	isMongoObjectIdString,
+	type AgreementLineItemsTableBlock,
+	type AgreementLineItemsTableColumn,
+	type AgreementLineItemsTableRow,
+	type AgreementStepDetailsData,
+	type AgreementStepDetailsField,
+	type PatchAgreementFieldValueItem,
 } from "../../api";
 import { buildInitialFieldValues } from "./agreementStepDetailsValidation";
 
@@ -96,6 +97,12 @@ export function fallbackTableFromDetails(details: AgreementStepDetailsData | nul
 		rows.push({ id, rowIndex: i, cells });
 	}
 	return { columns, rows };
+}
+
+/** True when the row id can be selected for bulk actions (persisted line item). */
+export function isSelectableLineItemRowId(id: string): boolean {
+	const trimmed = id.trim();
+	return Boolean(trimmed) && isMongoObjectIdString(trimmed) && !trimmed.startsWith("temp-");
 }
 
 export function resolveLineItemsTable(details: AgreementStepDetailsData | null): AgreementLineItemsTableBlock | null {

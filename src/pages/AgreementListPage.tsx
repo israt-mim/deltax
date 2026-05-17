@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
-import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import { toast } from "react-toastify";
 import { Button } from "../components/base/Button";
 import { SearchInput } from "../components/form-input/SearchInput";
@@ -177,16 +176,7 @@ export function AgreementListPage() {
 					open={bulkSelectedCount > 0}
 					selectedCount={bulkSelectedCount}
 					onClearSelection={clearSelection}
-					items={
-						<button
-							type="button"
-							onClick={() => setBulkDeleteConfirmOpen(true)}
-							className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium text-red-200 transition-colors hover:bg-white/10 hover:text-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
-						>
-							<DeleteOutlineOutlinedIcon sx={{ fontSize: 18 }} />
-							Delete
-						</button>
-					}
+					onDelete={() => setBulkDeleteConfirmOpen(true)}
 				/>
 
 				<InfiniteTable<AgreementListPageRow>

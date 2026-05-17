@@ -333,6 +333,53 @@ button:focus-visible {
   font-size: 18px !important;
 }
 
+/* Row action menus — destructive items (Delete / Remove) */
+.actions-dropdown-icon .ant-dropdown-menu-item-danger,
+.actions-dropdown-icon .ant-dropdown-menu-item-danger > .ant-dropdown-menu-title-content {
+  color: #dc2626 !important;
+}
+
+.actions-dropdown-icon .ant-dropdown-menu-item-danger .ant-dropdown-menu-item-icon,
+.actions-dropdown-icon .ant-dropdown-menu-item-danger .ant-dropdown-menu-item-icon svg {
+  color: #dc2626 !important;
+}
+
+.actions-dropdown-icon .ant-dropdown-menu-item-danger:hover,
+.actions-dropdown-icon .ant-dropdown-menu-item-danger.ant-dropdown-menu-item-active {
+  color: #b91c1c !important;
+  background-color: #fef2f2 !important;
+}
+
+.actions-dropdown-icon .ant-dropdown-menu-item-danger:hover .ant-dropdown-menu-item-icon,
+.actions-dropdown-icon .ant-dropdown-menu-item-danger:hover .ant-dropdown-menu-item-icon svg,
+.actions-dropdown-icon .ant-dropdown-menu-item-danger.ant-dropdown-menu-item-active .ant-dropdown-menu-item-icon,
+.actions-dropdown-icon .ant-dropdown-menu-item-danger.ant-dropdown-menu-item-active .ant-dropdown-menu-item-icon svg {
+  color: #b91c1c !important;
+}
+
+.dark .actions-dropdown-icon .ant-dropdown-menu-item-danger,
+.dark .actions-dropdown-icon .ant-dropdown-menu-item-danger > .ant-dropdown-menu-title-content {
+  color: #f87171 !important;
+}
+
+.dark .actions-dropdown-icon .ant-dropdown-menu-item-danger .ant-dropdown-menu-item-icon,
+.dark .actions-dropdown-icon .ant-dropdown-menu-item-danger .ant-dropdown-menu-item-icon svg {
+  color: #f87171 !important;
+}
+
+.dark .actions-dropdown-icon .ant-dropdown-menu-item-danger:hover,
+.dark .actions-dropdown-icon .ant-dropdown-menu-item-danger.ant-dropdown-menu-item-active {
+  color: #fca5a5 !important;
+  background-color: rgba(239, 68, 68, 0.12) !important;
+}
+
+.dark .actions-dropdown-icon .ant-dropdown-menu-item-danger:hover .ant-dropdown-menu-item-icon,
+.dark .actions-dropdown-icon .ant-dropdown-menu-item-danger:hover .ant-dropdown-menu-item-icon svg,
+.dark .actions-dropdown-icon .ant-dropdown-menu-item-danger.ant-dropdown-menu-item-active .ant-dropdown-menu-item-icon,
+.dark .actions-dropdown-icon .ant-dropdown-menu-item-danger.ant-dropdown-menu-item-active .ant-dropdown-menu-item-icon svg {
+  color: #fca5a5 !important;
+}
+
 /* Bulk / table checkboxes — theme primary fill + white mark (checked / indeterminate) */
 @layer components {
   .theme-checkbox,

@@ -531,9 +531,11 @@ export default function CreateAgreementDetailsPage() {
 									/>
 								) : (
 									<AgreementLineItemsStepPanel
+										agreementId={agreementId}
 										details={stepDetails}
 										loading={stepDetailsLoading}
 										errorMessage={stepDetailsError}
+										onRefresh={refreshStepDetails}
 										onNewClick={() => setLineItemQuery("new")}
 										onRowClick={(rowId) => setLineItemQuery(rowId)}
 									/>
