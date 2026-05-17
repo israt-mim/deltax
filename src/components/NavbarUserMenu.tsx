@@ -8,7 +8,7 @@ import LogoutOutlinedIcon from "@mui/icons-material/LogoutOutlined";
 import KeyboardArrowDownOutlinedIcon from "@mui/icons-material/KeyboardArrowDownOutlined";
 import { useAuth } from "../auth/AuthContext";
 import { APP_VERSION } from "../constants/app";
-import { useDarkMode } from "../hooks/useDarkMode";
+import { useAppTheme } from "../context/AppThemeContext";
 import { userDisplayName, userInitials, userShortName } from "../lib/userDisplay";
 
 function UserAvatar({ initials, size = "md" }: { initials: string; size?: "md" | "lg" }) {
@@ -67,7 +67,7 @@ function UserMenuPanel({
 }) {
 	const navigate = useNavigate();
 	const { user } = useAuth();
-	const { isDark, toggle } = useDarkMode();
+	const { isDark, setMode } = useAppTheme();
 
 	if (!user) return null;
 
@@ -108,7 +108,11 @@ function UserMenuPanel({
 						<DarkModeOutlinedIcon sx={{ fontSize: 20 }} />
 					</span>
 					<span className={`min-w-0 flex-1 font-medium ${MENU_ITEM_LABEL}`}>Dark Mode</span>
-					<Switch size="small" checked={isDark} onChange={toggle} />
+					<Switch
+						size="small"
+						checked={isDark}
+						onChange={(checked) => setMode(checked ? "dark" : "light")}
+					/>
 				</div>
 				<MenuRow
 					icon={<LogoutOutlinedIcon sx={{ fontSize: 20, color: "currentColor" }} />}

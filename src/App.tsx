@@ -4,6 +4,7 @@ import { BrowserRouter } from "react-router";
 import { Slide, ToastContainer } from "react-toastify";
 import { createAppQueryClient } from "./api/queryClient";
 import { AuthProvider } from "./auth/AuthContext";
+import { AppThemeProvider } from "./context/AppThemeContext";
 import { Routes } from "./Routes";
 import { fetchAgreementDetailsOnAppLoad } from "./store/agreementDetailsSlice";
 import { useAppDispatch, useAppSelector } from "./store/hooks";
@@ -21,9 +22,11 @@ export const App = () => {
 	return (
 		<QueryClientProvider client={queryClient}>
 			<BrowserRouter>
-				<AuthProvider>
-					<Routes />
-				</AuthProvider>
+				<AppThemeProvider>
+					<AuthProvider>
+						<Routes />
+					</AuthProvider>
+				</AppThemeProvider>
 			</BrowserRouter>
 			<ToastContainer
 				position="bottom-right"

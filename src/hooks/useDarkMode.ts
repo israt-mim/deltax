@@ -1,35 +1,16 @@
-import { useCallback, useEffect, useState } from "react";
+import { useAppTheme } from "../context/AppThemeContext";
 
-const STORAGE_KEY = "deltax-theme";
-
-function readStoredDarkMode(): boolean {
-	if (typeof window === "undefined") return false;
-	const stored = localStorage.getItem(STORAGE_KEY);
-	if (stored === "dark") return true;
-	if (stored === "light") return false;
-	return window.matchMedia("(prefers-color-scheme: dark)").matches;
-}
-
-export function applyDarkMode(enabled: boolean) {
-	document.documentElement.classList.toggle("dark", enabled);
-}
-
-/** Call once before React mounts to avoid theme flash. */
-export function initDarkModeFromStorage() {
-	applyDarkMode(readStoredDarkMode());
-}
-
+/** Backward-compatible hook; appearance is managed by AppThemeProvider. */
 export function useDarkMode() {
-	const [isDark, setIsDark] = useState(readStoredDarkMode);
+	const { isDark, mode, setMode } = useAppTheme();
 
-	useEffect(() => {
-		applyDarkMode(isDark);
-		localStorage.setItem(STORAGE_KEY, isDark ? "dark" : "light");
-	}, [isDark]);
-
-	const toggle = useCallback(() => {
-		setIsDark((prev) => !prev);
-	}, []);
-
-	return { isDark, setIsDark, toggle };
+	return {
+		isDark,
+		setIsDark: (enabled: boolean) => setMode(enabled ? "dark" : "light"),
+		toggle: () => setMode(isDark ? "light" : "dark"),
+		mode,
+		setMode,
+	};
 }
+
+export { initAppThemeFromStorage } from "../context/AppThemeContext";
