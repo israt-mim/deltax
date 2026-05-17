@@ -9,6 +9,7 @@ export interface AgreementLineItemsStepPanelProps {
 	details: AgreementStepDetailsData | null;
 	loading: boolean;
 	errorMessage: string | null;
+	readOnly?: boolean;
 	onNewClick: () => void;
 	onRowClick: (rowId: string) => void;
 }
@@ -17,6 +18,7 @@ export function AgreementLineItemsStepPanel({
 	details,
 	loading,
 	errorMessage,
+	readOnly = false,
 	onNewClick,
 	onRowClick,
 }: AgreementLineItemsStepPanelProps) {
@@ -53,12 +55,14 @@ export function AgreementLineItemsStepPanel({
 
 	return (
 		<div className="flex flex-col gap-4">
-			<div className="flex justify-end">
-				<Button type="button" size="md" status="primary" onClick={onNewClick}>
-					<AddOutlinedIcon sx={{ fontSize: 16 }} />
-					New Line Item
-				</Button>
-			</div>
+			{readOnly ? null : (
+				<div className="flex justify-end">
+					<Button type="button" size="md" status="primary" onClick={onNewClick}>
+						<AddOutlinedIcon sx={{ fontSize: 16 }} />
+						New Line Item
+					</Button>
+				</div>
+			)}
 
 			<div className="overflow-auto rounded-lg border border-neutral-200 dark:border-black-600">
 				<table className="w-full min-w-[640px] border-collapse text-left text-sm">
@@ -88,16 +92,24 @@ export function AgreementLineItemsStepPanel({
 							rows.map((row) => (
 								<tr
 									key={row.id}
-									role="button"
-									tabIndex={0}
-									className="cursor-pointer border-b border-neutral-100 bg-white hover:bg-neutral-50 dark:border-black-600 dark:bg-black-800 dark:hover:bg-black-700/50"
-									onClick={() => onRowClick(row.id)}
-									onKeyDown={(e) => {
-										if (e.key === "Enter" || e.key === " ") {
-											e.preventDefault();
-											onRowClick(row.id);
-										}
-									}}
+									role={readOnly ? undefined : "button"}
+									tabIndex={readOnly ? undefined : 0}
+									className={
+										readOnly
+											? "border-b border-neutral-100 bg-white dark:border-black-600 dark:bg-black-800"
+											: "cursor-pointer border-b border-neutral-100 bg-white hover:bg-neutral-50 dark:border-black-600 dark:bg-black-800 dark:hover:bg-black-700/50"
+									}
+									onClick={readOnly ? undefined : () => onRowClick(row.id)}
+									onKeyDown={
+										readOnly
+											? undefined
+											: (e) => {
+													if (e.key === "Enter" || e.key === " ") {
+														e.preventDefault();
+														onRowClick(row.id);
+													}
+												}
+									}
 								>
 									{columns.map((c) => {
 										const f = findFieldDefById(details, c.fieldId);

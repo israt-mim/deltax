@@ -41,6 +41,35 @@ export function buildInitialFieldValues(details: AgreementStepDetailsData): Reco
 	return next;
 }
 
+function normalizeFieldValueForCompare(value: unknown): string {
+	if (value === null || value === undefined) return "";
+	if (typeof value === "boolean") return value ? "1" : "0";
+	if (typeof value === "number") {
+		return Number.isFinite(value) ? String(value) : "";
+	}
+	if (dayjs.isDayjs(value)) {
+		return value.isValid() ? value.toISOString() : "";
+	}
+	return String(value).trim();
+}
+
+/** True when any field value differs from the loaded step baseline. */
+export function agreementFieldValuesDiffer(
+	baseline: Record<string, unknown>,
+	current: Record<string, unknown>
+): boolean {
+	const keys = new Set([...Object.keys(baseline), ...Object.keys(current)]);
+	for (const key of keys) {
+		if (
+			normalizeFieldValueForCompare(baseline[key]) !==
+			normalizeFieldValueForCompare(current[key])
+		) {
+			return true;
+		}
+	}
+	return false;
+}
+
 function isFieldSatisfied(field: AgreementStepDetailsField, value: unknown): boolean {
 	if (!field.required) return true;
 	const dt = (field.dataType ?? "String").trim();

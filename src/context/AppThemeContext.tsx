@@ -7,6 +7,7 @@ import {
 	useState,
 	type ReactNode,
 } from "react";
+import { ConfigProvider, theme as antdTheme } from "antd";
 import type { AppThemeName } from "../constants/appThemes";
 import {
 	readAppThemePreferences,
@@ -94,7 +95,25 @@ export function AppThemeProvider({ children }: { children: ReactNode }) {
 		[preferences.theme, preferences.mode, isDark, setTheme, setMode, setPreferences]
 	);
 
-	return <AppThemeContext.Provider value={value}>{children}</AppThemeContext.Provider>;
+	const antdThemeConfig = useMemo(
+		() => ({
+			algorithm: isDark ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
+			token: {
+				colorBgContainer: isDark ? "#141414" : undefined,
+				colorBgElevated: isDark ? "#141414" : undefined,
+				colorBorder: isDark ? "#262626" : undefined,
+				colorText: isDark ? "#f5f5f5" : undefined,
+				colorTextSecondary: isDark ? "#a3a3a3" : undefined,
+			},
+		}),
+		[isDark]
+	);
+
+	return (
+		<ConfigProvider theme={antdThemeConfig}>
+			<AppThemeContext.Provider value={value}>{children}</AppThemeContext.Provider>
+		</ConfigProvider>
+	);
 }
 
 export function useAppTheme(): AppThemeContextValue {

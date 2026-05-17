@@ -21,6 +21,7 @@ export interface AgreementClausesStepPanelProps {
 	loading: boolean;
 	errorMessage: string | null;
 	onRefresh: () => void;
+	readOnly?: boolean;
 }
 
 function briefId(c: AgreementClauseBrief): string {
@@ -29,11 +30,14 @@ function briefId(c: AgreementClauseBrief): string {
 
 function ClauseRowMenu({
 	clause,
+	readOnly,
 	onRemoveRequest,
 }: {
 	clause: AgreementClauseBrief;
+	readOnly?: boolean;
 	onRemoveRequest: (c: AgreementClauseBrief) => void;
 }) {
+	if (readOnly) return null;
 	const items: MenuProps["items"] = [
 		{
 			key: "remove",
@@ -80,6 +84,7 @@ export function AgreementClausesStepPanel({
 	loading,
 	errorMessage,
 	onRefresh,
+	readOnly = false,
 }: AgreementClausesStepPanelProps) {
 	const patchMutation = usePatchAgreementClausesMutation();
 	const [tableSearch, setTableSearch] = useState("");
@@ -205,14 +210,16 @@ export function AgreementClausesStepPanel({
 					onChange={(e) => setTableSearch(e.target.value)}
 					className="min-w-[200px] max-w-md flex-1"
 				/>
-				<Button type="button" size="md" status="primary" onClick={() => setAddModalOpen(true)}>
-					<AddOutlinedIcon sx={{ fontSize: 16 }} />
-					Add
-				</Button>
+				{readOnly ? null : (
+					<Button type="button" size="md" status="primary" onClick={() => setAddModalOpen(true)}>
+						<AddOutlinedIcon sx={{ fontSize: 16 }} />
+						Add
+					</Button>
+				)}
 			</div>
 
 			<FloatingBar
-				open={checkedIds.size > 0}
+				open={!readOnly && checkedIds.size > 0}
 				selectedCount={checkedIds.size}
 				onClearSelection={clearSelection}
 				items={
@@ -334,7 +341,11 @@ export function AgreementClausesStepPanel({
 										</td>
 										<td className="px-3 py-2.5 align-middle">
 											{id ? (
-												<ClauseRowMenu clause={c} onRemoveRequest={(row) => setRemovePending({ mode: "single", clause: row })} />
+												<ClauseRowMenu
+													clause={c}
+													readOnly={readOnly}
+													onRemoveRequest={(row) => setRemovePending({ mode: "single", clause: row })}
+												/>
 											) : null}
 										</td>
 									</tr>

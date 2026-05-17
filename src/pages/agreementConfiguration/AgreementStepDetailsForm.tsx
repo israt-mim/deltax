@@ -24,17 +24,78 @@ function toDayjsOrNull(v: unknown): Dayjs | null {
 	return d.isValid() ? d : null;
 }
 
+function formatFieldDisplayValue(field: AgreementStepDetailsField, value: unknown): string {
+	if (value == null || value === "") return "—";
+	const dataType = (field.dataType ?? "String").trim();
+	if (dataType === "Boolean") return Boolean(value) ? "Yes" : "No";
+	if (dataType === "Date") {
+		const d = dayjs(String(value));
+		return d.isValid() ? d.format("MMM D, YYYY") : String(value);
+	}
+	if (dataType === "DateTime") {
+		const d = dayjs(String(value));
+		return d.isValid() ? d.format("MMM D, YYYY h:mm A") : String(value);
+	}
+	if (dataType === "Currency") {
+		const num = Number(value);
+		return Number.isFinite(num)
+			? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(num)
+			: String(value);
+	}
+	return String(value);
+}
+
+function AgreementStepFieldView({
+	field,
+	value,
+}: {
+	field: AgreementStepDetailsField;
+	value: unknown;
+}) {
+	const displayValue = formatFieldDisplayValue(field, value);
+	const helperText = field.tooltip?.trim() || undefined;
+
+	return (
+		<div className="flex min-w-0 flex-col gap-1">
+			<span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
+				<span className="inline-flex flex-wrap items-center gap-1.5">
+					<span>{field.name}</span>
+					{field.required ? <span className="text-error-500">*</span> : null}
+					{filterTagsForDisplay(field.tags).map((t) => (
+						<span
+							key={t}
+							className="rounded bg-warning-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-warning-800 dark:bg-warning-900/80 dark:text-warning-200"
+						>
+							{t}
+						</span>
+					))}
+				</span>
+			</span>
+			<span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{displayValue}</span>
+			{helperText ? (
+				<span className="text-xs text-neutral-400 dark:text-neutral-500">{helperText}</span>
+			) : null}
+		</div>
+	);
+}
+
 function AgreementStepFieldControl({
 	field,
 	value,
 	error,
+	readOnly,
 	onChange,
 }: {
 	field: AgreementStepDetailsField;
 	value: unknown;
 	error?: string;
+	readOnly?: boolean;
 	onChange: (next: unknown) => void;
 }) {
+	if (readOnly) {
+		return <AgreementStepFieldView field={field} value={value} />;
+	}
+
 	const disabled = Boolean(field.disabled || field.locked);
 	const dataType = (field.dataType ?? "String").trim();
 	const label = (
@@ -167,6 +228,8 @@ export interface AgreementStepDetailsFormProps {
 	errorMessage: string | null;
 	valuesByFieldId: Record<string, unknown>;
 	errorsByFieldId?: Record<string, string>;
+	/** When true, fields are disabled (view mode). */
+	readOnly?: boolean;
 	onFieldValueChange: (fieldId: string, value: unknown) => void;
 }
 
@@ -179,6 +242,7 @@ export function AgreementStepDetailsForm({
 	errorMessage,
 	valuesByFieldId,
 	errorsByFieldId,
+	readOnly = false,
 	onFieldValueChange,
 }: AgreementStepDetailsFormProps) {
 	const [collapsedByKey, setCollapsedByKey] = useState<Record<string, boolean>>({});
@@ -277,6 +341,7 @@ export function AgreementStepDetailsForm({
 												field={field}
 												value={valuesByFieldId[field.id]}
 												error={errorsByFieldId?.[field.id]}
+												readOnly={readOnly}
 												onChange={(next) => onFieldValueChange(field.id, next)}
 											/>
 										))}

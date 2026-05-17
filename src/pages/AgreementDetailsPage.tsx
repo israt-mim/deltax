@@ -1,8 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import cn from "classnames";
+import { useParams } from "react-router-dom";
+import { Switch } from "antd";
 import { toast } from "react-toastify";
-import ArrowBackOutlinedIcon from "@mui/icons-material/ArrowBackOutlined";
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
+import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
+import { Button } from "../components/base/Button";
 import {
 	ApiError,
 	agreementStepDetailsOfQuery,
@@ -28,6 +31,7 @@ import {
 import { formatUserFacingError } from "../lib/formatUserFacingError";
 import { Card } from "../components/base/Card";
 import { CardMain } from "../components/base/CardMain";
+import { Modal } from "../components/base/Modal";
 import { PageLoader } from "../components/base/PageLoader";
 import { Tabs, type TabItem } from "../components/base/Tabs";
 import { Typography } from "../components/base/Typography";
@@ -43,6 +47,7 @@ import {
 	valuesRecordFromLineItemPayload,
 } from "./agreementConfiguration/agreementLineItemsUtils";
 import {
+	agreementFieldValuesDiffer,
 	buildInitialFieldValues,
 	validateRequiredAgreementFields,
 } from "./agreementConfiguration/agreementStepDetailsValidation";
@@ -69,10 +74,32 @@ function isAgreementTeamsTab(step: AgreementDocumentStep | null | undefined): bo
 	return step?.id === AGREEMENT_TEAMS_TAB.id;
 }
 
+function formatAgreementStatusLabel(status: string): string {
+	const raw = status.trim().toLowerCase();
+	if (!raw) return "—";
+	return raw.charAt(0).toUpperCase() + raw.slice(1);
+}
+
+const AGREEMENT_STATUS_BADGE_COLORS: Record<string, string> = {
+	Active: "bg-success-100 text-success-700 dark:bg-success-900 dark:text-success-300",
+	Draft: "bg-amber-100 text-amber-800 dark:bg-amber-950/90 dark:text-amber-200",
+	Archived: "bg-neutral-200 text-neutral-700 dark:bg-neutral-700 dark:text-neutral-200",
+	Cancelled: "bg-rose-100 text-rose-700 dark:bg-rose-950/70 dark:text-rose-200",
+	Pending: "bg-primary-100 text-primary-700 dark:bg-primary-900/80 dark:text-primary-200",
+};
+
+function agreementStatusBadgeClass(status: string): string {
+	const label = formatAgreementStatusLabel(status);
+	return cn(
+		"shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium",
+		AGREEMENT_STATUS_BADGE_COLORS[label] ??
+			"bg-primary-100 text-primary-700 dark:bg-primary-900/80 dark:text-primary-200"
+	);
+}
+
 /** `/agreements/:id` — read/edit view of one agreement using tabs for each step. */
 export default function AgreementDetailsPage() {
 	const { id: agreementIdParam } = useParams<{ id: string }>();
-	const navigate = useNavigate();
 	const patchFieldValuesMutation = usePatchAgreementFieldValuesMutation();
 	const postLineItemMutation = usePostAgreementLineItemMutation();
 	const patchLineItemMutation = usePatchAgreementLineItemMutation();
@@ -97,6 +124,9 @@ export default function AgreementDetailsPage() {
 	const [fieldErrorsById, setFieldErrorsById] = useState<Record<string, string>>({});
 	const [lineItemQuery, setLineItemQuery] = useState<string | null>(null);
 	const [stepDetailsNonce, setStepDetailsNonce] = useState(0);
+	const [isEditMode, setIsEditMode] = useState(false);
+	const [pendingTabKey, setPendingTabKey] = useState<string | null>(null);
+	const tabChangeModalTitleId = useId();
 
 	const refreshStepDetails = useCallback(() => {
 		setStepDetailsNonce((n) => n + 1);
@@ -106,7 +136,13 @@ export default function AgreementDetailsPage() {
 		setFieldValuesByStepId({});
 		setLineItemQuery(null);
 		setActiveTabKey("");
+		setIsEditMode(false);
+		setPendingTabKey(null);
 	}, [agreementId]);
+
+	useEffect(() => {
+		if (!isEditMode) setPendingTabKey(null);
+	}, [isEditMode]);
 
 	useEffect(() => {
 		if (!agreementId || !isMongoObjectIdString(agreementId)) {
@@ -183,6 +219,21 @@ export default function AgreementDetailsPage() {
 		return { ...defaults, ...stored };
 	}, [stepDetails, stepStorageKey, fieldValuesByStepId]);
 
+	const hasUnsavedChanges = useMemo(() => {
+		if (!isEditMode || stepDetailsLoading || !currentStep || !stepDetails) return false;
+		if (isAgreementDashboardTab(currentStep) || isAgreementTeamsTab(currentStep)) return false;
+		if (isClausesWizardStepName(currentStep) || isLineItemsWizardStepName(currentStep)) return false;
+		if (!isAgreementFieldValuesStep(stepDetails)) return false;
+		const baseline = buildInitialFieldValues(stepDetails);
+		return agreementFieldValuesDiffer(baseline, currentFieldValues);
+	}, [
+		currentFieldValues,
+		currentStep,
+		isEditMode,
+		stepDetails,
+		stepDetailsLoading,
+	]);
+
 	const handleFieldValueChange = useCallback(
 		(fieldId: string, value: unknown) => {
 			if (!stepStorageKey || !stepDetails?.sections?.length) return;
@@ -237,8 +288,18 @@ export default function AgreementDetailsPage() {
 		}
 	}, [agreementId, currentFieldValues, currentStep, patchFieldValuesMutation, stepDetails]);
 
+	const discardCurrentStepEdits = useCallback(() => {
+		setFieldErrorsById({});
+		if (!stepStorageKey) return;
+		setFieldValuesByStepId((prev) => {
+			const next = { ...prev };
+			delete next[stepStorageKey];
+			return next;
+		});
+	}, [stepStorageKey]);
+
 	const handleTabChange = useCallback(
-		async (nextKey: string) => {
+		(nextKey: string) => {
 			if (!nextKey || nextKey === activeTabKey) return;
 			if (hideLineItemsWizardNav) {
 				toast.info("Finish or cancel the line item editor first.");
@@ -248,19 +309,92 @@ export default function AgreementDetailsPage() {
 				toast.info("Please wait for this tab to finish loading.");
 				return;
 			}
-			if (!assertCurrentStepValid()) return;
-			const saved = await persistCurrentStepFieldValues();
-			if (!saved) return;
+			if (isEditMode && hasUnsavedChanges) {
+				setPendingTabKey(nextKey);
+				return;
+			}
 			setActiveTabKey(nextKey);
 		},
-		[
-			activeTabKey,
-			assertCurrentStepValid,
-			hideLineItemsWizardNav,
-			persistCurrentStepFieldValues,
-			stepDetailsLoading,
-		]
+		[activeTabKey, hasUnsavedChanges, hideLineItemsWizardNav, isEditMode, stepDetailsLoading]
 	);
+
+	const pendingTabLabel = useMemo(() => {
+		if (!pendingTabKey) return "";
+		return tabSteps.find((s) => s.id === pendingTabKey)?.name?.trim() || "tab";
+	}, [pendingTabKey, tabSteps]);
+
+	const isTabChangeSaving = patchFieldValuesMutation.isPending && pendingTabKey !== null;
+
+	const closeTabChangeModal = useCallback(() => {
+		if (!isTabChangeSaving) setPendingTabKey(null);
+	}, [isTabChangeSaving]);
+
+	const completePendingTabChange = useCallback(() => {
+		if (!pendingTabKey) return;
+		setActiveTabKey(pendingTabKey);
+		setPendingTabKey(null);
+	}, [pendingTabKey]);
+
+	const handleTabSaveAndProceed = useCallback(async () => {
+		if (!pendingTabKey) return;
+		if (!assertCurrentStepValid()) return;
+		const saved = await persistCurrentStepFieldValues();
+		if (!saved) return;
+		discardCurrentStepEdits();
+		completePendingTabChange();
+	}, [
+		assertCurrentStepValid,
+		completePendingTabChange,
+		discardCurrentStepEdits,
+		pendingTabKey,
+		persistCurrentStepFieldValues,
+	]);
+
+	const handleTabConfirmExit = useCallback(() => {
+		if (!pendingTabKey || isTabChangeSaving) return;
+		discardCurrentStepEdits();
+		completePendingTabChange();
+	}, [completePendingTabChange, discardCurrentStepEdits, isTabChangeSaving, pendingTabKey]);
+
+	const enterEditMode = useCallback(() => {
+		setIsEditMode(true);
+	}, []);
+
+	const cancelEditMode = useCallback(() => {
+		setIsEditMode(false);
+		setLineItemQuery(null);
+		setPendingTabKey(null);
+		discardCurrentStepEdits();
+		refreshStepDetails();
+	}, [discardCurrentStepEdits, refreshStepDetails]);
+
+	const handleSaveEdit = useCallback(async () => {
+		if (hideLineItemsWizardNav) {
+			toast.info("Finish or cancel the line item editor first.");
+			return;
+		}
+		if (!assertCurrentStepValid()) return;
+		const saved = await persistCurrentStepFieldValues();
+		if (!saved) return;
+		if (stepStorageKey) {
+			setFieldValuesByStepId((prev) => {
+				const next = { ...prev };
+				delete next[stepStorageKey];
+				return next;
+			});
+		}
+		refreshStepDetails();
+		toast.success("Changes saved.");
+		setIsEditMode(false);
+	}, [
+		assertCurrentStepValid,
+		hideLineItemsWizardNav,
+		persistCurrentStepFieldValues,
+		refreshStepDetails,
+		stepStorageKey,
+	]);
+
+	const isSaving = patchFieldValuesMutation.isPending;
 
 	useEffect(() => {
 		if (!agreementId || !isMongoObjectIdString(agreementId) || !currentStep) {
@@ -463,25 +597,44 @@ export default function AgreementDetailsPage() {
 
 	return (
 		<CardMain className="flex min-h-0 flex-1 flex-col gap-0 !m-0 !p-0">
+			{!isEditMode ? (
+				<div
+					role="status"
+					className="flex items-center justify-center gap-2 border-b border-primary-200 bg-primary-50 px-3 py-1.5 text-center text-xs leading-snug text-primary-900 shadow-sm sm:text-sm dark:border-black-600 dark:bg-black-800 dark:text-neutral-200 dark:shadow-none"
+				>
+					<VisibilityOutlinedIcon
+						sx={{ fontSize: 18 }}
+						className="shrink-0 text-primary-600 dark:text-neutral-300"
+						aria-hidden
+					/>
+					<p className="m-0">
+						<span className="font-semibold text-primary-800 dark:text-white">View mode</span>
+						<span className="text-primary-800/95 dark:text-neutral-200">
+							{" — Enable "}
+							<span className="font-bold text-primary-700 dark:text-white">Edit</span>
+							{" to make changes to this agreement."}
+						</span>
+					</p>
+				</div>
+			) : null}
 			<Card className="flex flex-col gap-4 p-4">
 				<div className="flex items-center justify-between gap-3">
 					<div className="flex min-w-0 items-center gap-3">
-						<button
-							type="button"
-							aria-label="Back to agreements"
-							className="flex shrink-0 rounded-md p-1.5 text-neutral-600 transition-colors hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-black-600"
-							onClick={() => void navigate("/agreements")}
-						>
-							<ArrowBackOutlinedIcon sx={{ fontSize: 22 }} />
-						</button>
 						<DescriptionOutlinedIcon
 							sx={{ fontSize: 40 }}
 							className="shrink-0 text-neutral-500 dark:text-neutral-400"
 						/>
 						<div className="flex min-w-0 flex-col gap-0.5">
-							<span className="truncate text-lg font-semibold text-neutral-900 dark:text-white">
-								{headerDisplayName}
-							</span>
+							<div className="flex min-w-0 flex-wrap items-center gap-2">
+								<span className="truncate text-lg font-semibold text-neutral-900 dark:text-white">
+									{headerDisplayName}
+								</span>
+								{dashboard?.status ? (
+									<span className={agreementStatusBadgeClass(dashboard.status)}>
+										{formatAgreementStatusLabel(dashboard.status)}
+									</span>
+								) : null}
+							</div>
 							{headerDisplayId || headerBreadcrumb ? (
 								<div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-neutral-500 dark:text-neutral-400">
 									{headerDisplayId ? <span className="font-medium">{headerDisplayId}</span> : null}
@@ -495,11 +648,30 @@ export default function AgreementDetailsPage() {
 							) : null}
 						</div>
 					</div>
-					{dashboard?.status ? (
-						<span className="shrink-0 rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-medium capitalize text-neutral-700 dark:bg-black-600 dark:text-neutral-300">
-							{dashboard.status}
-						</span>
-					) : null}
+					<div className="flex shrink-0 flex-wrap items-center justify-end gap-3">
+						{isEditMode ? (
+							<Button
+								type="button"
+								size="sm"
+								onClick={() => void handleSaveEdit()}
+								loading={isSaving}
+								disabled={!hasUnsavedChanges}
+							>
+								Save Changes
+							</Button>
+						) : null}
+						<div className="flex items-center gap-2">
+							<Switch
+								size="small"
+								checked={isEditMode}
+								onChange={(checked) => {
+									if (checked) enterEditMode();
+									else cancelEditMode();
+								}}
+							/>
+							<span className="text-sm text-neutral-600 dark:text-neutral-400">Edit</span>
+						</div>
+					</div>
 				</div>
 				{tabItems.length > 0 ? (
 					<Tabs
@@ -534,7 +706,7 @@ export default function AgreementDetailsPage() {
 					<Card className="flex min-h-0 flex-1 flex-col overflow-auto p-4">
 						{currentStep ? (
 							isAgreementTeamsTab(currentStep) ? (
-								<AgreementTeamsStepPanel agreementId={agreementId} />
+								<AgreementTeamsStepPanel agreementId={agreementId} readOnly={!isEditMode} />
 							) : isClausesWizardStepName(currentStep) ? (
 								<AgreementClausesStepPanel
 									agreementId={agreementId}
@@ -542,9 +714,10 @@ export default function AgreementDetailsPage() {
 									loading={stepDetailsLoading}
 									errorMessage={stepDetailsError}
 									onRefresh={refreshStepDetails}
+									readOnly={!isEditMode}
 								/>
 							) : isLineItemsWizardStepName(currentStep) ? (
-								lineItemQuery ? (
+								lineItemQuery && isEditMode ? (
 									<AgreementLineItemEditorView
 										key={`${lineItemQuery}-${stepDetailsNonce}`}
 										details={stepDetails}
@@ -559,6 +732,7 @@ export default function AgreementDetailsPage() {
 										details={stepDetails}
 										loading={stepDetailsLoading}
 										errorMessage={stepDetailsError}
+										readOnly={!isEditMode}
 										onNewClick={() => setLineItemQuery("new")}
 										onRowClick={(rowId) => setLineItemQuery(rowId)}
 									/>
@@ -570,6 +744,7 @@ export default function AgreementDetailsPage() {
 									errorMessage={stepDetailsError}
 									valuesByFieldId={currentFieldValues}
 									errorsByFieldId={fieldErrorsById}
+									readOnly={!isEditMode}
 									onFieldValueChange={handleFieldValueChange}
 								/>
 							)
@@ -579,6 +754,66 @@ export default function AgreementDetailsPage() {
 					</Card>
 				)}
 			</div>
+
+			<Modal
+				open={pendingTabKey !== null}
+				onCancel={closeTabChangeModal}
+				width={480}
+				maskClosable={!isTabChangeSaving}
+				keyboard={!isTabChangeSaving}
+				aria-labelledby={tabChangeModalTitleId}
+				header={
+					<h2
+						id={tabChangeModalTitleId}
+						className="mb-0 text-lg font-semibold text-neutral-900 dark:text-white"
+					>
+						Leave this tab?
+					</h2>
+				}
+				footer={
+					<div className="flex w-full flex-wrap items-center justify-between gap-3">
+						<Button
+							type="button"
+							size="md"
+							appearance="outlined"
+							status="secondary-neutral"
+							onClick={closeTabChangeModal}
+							disabled={isTabChangeSaving}
+						>
+							Cancel
+						</Button>
+						<div className="flex flex-wrap items-center justify-end gap-3">
+							<Button
+								type="button"
+								size="md"
+								appearance="filled"
+								status="primary"
+								loading={isTabChangeSaving}
+								disabled={isTabChangeSaving}
+								onClick={() => void handleTabSaveAndProceed()}
+							>
+								Save and Proceed
+							</Button>
+							<Button
+								type="button"
+								size="md"
+								appearance="outlined"
+								status="secondary-neutral"
+								onClick={handleTabConfirmExit}
+								disabled={isTabChangeSaving}
+							>
+								Confirm Exit
+							</Button>
+						</div>
+					</div>
+				}
+			>
+				<p className="mb-0 text-sm text-neutral-600 dark:text-neutral-300">
+					You have unsaved changes on this tab. If you switch to{" "}
+					<span className="font-medium text-neutral-900 dark:text-white">{pendingTabLabel}</span>{" "}
+					without saving, your changes will be lost.
+				</p>
+			</Modal>
 		</CardMain>
 	);
 }

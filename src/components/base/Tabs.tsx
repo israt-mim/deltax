@@ -15,11 +15,11 @@ export interface TabsProps {
 	variant?: "underline" | "pill";
 	size?: "sm" | "md" | "lg";
 	className?: string;
-	/** underline only: active tab text classes (defaults to blue) */
+	/** underline only: active tab text classes (defaults to primary) */
 	underlineActiveClassName?: string;
 	/** underline only: inactive tab text classes */
 	underlineInactiveClassName?: string;
-	/** underline only: sliding indicator bar classes (defaults to blue) */
+	/** underline only: sliding indicator bar classes (defaults to primary) */
 	underlineIndicatorClassName?: string;
 	/** pill only: sliding pill background (defaults to white / dark card) */
 	pillIndicatorClassName?: string;
@@ -158,7 +158,7 @@ export const Tabs = ({
 							"font-medium transition-colors duration-200 whitespace-nowrap",
 							UNDERLINE_SIZE_CLASSES[size],
 							activeKey === item.key
-								? underlineActiveClassName ?? "text-blue-600 dark:text-blue-400"
+								? underlineActiveClassName ?? "text-primary-600 dark:text-primary-400"
 								: underlineInactiveClassName ??
 										"text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300",
 							item.disabled && "opacity-40 cursor-not-allowed"
@@ -173,7 +173,7 @@ export const Tabs = ({
 			<div
 				className={cn(
 					"absolute bottom-0 rounded-full transition-all duration-200 ease-out",
-					underlineIndicatorClassName ?? "bg-blue-600 dark:bg-blue-400",
+					underlineIndicatorClassName ?? "bg-primary-500 dark:bg-primary-400",
 					UNDERLINE_INDICATOR_HEIGHT[size]
 				)}
 				style={indicatorStyle}
