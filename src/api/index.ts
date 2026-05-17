@@ -68,10 +68,13 @@ export {
 export {
 	useBulkDeleteUsersMutation,
 	useCreateUserMutation,
+	useCurrentUserQuery,
 	useDeleteUserMutation,
+	useUpdateProfileMutation,
 	useUpdateUserMutation,
 	useUsersInfiniteList,
 } from "./hooks/users";
+export type { UpdateProfileBody } from "./hooks/users";
 
 export {
 	bulkDeleteFields,

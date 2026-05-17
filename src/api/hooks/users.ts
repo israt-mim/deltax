@@ -1,13 +1,15 @@
-import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	bulkDeleteUsers,
 	createUser,
 	deleteUser,
+	getUserById,
 	listUsers,
 	updateUser,
 	type UpdateUserBody,
 } from "../services/users";
 import { queryKeys } from "../queryKeys";
+export type UpdateProfileBody = Pick<UpdateUserBody, "firstName" | "lastName" | "email">;
 
 const USERS_PAGE_SIZE = 30;
 
@@ -44,6 +46,33 @@ export function useBulkDeleteUsersMutation() {
 			void queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
 			void queryClient.invalidateQueries({ queryKey: queryKeys.groups.all });
 			void queryClient.invalidateQueries({ queryKey: queryKeys.teams.all });
+		},
+	});
+}
+
+/** Full user record for the signed-in user (group / teams labels). */
+export function useCurrentUserQuery(userId: string | undefined) {
+	const id = userId?.trim() ?? "";
+	return useQuery({
+		queryKey: [...queryKeys.users.all, "detail", id] as const,
+		queryFn: () => getUserById(id),
+		enabled: Boolean(id),
+		staleTime: 60_000,
+	});
+}
+
+export function useUpdateProfileMutation() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({ id, ...body }: { id: string } & UpdateProfileBody) => updateUser(id, body),
+		onSuccess: (data, variables) => {
+			queryClient.setQueryData([...queryKeys.users.all, "detail", variables.id] as const, data);
+		},
+		onSettled: (_data, _err, variables) => {
+			void queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
+			if (variables?.id) {
+				void queryClient.invalidateQueries({ queryKey: [...queryKeys.users.all, "detail", variables.id] });
+			}
 		},
 	});
 }

@@ -85,7 +85,7 @@ function UserMenuPanel({
 					icon={<PersonOutlinedIcon sx={{ fontSize: 20, color: "#16a34a" }} />}
 					label="Profile"
 					labelClassName="text-success-700 dark:text-success-400"
-					onClick={() => go("/settings")}
+					onClick={() => go("/profile")}
 				/>
 				<MenuRow
 					icon={<SettingsOutlinedIcon sx={{ fontSize: 20 }} />}

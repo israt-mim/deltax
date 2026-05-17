@@ -1,7 +1,7 @@
 import { Route, Routes as ReactRoutes } from "react-router";
 import { RequireAuth, RequirePasswordResetComplete } from "./auth/AuthContext";
 import { AppLayout } from "./layouts/AppLayout";
-import { Home, Configure, Settings, AgreementConfiguration, FieldConfiguration } from "./pages/index";
+import { Home, Configure, Settings, ProfilePage, AgreementConfiguration, FieldConfiguration } from "./pages/index";
 import CreateFieldConfiguration from "./pages/CreateFieldConfiguration";
 import CreateAgreementConfiguration from "./pages/CreateAgreementConfiguration";
 import CreateAgreementDetailsPage from "./pages/CreateAgreementDetailsPage";
@@ -39,6 +39,7 @@ export const Routes = () => {
 						</Route>
 						<Route path="/clauses" element={<ClausesPage />} />
 						<Route path="/clauses/:id" element={<ClauseDetailPage />} />
+						<Route path="/profile" element={<ProfilePage />} />
 						<Route path="/settings" element={<Settings />} />
 					</Route>
 				</Route>
