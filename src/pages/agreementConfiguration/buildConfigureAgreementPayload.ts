@@ -8,6 +8,10 @@ export type ConfigureFieldOverrides = {
 	removedFieldIdBySectionKey: Record<string, string[]>;
 	/** Optional display renames for section row keys (`api-{stepId}-{i}` / `draft-{uuid}`). */
 	sectionNameBySectionKey?: Record<string, string>;
+	/** Per wizard step, ordered section row keys for configure payload. */
+	sectionOrderByStepId?: Record<string, string[]>;
+	/** Per section row key, ordered field ids (drag-and-drop layout). */
+	fieldOrderBySectionKey?: Record<string, string[]>;
 };
 
 function mergeFieldsForSectionKey(
@@ -18,7 +22,14 @@ function mergeFieldsForSectionKey(
 	const removed = new Set(overrides.removedFieldIdBySectionKey[sectionKey] ?? []);
 	const base = baseFields.filter((fid) => !removed.has(fid));
 	const added = overrides.addedBySectionKey[sectionKey] ?? [];
-	return [...new Set([...base, ...added])];
+	const merged = [...new Set([...base, ...added])];
+	const order = overrides.fieldOrderBySectionKey?.[sectionKey];
+	if (!order?.length) return merged;
+
+	const mergedSet = new Set(merged);
+	const ordered = order.filter((fid) => mergedSet.has(fid));
+	const tail = merged.filter((fid) => !order.includes(fid));
+	return [...ordered, ...tail];
 }
 
 function isAuthoringOrClausesCatalogStep(stepName: string): boolean {
@@ -53,7 +64,20 @@ function buildSectionRowsForAgreementStep(
 		});
 	}
 
-	return rows
+	const order = overrides.sectionOrderByStepId?.[stepId];
+	const orderedRows =
+		order?.length && order.length > 0
+			? (() => {
+					const byKey = new Map(rows.map((r) => [r.key, r]));
+					const fromOrder = order
+						.map((key) => byKey.get(key))
+						.filter((r): r is (typeof rows)[number] => Boolean(r));
+					const rest = rows.filter((r) => !order.includes(r.key));
+					return [...fromOrder, ...rest];
+				})()
+			: rows;
+
+	return orderedRows
 		.map((r) => ({
 			name: (overrides.sectionNameBySectionKey?.[r.key] ?? r.name).trim(),
 			fields: mergeFieldsForSectionKey(r.key, r.fields, overrides),

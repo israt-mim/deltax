@@ -19,7 +19,15 @@ import { Stepper, type StepperStep } from "../components/base/Stepper";
 import { Typography } from "../components/base/Typography";
 import { FormInput } from "../components/form-input/FormInput";
 import { AddFieldsModal } from "./agreementConfiguration/AddFieldsModal";
-import { AgreementStepLayoutPanel, mergeSectionFieldIds } from "./agreementConfiguration/AgreementStepLayoutPanel";
+import {
+	applyLayoutSectionsToConfigureState,
+	orderDisplaySections,
+} from "./agreementConfiguration/agreementLayoutDnD";
+import {
+	AgreementStepLayoutPanel,
+	type DisplaySectionRow,
+	mergeSectionFieldIds,
+} from "./agreementConfiguration/AgreementStepLayoutPanel";
 import {
 	buildConfigureAgreementPayload,
 	type ConfigureDraftSection,
@@ -134,14 +142,36 @@ const CreateAgreementConfiguration = () => {
 		return [...apiRows, ...draftRows];
 	}, [activeWizardStep, layoutForActiveStep, draftSectionsByStepId]);
 
+	const orderedDisplaySections = useMemo(
+		() =>
+			activeWizardStep
+				? orderDisplaySections(displaySections, activeWizardStep._id, fieldOverrides)
+				: displaySections,
+		[activeWizardStep, displaySections, fieldOverrides]
+	);
+
 	const panelSections = useMemo(
 		() =>
-			displaySections.map((s) => ({
+			orderedDisplaySections.map((s) => ({
 				...s,
 				name: fieldOverrides.sectionNameBySectionKey?.[s.key] ?? s.name,
 				fields: mergeSectionFieldIds(s, fieldOverrides),
 			})),
-		[displaySections, fieldOverrides]
+		[orderedDisplaySections, fieldOverrides]
+	);
+
+	const handleLayoutSectionsChange = useCallback(
+		(sections: DisplaySectionRow[]) => {
+			if (!activeWizardStep) return;
+			applyLayoutSectionsToConfigureState(
+				activeWizardStep._id,
+				displaySections,
+				sections,
+				setDraftSectionsByStepId,
+				setFieldOverrides
+			);
+		},
+		[activeWizardStep, displaySections]
 	);
 
 	const excludeFieldIdsForAddModal = useMemo(() => {
@@ -328,6 +358,7 @@ const CreateAgreementConfiguration = () => {
 				{stepperSteps.length > 0 && activeWizardStep ? (
 					<AgreementStepLayoutPanel
 						displaySections={panelSections}
+						onSectionsChange={handleLayoutSectionsChange}
 						onOpenAddSection={handleOpenAddSection}
 						onOpenAddField={handleOpenAddField}
 						onRemoveFieldFromSection={handleRemoveFieldFromSection}

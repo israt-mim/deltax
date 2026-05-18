@@ -38,7 +38,15 @@ import {
 	AgreementRelevantTeamsPanel,
 	type AgreementRelevantTeamDraftEntry,
 } from "./agreementConfiguration/AgreementRelevantTeamsPanel";
-import { AgreementStepLayoutPanel, mergeSectionFieldIds } from "./agreementConfiguration/AgreementStepLayoutPanel";
+import {
+	applyLayoutSectionsToConfigureState,
+	orderDisplaySections,
+} from "./agreementConfiguration/agreementLayoutDnD";
+import {
+	AgreementStepLayoutPanel,
+	type DisplaySectionRow,
+	mergeSectionFieldIds,
+} from "./agreementConfiguration/AgreementStepLayoutPanel";
 import { Button } from "../components/base/Button";
 import { Card } from "../components/base/Card";
 import { CardMain } from "../components/base/CardMain";
@@ -687,6 +695,19 @@ export const AgreementConfigurationDetailsPage = () => {
 		}));
 	}, []);
 
+	const handleLayoutSectionsChange = useCallback(
+		(sections: DisplaySectionRow[], baseRows: DisplaySectionRow[], stepId: string) => {
+			applyLayoutSectionsToConfigureState(
+				stepId,
+				baseRows,
+				sections,
+				setDraftSectionsByStepId,
+				setLayoutFieldOverrides
+			);
+		},
+		[]
+	);
+
 	const handleSaveConfigurationLayout = useCallback(async () => {
 		const cfg = configQuery.data;
 		const rid = id?.trim();
@@ -695,7 +716,6 @@ export const AgreementConfigurationDetailsPage = () => {
 			const body = buildConfigureAgreementPayload(cfg, draftSectionsByStepId, layoutFieldOverrides);
 			await configureMutation.mutateAsync({ id: rid, body });
 			toast.success("Layout saved.");
-			setHeaderEditMode(false);
 			clearConfigurationLayoutDrafts();
 		} catch (e) {
 			toast.error(formatUserFacingError(e, "Could not save layout."));
@@ -801,7 +821,12 @@ export const AgreementConfigurationDetailsPage = () => {
 		}));
 		return [...apiRows, ...draftRows];
 	})();
-	const panelSectionsForConfigurationTab = displaySectionsForConfigurationTab.map((s) => ({
+	const orderedDisplaySectionsForConfigurationTab = orderDisplaySections(
+		displaySectionsForConfigurationTab,
+		activeConfigurationStepKey,
+		layoutFieldOverrides
+	);
+	const panelSectionsForConfigurationTab = orderedDisplaySectionsForConfigurationTab.map((s) => ({
 		...s,
 		name: layoutFieldOverrides.sectionNameBySectionKey?.[s.key] ?? s.name,
 		fields: mergeSectionFieldIds(s, layoutFieldOverrides),
@@ -1207,6 +1232,16 @@ export const AgreementConfigurationDetailsPage = () => {
 										<AgreementStepLayoutPanel
 											readOnly={!headerEditMode}
 											displaySections={panelSectionsForConfigurationTab}
+											onSectionsChange={
+												headerEditMode && activeConfigurationStepKey
+													? (sections) =>
+															handleLayoutSectionsChange(
+																sections,
+																displaySectionsForConfigurationTab,
+																activeConfigurationStepKey
+															)
+													: undefined
+											}
 											onOpenAddSection={headerEditMode ? handleOpenLayoutAddSection : undefined}
 											onOpenAddField={headerEditMode ? handleOpenLayoutAddField : undefined}
 											onRemoveFieldFromSection={
