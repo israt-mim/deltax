@@ -263,7 +263,7 @@ export function DashboardCharts({
 			<ChartCard title="Template activation" subtitle="Active vs draft templates">
 				<StatusPieChart data={templateActivation} emptyMessage="No templates yet" />
 			</ChartCard>
-			<ChartCard title="Template setup" subtitle="Configured vs in progress">
+			<ChartCard title="Agreement Configuration Setup" subtitle="Configured vs in progress">
 				<StatusPieChart data={templateCompletion} emptyMessage="No templates yet" />
 			</ChartCard>
 			<ChartCard title="New agreements" subtitle="Created per month (last 6 months)">

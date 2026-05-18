@@ -94,7 +94,7 @@ export const Home = () => {
 						onClick={() => void navigate("/agreements")}
 					/>
 					<DashboardStatCard
-						label="Templates"
+						label="Agreement Configurations"
 						value={formatStatCount(templatesTotal.data, templatesTotal.isPending)}
 						icon={
 							<DescriptionOutlinedIcon
