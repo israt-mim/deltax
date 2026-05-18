@@ -15,6 +15,7 @@ import { FormToggleField } from "../../components/form-input/FormToggleField";
 import { FormSelect } from "../../components/form-input/FormSelect";
 import { FormNumber } from "../../components/form-input/FormNumber";
 import { FormDatePicker } from "../../components/form-input/FormDatePicker";
+import type { FieldConfigurationApiDocument } from "../../api/services/fields";
 
 export const GROUP_OPTIONS = [
 	{ value: "testGroup", label: "testGroup" },
@@ -22,6 +23,26 @@ export const GROUP_OPTIONS = [
 	{ value: "procurement", label: "Procurement" },
 	{ value: "hr", label: "HR" },
 ];
+
+/** Derive immutable group technical name from the selected/entered group label. */
+export function groupToTechnicalName(group: string): string {
+	const trimmed = group.trim();
+	if (!trimmed) return "";
+
+	const known = GROUP_OPTIONS.find(
+		(o) =>
+			o.value === trimmed ||
+			o.label === trimmed ||
+			o.label.toLowerCase() === trimmed.toLowerCase()
+	);
+	if (known) return known.value;
+
+	return trimmed
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, "_")
+		.replace(/^_+|_+$/g, "")
+		.replace(/_+/g, "_");
+}
 
 export const CONTEXT_OPTIONS = [
 	{ value: "Global", label: "Global" },
@@ -124,6 +145,50 @@ export function parseDefaultValueFromApi(
 	return String(value);
 }
 
+export type FieldFormSetters = {
+	setName: (v: string) => void;
+	setGroup: (v: string) => void;
+	setGroupTechName: (v: string) => void;
+	setContext: (v: string) => void;
+	setTags: (v: string[]) => void;
+	setTooltip: (v: string) => void;
+	setVisible: (v: boolean) => void;
+	setRequired: (v: boolean) => void;
+	setDisabled: (v: boolean) => void;
+	setLocked: (v: boolean) => void;
+	setFieldType: (v: string) => void;
+	setDataType: (v: DataType) => void;
+	setChoiceOptions: (v: string[]) => void;
+	setChoiceDraft: (v: string) => void;
+	setDefaultValue: (v: string | number | boolean | Dayjs | null) => void;
+};
+
+/** Hydrate create/edit form state from a field API document. */
+export function applyFieldDocToForm(doc: FieldConfigurationApiDocument, setters: FieldFormSetters): void {
+	const details = doc.details;
+	const type = doc.type;
+	const nextDataType = (DATA_TYPES.includes(type.dataType as DataType)
+		? type.dataType
+		: "String") as DataType;
+
+	const groupName = details?.group ?? "";
+	setters.setName(details?.name ?? "");
+	setters.setGroup(groupName);
+	setters.setGroupTechName(groupToTechnicalName(groupName));
+	setters.setContext(details?.context ?? "");
+	setters.setTags(Array.isArray(details?.tags) ? details.tags : []);
+	setters.setTooltip(details?.tooltip ?? "");
+	setters.setVisible(details?.visible !== false);
+	setters.setRequired(Boolean(details?.required));
+	setters.setDisabled(Boolean(details?.disabled));
+	setters.setLocked(Boolean(details?.locked));
+	setters.setFieldType(type?.fieldType ?? "Generic");
+	setters.setDataType(nextDataType);
+	setters.setChoiceOptions(Array.isArray(type?.choiceOptions) ? type.choiceOptions : []);
+	setters.setChoiceDraft("");
+	setters.setDefaultValue(parseDefaultValueFromApi(nextDataType, type?.defaultValue));
+}
+
 export type DetailsStepProps = {
 	name: string;
 	onNameChange: (v: string) => void;
@@ -187,7 +252,11 @@ export const DetailsStep = ({
 					required
 					allowCreate
 					value={group}
-					onChange={(val) => onGroupChange(String(val ?? ""))}
+					onChange={(val) => {
+						const nextGroup = String(val ?? "");
+						onGroupChange(nextGroup);
+						onGroupTechNameChange(groupToTechnicalName(nextGroup));
+					}}
 					options={GROUP_OPTIONS}
 					placeholder="Select group"
 					error={errors?.group}
@@ -195,8 +264,12 @@ export const DetailsStep = ({
 				<FormInput
 					label="Group technical name"
 					value={groupTechName}
-					onChange={(e) => onGroupTechNameChange(e.target.value)}
-					placeholder="Enter group technical name"
+					readOnly
+					disabled
+					placeholder="Generated from group"
+					classNames={{
+						input: "cursor-not-allowed text-neutral-600 dark:text-neutral-400",
+					}}
 				/>
 				<FormCreatableSelect
 					label="Context"

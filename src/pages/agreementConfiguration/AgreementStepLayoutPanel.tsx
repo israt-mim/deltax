@@ -59,6 +59,7 @@ const layoutCollisionDetection: CollisionDetection = (args) => {
 	return closestCenter(args);
 };
 import type { ConfigureFieldOverrides } from "./buildConfigureAgreementPayload";
+import { EditFieldModal } from "../fieldConfiguration/EditFieldModal";
 
 export type DisplaySectionRow = { key: string; name: string; fields: string[] };
 
@@ -139,7 +140,7 @@ function FieldTile({
 					<DragIndicatorOutlinedIcon sx={{ fontSize: 20 }} aria-hidden />
 				</button>
 			)}
-			<div className={cn("min-w-0 flex-1 leading-tight", showActions && "pr-12")}>
+			<div className={cn("min-w-0 flex-1 leading-tight", showActions && "pr-14")}>
 				{loading ? (
 					<SkeletonInline className="h-3.5 w-28" />
 				) : (
@@ -159,7 +160,7 @@ function FieldTile({
 			{showActions ? (
 				<div
 					className={cn(
-						"absolute right-1 top-1/2 flex -translate-y-1/2 gap-0.5 rounded p-0.5",
+						"absolute right-1.5 top-1/2 flex -translate-y-1/2 gap-1 rounded-md p-1",
 						"opacity-100 sm:opacity-0 sm:group-focus-within:opacity-100 sm:group-hover:opacity-100"
 					)}
 				>
@@ -167,7 +168,7 @@ function FieldTile({
 						<button
 							type="button"
 							aria-label="Edit field"
-							className="rounded p-0.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800 dark:hover:bg-black-600 dark:hover:text-neutral-100"
+							className="rounded-md p-1 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800 dark:hover:bg-black-600 dark:hover:text-neutral-100"
 							onClick={onEdit}
 						>
 							<EditOutlinedIcon sx={{ fontSize: 15 }} />
@@ -177,7 +178,7 @@ function FieldTile({
 						<button
 							type="button"
 							aria-label="Remove field"
-							className="rounded p-0.5 text-neutral-500 hover:bg-error-50 hover:text-error-600 dark:hover:bg-error-950/40 dark:hover:text-error-400"
+							className="rounded-md p-1 text-neutral-500 hover:bg-error-50 hover:text-error-600 dark:hover:bg-error-950/40 dark:hover:text-error-400"
 							onClick={onRemove}
 						>
 							<CloseOutlinedIcon sx={{ fontSize: 15 }} />
@@ -272,6 +273,7 @@ function SortableSectionBlock({
 	onEditingNameChange,
 	onOpenAddField,
 	onRemoveFieldFromSection,
+	onEditField,
 	canRenameSection,
 	sectionDragDisabled,
 }: {
@@ -291,6 +293,7 @@ function SortableSectionBlock({
 	onEditingNameChange: (name: string) => void;
 	onOpenAddField?: () => void;
 	onRemoveFieldFromSection?: (fieldId: string) => void;
+	onEditField?: (fieldId: string) => void;
 }) {
 	const sectionId = sectionSortableId(section.key);
 	const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
@@ -378,7 +381,7 @@ function SortableSectionBlock({
 				<div className="border-t border-neutral-200 bg-neutral-50/50 px-3 py-2.5 dark:border-black-500 dark:bg-black-900/30">
 					<SectionFieldsDropZone sectionKey={section.key}>
 						<SortableContext id={section.key} items={fieldSortableIds} strategy={rectSortingStrategy}>
-							<div className="grid w-full min-w-0 grid-cols-[repeat(auto-fill,minmax(min(100%,200px),1fr))] gap-2">
+							<div className="grid w-full min-w-0 grid-cols-[repeat(auto-fill,minmax(min(100%,260px),1fr))] gap-2">
 								{(section.fields ?? []).map((fid) => {
 									const idx = fieldIds.indexOf(fid);
 									const q = idx >= 0 ? fieldQueries[idx] : undefined;
@@ -390,11 +393,7 @@ function SortableSectionBlock({
 											doc={q?.data}
 											loading={Boolean(q?.isPending || q?.isFetching)}
 											readOnly={readOnly}
-											onEdit={
-												readOnly
-													? undefined
-													: () => toast.info("Field editing opens from Fields configuration.")
-											}
+											onEdit={readOnly || !onEditField ? undefined : () => onEditField(fid)}
 											onRemove={
 												readOnly || !onRemoveFieldFromSection
 													? undefined
@@ -440,6 +439,7 @@ export function AgreementStepLayoutPanel({
 	const [collapsedByKey, setCollapsedByKey] = useState<Record<string, boolean>>({});
 	const [editingSectionKey, setEditingSectionKey] = useState<string | null>(null);
 	const [editingSectionName, setEditingSectionName] = useState("");
+	const [editFieldId, setEditFieldId] = useState<string | null>(null);
 
 	const dragEnabled = !readOnly && Boolean(onSectionsChange);
 
@@ -585,8 +585,17 @@ export function AgreementStepLayoutPanel({
 		? fieldQueries[fieldIds.indexOf(activeFieldDrag.fieldId)]?.data
 		: undefined;
 
+	const editFieldModal = (
+		<EditFieldModal
+			open={editFieldId != null}
+			fieldId={editFieldId}
+			onClose={() => setEditFieldId(null)}
+		/>
+	);
+
 	if (sections.length === 0) {
 		return (
+			<>
 			<div className="flex w-full min-w-0 max-w-full flex-col items-center justify-center gap-4 rounded-lg border border-dashed border-neutral-200 bg-neutral-50/80 py-16 dark:border-black-500 dark:bg-black-800/40">
 				<Typography size="medium" variant="semibold" className="text-neutral-700 dark:text-neutral-200">
 					No layout for this step yet
@@ -608,6 +617,8 @@ export function AgreementStepLayoutPanel({
 					</p>
 				)}
 			</div>
+			{editFieldModal}
+			</>
 		);
 	}
 
@@ -636,6 +647,7 @@ export function AgreementStepLayoutPanel({
 							? (fieldId) => onRemoveFieldFromSection(section.key, fieldId)
 							: undefined
 					}
+					onEditField={readOnly ? undefined : (fieldId) => setEditFieldId(fieldId)}
 				/>
 			))}
 			{!readOnly && onOpenAddSection ? (
@@ -655,10 +667,16 @@ export function AgreementStepLayoutPanel({
 	);
 
 	if (!dragEnabled) {
-		return sectionList;
+		return (
+			<>
+				{sectionList}
+				{editFieldModal}
+			</>
+		);
 	}
 
 	return (
+		<>
 		<DndContext
 			sensors={sensors}
 			collisionDetection={layoutCollisionDetection}
@@ -671,11 +689,13 @@ export function AgreementStepLayoutPanel({
 			</SortableContext>
 			<DragOverlay dropAnimation={null}>
 				{activeFieldDrag ? (
-					<div className="min-w-[200px] max-w-[280px] shadow-lg">
+					<div className="min-w-[260px] max-w-[340px] shadow-lg">
 						<FieldTile fieldId={activeFieldDrag.fieldId} doc={activeFieldDoc} loading={false} readOnly />
 					</div>
 				) : null}
 			</DragOverlay>
 		</DndContext>
+		{editFieldModal}
+		</>
 	);
 }

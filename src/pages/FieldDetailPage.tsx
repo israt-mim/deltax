@@ -17,13 +17,12 @@ import { Title } from "../components/base/Title";
 import { Typography } from "../components/base/Typography";
 import { Button } from "../components/base/Button";
 import {
-	DATA_TYPES,
+	applyFieldDocToForm,
 	type DataType,
 	DetailsStep,
 	TypeStep,
 	emptyDefaultForDataType,
 	normalizeChoiceOptions,
-	parseDefaultValueFromApi,
 	validateDetailsStep,
 	validateTypeStep,
 	type DetailsStepErrors,
@@ -44,46 +43,6 @@ function formatDefaultValueDisplay(dataType: string, raw: unknown): string {
 	if (typeof raw === "number") return String(raw);
 	const s = String(raw);
 	return s.trim() ? s : "—";
-}
-
-function applyDocToForm(doc: FieldConfigurationApiDocument, setters: {
-	setName: (v: string) => void;
-	setGroup: (v: string) => void;
-	setGroupTechName: (v: string) => void;
-	setContext: (v: string) => void;
-	setTags: (v: string[]) => void;
-	setTooltip: (v: string) => void;
-	setVisible: (v: boolean) => void;
-	setRequired: (v: boolean) => void;
-	setDisabled: (v: boolean) => void;
-	setLocked: (v: boolean) => void;
-	setFieldType: (v: string) => void;
-	setDataType: (v: DataType) => void;
-	setChoiceOptions: (v: string[]) => void;
-	setChoiceDraft: (v: string) => void;
-	setDefaultValue: (v: string | number | boolean | Dayjs | null) => void;
-}) {
-	const details = doc.details;
-	const type = doc.type;
-	const nextDataType = (DATA_TYPES.includes(type.dataType as DataType)
-		? type.dataType
-		: "String") as DataType;
-
-	setters.setName(details?.name ?? "");
-	setters.setGroup(details?.group ?? "");
-	setters.setGroupTechName(details?.groupTechnicalName ?? "");
-	setters.setContext(details?.context ?? "");
-	setters.setTags(Array.isArray(details?.tags) ? details.tags : []);
-	setters.setTooltip(details?.tooltip ?? "");
-	setters.setVisible(details?.visible !== false);
-	setters.setRequired(Boolean(details?.required));
-	setters.setDisabled(Boolean(details?.disabled));
-	setters.setLocked(Boolean(details?.locked));
-	setters.setFieldType(type?.fieldType ?? "Generic");
-	setters.setDataType(nextDataType);
-	setters.setChoiceOptions(Array.isArray(type?.choiceOptions) ? type.choiceOptions : []);
-	setters.setChoiceDraft("");
-	setters.setDefaultValue(parseDefaultValueFromApi(nextDataType, type?.defaultValue));
 }
 
 export const FieldDetailPage = () => {
@@ -121,7 +80,7 @@ export const FieldDetailPage = () => {
 	const updateFieldMutation = useUpdateFieldMutation();
 
 	const hydrateFromDoc = useCallback((doc: FieldConfigurationApiDocument) => {
-		applyDocToForm(doc, {
+		applyFieldDocToForm(doc, {
 			setName,
 			setGroup,
 			setGroupTechName,
