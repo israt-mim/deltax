@@ -814,8 +814,8 @@ export const AgreementConfigurationDetailsPage = () => {
 
 	return (
 		<>
-		<CardMain className="flex flex-col gap-0 !p-0">
-			<div className="overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-sm dark:border-black-600 dark:bg-black-800">
+		<CardMain className="flex min-w-0 flex-col gap-0 overflow-x-hidden !p-0">
+			<div className="min-w-0 overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-sm dark:border-black-600 dark:bg-black-800">
 				<div className="flex flex-col gap-4 border-b border-neutral-200 px-5 pb-5 pt-5 dark:border-black-600 sm:flex-row sm:items-start sm:justify-between sm:gap-8 sm:px-6 sm:pb-6 sm:pt-6">
 					<div className="flex min-w-0 flex-1 gap-4">
 						<div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-blue-100 bg-blue-50 dark:border-blue-900/40 dark:bg-blue-950/35">
@@ -898,8 +898,9 @@ export const AgreementConfigurationDetailsPage = () => {
 				</div>
 			</div>
 
-			<Card className="overflow-hidden border border-neutral-200 bg-white p-0 shadow-sm dark:border-black-600 dark:bg-black-800 m-4">
-				<div className="p-2">
+			<div className="min-w-0 p-4">
+				<Card className="overflow-hidden border border-neutral-200 bg-white p-0 shadow-sm dark:border-black-600 dark:bg-black-800">
+				<div className="min-w-0 p-2">
 					{detailTab === AGREEMENT_DETAIL_TAB_KEYS.general ? (
 						<div className="max-w-full">
 							<div className="flex flex-col gap-3 border-b border-neutral-200 pb-1 sm:flex-row sm:items-end sm:justify-between sm:gap-4 dark:border-black-600">
@@ -1157,7 +1158,7 @@ export const AgreementConfigurationDetailsPage = () => {
 							) : null}
 						</div>
 					) : (
-						<div className="flex max-w-full flex-col gap-4">
+						<div className="flex min-w-0 max-w-full flex-col gap-4">
 							{configurationTabWizardSteps.length === 0 ? (
 								<p className="text-sm text-neutral-600 dark:text-neutral-400">
 									No wizard steps to show here. Authoring and Clauses are excluded from this tab; add other
@@ -1219,7 +1220,8 @@ export const AgreementConfigurationDetailsPage = () => {
 						</div>
 					)}
 				</div>
-			</Card>
+				</Card>
+			</div>
 		</CardMain>
 
 			<Modal

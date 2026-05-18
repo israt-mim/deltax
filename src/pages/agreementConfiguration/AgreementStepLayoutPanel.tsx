@@ -9,7 +9,7 @@ import ExpandMoreOutlinedIcon from "@mui/icons-material/ExpandMoreOutlined";
 import cn from "classnames";
 import { getFieldById, type FieldConfigurationApiDocument } from "../../api";
 import { queryKeys } from "../../api/queryKeys";
-import { Card } from "../../components/base/Card";
+import { Button } from "../../components/base/Button";
 import { SkeletonInline } from "../../components/skeletons";
 import { Typography } from "../../components/base/Typography";
 import { FormInput } from "../../components/form-input/FormInput";
@@ -24,11 +24,17 @@ export function mergeSectionFieldIds(section: DisplaySectionRow, overrides: Conf
 	return [...new Set([...base, ...added])];
 }
 
-function fieldCardLabel(fieldId: string, doc: FieldConfigurationApiDocument | undefined): string {
-	if (!doc?.details) return `Field ${fieldId.slice(0, 8)}…`;
-	const name = doc.details.name?.trim() || "—";
-	const tech = doc.details.groupTechnicalName?.trim() || fieldId;
-	return `${name} (${tech})`;
+function getFieldCardMeta(
+	fieldId: string,
+	doc: FieldConfigurationApiDocument | undefined
+): { name: string; technicalName: string } {
+	if (!doc?.details) {
+		return { name: `Field ${fieldId.slice(0, 8)}…`, technicalName: fieldId };
+	}
+	return {
+		name: doc.details.name?.trim() || "—",
+		technicalName: doc.details.groupTechnicalName?.trim() || fieldId,
+	};
 }
 
 function FieldTile({
@@ -46,41 +52,69 @@ function FieldTile({
 	onEdit?: () => void;
 	onRemove?: () => void;
 }) {
+	const meta = getFieldCardMeta(fieldId, doc);
+	const showActions = !readOnly && (onEdit || onRemove);
+
 	return (
-		<Card className="group flex items-start gap-2 border border-neutral-200 bg-white px-3 py-3 shadow-sm dark:border-black-500 dark:bg-black-700">
-			<DragIndicatorOutlinedIcon sx={{ fontSize: 18 }} className="mt-0.5 shrink-0 text-neutral-400" />
-			<div className="min-w-0 flex-1 text-sm font-medium text-neutral-900 dark:text-neutral-100">
+		<article
+			className={cn(
+				"group relative flex min-w-0 items-center gap-2 rounded-md border border-neutral-200 bg-white px-2 py-1.5",
+				"transition-colors hover:border-primary-300 hover:bg-neutral-50",
+				"dark:border-black-500 dark:bg-black-800 dark:hover:border-primary-600/40 dark:hover:bg-black-750"
+			)}
+		>
+			<DragIndicatorOutlinedIcon
+				sx={{ fontSize: 20 }}
+				className="shrink-0 cursor-grab text-neutral-400 active:cursor-grabbing dark:text-neutral-500"
+				aria-hidden
+			/>
+			<div className={cn("min-w-0 flex-1 leading-tight", showActions && "pr-12")}>
 				{loading ? (
-					<SkeletonInline />
+					<SkeletonInline className="h-3.5 w-28" />
 				) : (
-					fieldCardLabel(fieldId, doc)
+					<>
+						<p className="truncate text-sm font-medium text-neutral-900 dark:text-neutral-100">
+							{meta.name}
+						</p>
+						<p
+							className="truncate font-mono text-[11px] text-neutral-500 dark:text-neutral-400"
+							title={meta.technicalName}
+						>
+							{meta.technicalName}
+						</p>
+					</>
 				)}
 			</div>
-			{!readOnly && (onEdit || onRemove) && (
-				<div className="flex shrink-0 gap-0.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100">
-					{onEdit && (
+			{showActions ? (
+				<div
+					className={cn(
+						"absolute right-1 top-1/2 flex -translate-y-1/2 gap-0.5 rounded p-0.5",
+						"opacity-100 sm:opacity-0 sm:group-focus-within:opacity-100 sm:group-hover:opacity-100"
+					)}
+				>
+					{onEdit ? (
 						<button
 							type="button"
 							aria-label="Edit field"
-							className="rounded p-1 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-800 dark:hover:bg-black-600 dark:hover:text-neutral-100"
+							className="rounded p-0.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800 dark:hover:bg-black-600 dark:hover:text-neutral-100"
 							onClick={onEdit}
 						>
-							<EditOutlinedIcon sx={{ fontSize: 18 }} />
+							<EditOutlinedIcon sx={{ fontSize: 15 }} />
 						</button>
-					)}
-					{onRemove && (
+					) : null}
+					{onRemove ? (
 						<button
 							type="button"
 							aria-label="Remove field"
-							className="rounded p-1 text-neutral-500 transition-colors hover:bg-error-50 hover:text-error-600 dark:hover:bg-error-950/40 dark:hover:text-error-400"
+							className="rounded p-0.5 text-neutral-500 hover:bg-error-50 hover:text-error-600 dark:hover:bg-error-950/40 dark:hover:text-error-400"
 							onClick={onRemove}
 						>
-							<CloseOutlinedIcon sx={{ fontSize: 18 }} />
+							<CloseOutlinedIcon sx={{ fontSize: 15 }} />
 						</button>
-					)}
+					) : null}
 				</div>
-			)}
-		</Card>
+			) : null}
+		</article>
 	);
 }
 
@@ -147,19 +181,21 @@ export function AgreementStepLayoutPanel({
 
 	if (displaySections.length === 0) {
 		return (
-			<div className="flex flex-col items-center justify-center gap-4 rounded-lg border border-dashed border-neutral-200 bg-neutral-50/80 py-16 dark:border-black-500 dark:bg-black-800/40">
+			<div className="flex w-full min-w-0 max-w-full flex-col items-center justify-center gap-4 rounded-lg border border-dashed border-neutral-200 bg-neutral-50/80 py-16 dark:border-black-500 dark:bg-black-800/40">
 				<Typography size="medium" variant="semibold" className="text-neutral-700 dark:text-neutral-200">
 					No layout for this step yet
 				</Typography>
 				{!readOnly && onOpenAddSection ? (
-					<button
+					<Button
 						type="button"
-						className="inline-flex items-center gap-1.5 rounded-lg border border-primary-200 bg-primary-50 px-4 py-2 text-sm font-medium text-primary-700 transition-colors hover:bg-primary-100 dark:border-primary-800 dark:bg-primary-950/50 dark:text-primary-200 dark:hover:bg-primary-900/60"
+						size="md"
+						appearance="outlined"
+						status="primary"
 						onClick={onOpenAddSection}
 					>
 						<AddOutlinedIcon sx={{ fontSize: 18 }} />
 						New Section
-					</button>
+					</Button>
 				) : (
 					<p className="text-center text-sm text-neutral-500 dark:text-neutral-400">
 						Turn on Edit to add sections and fields.
@@ -170,14 +206,14 @@ export function AgreementStepLayoutPanel({
 	}
 
 	return (
-		<div className="flex flex-col gap-4">
+		<div className="flex w-full min-w-0 max-w-full flex-col gap-4">
 			{displaySections.map((section) => {
 				const expanded = !collapsedByKey[section.key];
 				const isEditingTitle = editingSectionKey === section.key;
 				return (
 					<div
 						key={section.key}
-						className="flex flex-col gap-0 overflow-hidden rounded-lg border border-neutral-200 dark:border-black-500"
+						className="flex w-full min-w-0 flex-col gap-0 overflow-hidden rounded-lg border border-neutral-200 dark:border-black-500"
 					>
 						<div className="flex items-center justify-between gap-2 bg-neutral-100 px-3 py-2.5 dark:bg-black-600">
 							<div className="flex min-w-0 flex-1 items-center gap-2">
@@ -229,8 +265,8 @@ export function AgreementStepLayoutPanel({
 							</button>
 						</div>
 						{expanded ? (
-							<div className="flex flex-col gap-3 border-t border-neutral-200 px-3 py-3 dark:border-black-500">
-								<div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+							<div className="flex min-w-0 flex-col gap-2 border-t border-neutral-200 bg-neutral-50/50 px-3 py-2.5 dark:border-black-500 dark:bg-black-900/30">
+								<div className="grid w-full min-w-0 grid-cols-[repeat(auto-fill,minmax(min(100%,200px),1fr))] gap-2">
 									{(section.fields ?? []).map((fid) => {
 										const idx = fieldIds.indexOf(fid);
 										const q = idx >= 0 ? fieldQueries[idx] : undefined;
@@ -256,13 +292,17 @@ export function AgreementStepLayoutPanel({
 									})}
 								</div>
 								{!readOnly && onOpenAddField && (
-									<button
+									<Button
 										type="button"
-										className="mx-auto text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
+										size="sm"
+										appearance="outlined"
+										status="primary"
+										className="mx-auto"
 										onClick={() => onOpenAddField(section.key)}
 									>
-										+ Add Field
-									</button>
+										<AddOutlinedIcon sx={{ fontSize: 16 }} />
+										Add Field
+									</Button>
 								)}
 							</div>
 						) : null}
@@ -270,14 +310,17 @@ export function AgreementStepLayoutPanel({
 				);
 			})}
 			{!readOnly && onOpenAddSection && (
-				<button
+				<Button
 					type="button"
-					className="mx-auto inline-flex items-center gap-1.5 rounded-lg border border-primary-200 bg-primary-50 px-4 py-2 text-sm font-medium text-primary-700 transition-colors hover:bg-primary-100 dark:border-primary-800 dark:bg-primary-950/50 dark:text-primary-200 dark:hover:bg-primary-900/60"
+					size="md"
+					appearance="outlined"
+					status="primary"
+					className="mx-auto"
 					onClick={onOpenAddSection}
 				>
 					<AddOutlinedIcon sx={{ fontSize: 18 }} />
 					New Section
-				</button>
+				</Button>
 			)}
 		</div>
 	);
