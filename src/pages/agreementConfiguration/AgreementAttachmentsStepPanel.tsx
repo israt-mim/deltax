@@ -1,8 +1,8 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 import cn from "classnames";
 import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
-import ArrowBackOutlinedIcon from "@mui/icons-material/ArrowBackOutlined";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import CreateNewFolderOutlinedIcon from "@mui/icons-material/CreateNewFolderOutlined";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import DownloadOutlinedIcon from "@mui/icons-material/DownloadOutlined";
@@ -25,6 +25,10 @@ import { UserIdentity } from "../../components/UserIdentity";
 import { AgreementTeamsSkeleton } from "../../components/skeletons";
 import { formatUserFacingError } from "../../lib/formatUserFacingError";
 import { formatUsDateTime } from "../../lib/formatDateTime";
+import {
+	canPreviewAttachment,
+	resolveAttachmentFileUrl,
+} from "../../lib/attachmentDocument";
 import { TABLE_EMPTY_CELL_CLASS, TABLE_SHELL_CLASS } from "../../constants/global";
 import { useDebouncedValue } from "../../lib/useDebouncedValue";
 import { AgreementAddAttachmentsModal } from "./AgreementAddAttachmentsModal";
@@ -33,6 +37,8 @@ import { AgreementNewFolderModal } from "./AgreementNewFolderModal";
 export interface AgreementAttachmentsStepPanelProps {
 	agreementId: string;
 	readOnly?: boolean;
+	previewAttachmentId?: string | null;
+	onPreviewAttachmentChange?: (attachment: AgreementAttachment | null) => void;
 }
 
 function fileIconClass(kind: AgreementAttachment["kind"]): string {
@@ -44,16 +50,79 @@ function tagsLabel(tags: string[] | undefined): string {
 	return tags.join(", ");
 }
 
+type AttachmentFolderCrumb = { id: string; name: string };
+
+function AttachmentFolderBreadcrumb({
+	path,
+	onNavigate,
+}: {
+	path: AttachmentFolderCrumb[];
+	onNavigate: (index: number) => void;
+}) {
+	if (path.length === 0) return null;
+
+	return (
+		<nav
+			aria-label="Attachment folder path"
+			className="flex min-w-0 flex-wrap items-center gap-1 text-sm"
+		>
+			<button
+				type="button"
+				onClick={() => onNavigate(-1)}
+				className="shrink-0 text-neutral-600 hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+			>
+				Attachments
+			</button>
+			{path.map((crumb, index) => {
+				const isLast = index === path.length - 1;
+				return (
+					<span key={crumb.id} className="flex min-w-0 items-center gap-1">
+						<ChevronRightIcon
+							sx={{ fontSize: 16 }}
+							className="shrink-0 text-neutral-400 dark:text-neutral-500"
+							aria-hidden
+						/>
+						{isLast ? (
+							<span
+								className="truncate font-medium text-neutral-900 dark:text-white"
+								aria-current="page"
+							>
+								{crumb.name}
+							</span>
+						) : (
+							<button
+								type="button"
+								onClick={() => onNavigate(index)}
+								className="max-w-[12rem] truncate text-neutral-600 hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400"
+							>
+								{crumb.name}
+							</button>
+						)}
+					</span>
+				);
+			})}
+		</nav>
+	);
+}
+
 export function AgreementAttachmentsStepPanel({
 	agreementId,
 	readOnly = false,
+	previewAttachmentId = null,
+	onPreviewAttachmentChange,
 }: AgreementAttachmentsStepPanelProps) {
-	const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
+	const [folderPath, setFolderPath] = useState<AttachmentFolderCrumb[]>([]);
 	const [search, setSearch] = useState("");
+	const currentFolderId = folderPath.at(-1)?.id ?? null;
 	const debouncedSearch = useDebouncedValue(search, 200);
 	const [folderModalOpen, setFolderModalOpen] = useState(false);
 	const [addModalOpen, setAddModalOpen] = useState(false);
 	const [pendingDelete, setPendingDelete] = useState<AgreementAttachment | null>(null);
+
+	useEffect(() => {
+		setFolderPath([]);
+		setSearch("");
+	}, [agreementId]);
 
 	const attachmentsQuery = useAgreementAttachmentsQuery({
 		agreementId,
@@ -82,6 +151,33 @@ export function AgreementAttachmentsStepPanel({
 		const files = filtered.filter((a) => a.kind !== "folder");
 		return [...folders, ...files];
 	}, [filtered]);
+
+	const navigateToFolder = useCallback(
+		(index: number) => {
+			onPreviewAttachmentChange?.(null);
+			if (index < 0) {
+				setFolderPath([]);
+				return;
+			}
+			setFolderPath((prev) => prev.slice(0, index + 1));
+		},
+		[onPreviewAttachmentChange]
+	);
+
+	const handleRowActivate = useCallback(
+		(att: AgreementAttachment) => {
+			if (att.kind === "folder") {
+				const name = att.name?.trim() || "Folder";
+				setFolderPath((prev) => [...prev, { id: att.id, name }]);
+				onPreviewAttachmentChange?.(null);
+				return;
+			}
+			if (canPreviewAttachment(att)) {
+				onPreviewAttachmentChange?.(att);
+			}
+		},
+		[onPreviewAttachmentChange]
+	);
 
 	const handleCreateFolder = useCallback(
 		async (payload: { name: string; tags: string[] }) => {
@@ -125,35 +221,62 @@ export function AgreementAttachmentsStepPanel({
 				agreementId,
 				attachmentId: pendingDelete.id,
 			});
+			if (previewAttachmentId === pendingDelete.id) {
+				onPreviewAttachmentChange?.(null);
+			}
+			if (pendingDelete.kind === "folder") {
+				setFolderPath((prev) => {
+					const index = prev.findIndex((crumb) => crumb.id === pendingDelete.id);
+					return index >= 0 ? prev.slice(0, index) : prev;
+				});
+			}
 			toast.success(pendingDelete.kind === "folder" ? "Folder removed." : "File removed.");
 			setPendingDelete(null);
 		} catch (err) {
 			toast.error(formatUserFacingError(err, "Could not delete."));
 		}
-	}, [agreementId, deleteMutation, pendingDelete]);
+	}, [
+		agreementId,
+		deleteMutation,
+		onPreviewAttachmentChange,
+		pendingDelete,
+		previewAttachmentId,
+	]);
 
 	const rowMenu = useCallback(
 		(att: AgreementAttachment): MenuProps["items"] => {
-			if (readOnly) return [];
 			const items: MenuProps["items"] = [];
 			if (att.kind === "file" && att.attachmentUrl) {
 				items.push({
 					key: "download",
-					label: (
-						<a href={att.attachmentUrl} target="_blank" rel="noopener noreferrer">
-							Download
-						</a>
-					),
+					icon: <DownloadOutlinedIcon sx={{ fontSize: 18 }} />,
+					label: "Download",
 				});
 			}
-			items.push({
-				key: "delete",
-				label: <span className="text-error-600 dark:text-error-400">Delete</span>,
-				onClick: () => setPendingDelete(att),
-			});
+			if (!readOnly) {
+				items.push({
+					key: "delete",
+					icon: <DeleteOutlineOutlinedIcon sx={{ fontSize: 18 }} />,
+					label: "Delete",
+					danger: true,
+				});
+			}
 			return items;
 		},
 		[readOnly]
+	);
+
+	const handleRowMenuClick = useCallback(
+		(att: AgreementAttachment, key: string) => {
+			if (key === "download" && att.kind === "file" && att.attachmentUrl) {
+				window.open(resolveAttachmentFileUrl(att), "_blank", "noopener,noreferrer");
+				return;
+			}
+			if (key === "delete") {
+				setPendingDelete(att);
+			}
+		},
+		[]
 	);
 
 	if (attachmentsQuery.isPending) {
@@ -170,26 +293,21 @@ export function AgreementAttachmentsStepPanel({
 
 	return (
 		<div className="flex flex-col gap-4">
-			<div className="flex flex-wrap items-center justify-between gap-3">
-				<div className="flex min-w-0 flex-1 items-center gap-2">
-					{currentFolderId ? (
-						<Button
-							type="button"
-							size="sm"
-							appearance="outlined"
-							status="secondary-neutral"
-							onClick={() => setCurrentFolderId(null)}
-						>
-							<ArrowBackOutlinedIcon fontSize="small" />
-							Back
-						</Button>
-					) : null}
-					<span className="text-sm text-neutral-600 dark:text-neutral-400">
-						{sorted.length} {sorted.length === 1 ? "item" : "items"}
-					</span>
+			{folderPath.length > 0 ? (
+				<AttachmentFolderBreadcrumb path={folderPath} onNavigate={navigateToFolder} />
+			) : null}
+
+			<div className="flex flex-wrap items-center gap-3">
+				<div className="min-w-[200px] max-w-md flex-1">
+					<SearchInput
+						placeholder="Search (use * as a wildcard)"
+						value={search}
+						onChange={(e) => setSearch(e.target.value)}
+						aria-label="Search attachments"
+					/>
 				</div>
 				{!readOnly ? (
-					<div className="flex flex-wrap gap-2">
+					<div className="ml-auto flex flex-wrap gap-2">
 						<Button
 							type="button"
 							size="sm"
@@ -216,13 +334,6 @@ export function AgreementAttachmentsStepPanel({
 				) : null}
 			</div>
 
-			<SearchInput
-				placeholder="Search (use * as a wildcard)"
-				value={search}
-				onChange={(e) => setSearch(e.target.value)}
-				aria-label="Search attachments"
-			/>
-
 			<div className={cn(TABLE_SHELL_CLASS, "overflow-x-auto")}>
 				<table className="min-w-full text-left text-sm">
 					<thead className="bg-neutral-50 text-neutral-600 dark:bg-black-900 dark:text-neutral-300">
@@ -244,96 +355,83 @@ export function AgreementAttachmentsStepPanel({
 								>
 									{debouncedSearch.trim()
 										? "No attachments match your search."
-										: "No attachments yet. Create a folder or upload files."}
+										: "No attachments yet. Create a folder or upload PDF files."}
 								</td>
 							</tr>
 						) : (
-							sorted.map((att) => (
-								<tr key={att.id} className="bg-white dark:bg-black-800">
-									<td className="px-4 py-3">
-										{att.kind === "folder" ? (
-											<button
-												type="button"
-												className="flex min-w-0 items-center gap-2 font-medium text-primary-700 hover:underline dark:text-primary-300"
-												onClick={() => setCurrentFolderId(att.id)}
-											>
-												<FolderOutlinedIcon fontSize="small" className={fileIconClass("folder")} />
-												<span className="truncate">{att.name}</span>
-											</button>
-										) : (
-											<div className="flex min-w-0 items-center gap-2 font-medium text-neutral-900 dark:text-white">
-												<InsertDriveFileOutlinedIcon
-													fontSize="small"
-													className={cn("shrink-0", fileIconClass("file"))}
-												/>
-												{att.attachmentUrl ? (
-													<a
-														href={att.attachmentUrl}
-														target="_blank"
-														rel="noopener noreferrer"
-														className="truncate hover:text-primary-600 dark:hover:text-primary-400"
-													>
-														{att.name?.trim() || att.originalFileName || "—"}
-													</a>
-												) : (
-													<span className="truncate">
-														{att.name?.trim() || att.originalFileName || "—"}
-													</span>
-												)}
-											</div>
+							sorted.map((att) => {
+								const isPreviewing = previewAttachmentId === att.id;
+								const previewable = canPreviewAttachment(att);
+								return (
+									<tr
+										key={att.id}
+										className={cn(
+											"bg-white dark:bg-black-800",
+											(att.kind === "folder" || previewable) &&
+												"cursor-pointer hover:bg-neutral-50 dark:hover:bg-black-700/60",
+											isPreviewing && "bg-primary-50/80 dark:bg-primary-950/30"
 										)}
-									</td>
-									<td className="whitespace-nowrap px-4 py-3 text-neutral-600 dark:text-neutral-300">
-										{att.createdAt ? formatUsDateTime(att.createdAt) : "—"}
-									</td>
-									<td className="px-4 py-3">
-										<UserIdentity user={att.createdBy ?? null} />
-									</td>
-									<td className="px-4 py-3">
-										<UserIdentity user={att.modifiedBy ?? null} />
-									</td>
-									<td className="max-w-[160px] truncate px-4 py-3 text-neutral-600 dark:text-neutral-300">
-										{tagsLabel(att.tags)}
-									</td>
-									<td className="px-4 py-3 text-right">
-										<div className="flex justify-end gap-1">
-											{att.kind === "file" && att.attachmentUrl ? (
-												<a
-													href={att.attachmentUrl}
-													target="_blank"
-													rel="noopener noreferrer"
-													className="inline-flex items-center justify-center rounded-md p-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-black-700"
-													aria-label={`Download ${att.name}`}
-												>
-													<DownloadOutlinedIcon fontSize="small" />
-												</a>
-											) : null}
-											{(rowMenu(att)?.length ?? 0) > 0 ? (
-												<Dropdown menu={{ items: rowMenu(att) }} trigger={["click"]}>
-													<button
-														type="button"
-														className="inline-flex items-center justify-center rounded-md p-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-black-700"
-														aria-label="Actions"
+										onClick={() => handleRowActivate(att)}
+									>
+										<td className="px-4 py-3 text-neutral-600 dark:text-neutral-300">
+											<div className="flex min-w-0 items-center gap-2">
+												{att.kind === "folder" ? (
+													<FolderOutlinedIcon
+														fontSize="small"
+														className={cn("shrink-0", fileIconClass("folder"))}
+													/>
+												) : (
+													<InsertDriveFileOutlinedIcon
+														fontSize="small"
+														className={cn("shrink-0", fileIconClass("file"))}
+													/>
+												)}
+												<span className="truncate font-medium">
+													{att.name?.trim() || att.originalFileName || "—"}
+												</span>
+											</div>
+										</td>
+										<td className="whitespace-nowrap px-4 py-3 text-neutral-600 dark:text-neutral-300">
+											{att.createdAt ? formatUsDateTime(att.createdAt) : "—"}
+										</td>
+										<td className="px-4 py-3 text-neutral-600 dark:text-neutral-300">
+											<UserIdentity user={att.createdBy ?? null} />
+										</td>
+										<td className="px-4 py-3 text-neutral-600 dark:text-neutral-300">
+											<UserIdentity user={att.modifiedBy ?? null} />
+										</td>
+										<td className="max-w-[160px] truncate px-4 py-3 text-neutral-600 dark:text-neutral-300">
+											{tagsLabel(att.tags)}
+										</td>
+										<td
+											className="px-4 py-3 text-right"
+											data-row-click-ignore
+											onClick={(e) => e.stopPropagation()}
+										>
+											<div className="flex justify-end">
+												{(rowMenu(att)?.length ?? 0) > 0 ? (
+													<Dropdown
+														menu={{
+															items: rowMenu(att),
+															onClick: ({ key }) => handleRowMenuClick(att, key),
+														}}
+														classNames={{ root: "actions-dropdown-icon" }}
+														trigger={["click"]}
 													>
-														<MoreVertOutlinedIcon fontSize="small" />
-													</button>
-												</Dropdown>
-											) : null}
-											{!readOnly && att.kind === "file" ? (
-												<button
-													type="button"
-													className="inline-flex items-center justify-center rounded-md p-2 text-error-600 hover:bg-error-50 dark:text-error-400 dark:hover:bg-error-950/40"
-													aria-label={`Delete ${att.name}`}
-													disabled={busy}
-													onClick={() => setPendingDelete(att)}
-												>
-													<DeleteOutlineOutlinedIcon fontSize="small" />
-												</button>
-											) : null}
-										</div>
-									</td>
-								</tr>
-							))
+														<button
+															type="button"
+															className="inline-flex items-center justify-center rounded-md p-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-black-700"
+															aria-label="Actions"
+														>
+															<MoreVertOutlinedIcon fontSize="small" />
+														</button>
+													</Dropdown>
+												) : null}
+											</div>
+										</td>
+									</tr>
+								);
+							})
 						)}
 					</tbody>
 				</table>

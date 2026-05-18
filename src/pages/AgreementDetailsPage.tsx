@@ -45,6 +45,18 @@ import { AgreementLineItemsStepPanel } from "./agreementConfiguration/AgreementL
 import { AgreementStepDetailsForm } from "./agreementConfiguration/AgreementStepDetailsForm";
 import { AgreementTeamsStepPanel } from "./agreementConfiguration/AgreementTeamsStepPanel";
 import { AgreementAttachmentsStepPanel } from "./agreementConfiguration/AgreementAttachmentsStepPanel";
+import { AgreementAttachmentDocPreview } from "./agreementConfiguration/AgreementAttachmentDocPreview";
+import {
+	ResizableSidebar,
+	RESIZABLE_SIDEBAR_DEFAULT_WIDTH,
+	RESIZABLE_SIDEBAR_MAX_WIDTH,
+	RESIZABLE_SIDEBAR_MIN_WIDTH,
+} from "../components/base/ResizableSidebar";
+import {
+	attachmentDisplayName,
+	canPreviewAttachment,
+} from "../lib/attachmentDocument";
+import type { AgreementAttachment } from "../api";
 import {
 	emptyLineItemValuesFromLayout,
 	fieldValuesArrayFromRecord,
@@ -161,7 +173,10 @@ export default function AgreementDetailsPage() {
 	const [lineItemQuery, setLineItemQuery] = useState<string | null>(null);
 	const [isEditMode, setIsEditMode] = useState(false);
 	const [pendingTabKey, setPendingTabKey] = useState<string | null>(null);
+	const [previewAttachment, setPreviewAttachment] = useState<AgreementAttachment | null>(null);
+	const [previewSidebarWidth, setPreviewSidebarWidth] = useState(RESIZABLE_SIDEBAR_DEFAULT_WIDTH);
 	const tabChangeModalTitleId = useId();
+	const previewOpen = previewAttachment !== null;
 
 	const refreshStepDetails = useCallback(() => {
 		if (!agreementIdValid) return;
@@ -175,6 +190,7 @@ export default function AgreementDetailsPage() {
 		setLineItemQuery(null);
 		setIsEditMode(false);
 		setPendingTabKey(null);
+		setPreviewAttachment(null);
 		setActiveTabKey("");
 		setSearchParams(
 			(prev) => {
@@ -313,6 +329,9 @@ export default function AgreementDetailsPage() {
 	useEffect(() => {
 		if (!currentStep || !isLineItemsWizardStepName(currentStep)) {
 			setLineItemQuery(null);
+		}
+		if (!isAgreementAttachmentsTab(currentStep)) {
+			setPreviewAttachment(null);
 		}
 		setFieldErrorsById({});
 	}, [currentStep?.id, currentStep?.name]);
@@ -661,7 +680,11 @@ export default function AgreementDetailsPage() {
 	}
 
 	return (
-		<CardMain className="flex min-h-0 flex-1 flex-col gap-0 !m-0 !p-0">
+		<CardMain className="relative flex min-h-0 flex-1 flex-col gap-0 overflow-hidden !m-0 !p-0">
+			<div
+				className="flex min-h-0 flex-1 flex-col"
+				style={previewOpen ? { paddingRight: previewSidebarWidth } : undefined}
+			>
 			{!isEditMode ? (
 				<div
 					role="status"
@@ -773,7 +796,12 @@ export default function AgreementDetailsPage() {
 							isAgreementTeamsTab(currentStep) ? (
 								<AgreementTeamsStepPanel agreementId={agreementId} readOnly={!isEditMode} />
 							) : isAgreementAttachmentsTab(currentStep) ? (
-								<AgreementAttachmentsStepPanel agreementId={agreementId} readOnly={!isEditMode} />
+								<AgreementAttachmentsStepPanel
+									agreementId={agreementId}
+									readOnly={!isEditMode}
+									previewAttachmentId={previewAttachment?.id ?? null}
+									onPreviewAttachmentChange={setPreviewAttachment}
+								/>
 							) : isClausesWizardStepName(currentStep) ? (
 								<AgreementClausesStepPanel agreementId={agreementId} readOnly={!isEditMode} />
 							) : isLineItemsWizardStepName(currentStep) ? (
@@ -876,6 +904,22 @@ export default function AgreementDetailsPage() {
 					without saving, your changes will be lost.
 				</p>
 			</Modal>
+			</div>
+
+			{previewAttachment && canPreviewAttachment(previewAttachment) ? (
+				<ResizableSidebar
+					open
+					variant="page"
+					title={attachmentDisplayName(previewAttachment)}
+					onClose={() => setPreviewAttachment(null)}
+					onWidthChange={setPreviewSidebarWidth}
+					minWidth={RESIZABLE_SIDEBAR_MIN_WIDTH}
+					maxWidth={RESIZABLE_SIDEBAR_MAX_WIDTH}
+					defaultWidth={RESIZABLE_SIDEBAR_DEFAULT_WIDTH}
+				>
+					<AgreementAttachmentDocPreview attachment={previewAttachment} />
+				</ResizableSidebar>
+			) : null}
 		</CardMain>
 	);
 }

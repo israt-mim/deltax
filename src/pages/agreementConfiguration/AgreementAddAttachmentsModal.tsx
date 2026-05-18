@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import cn from "classnames";
+import { toast } from "react-toastify";
 import CloudUploadOutlinedIcon from "@mui/icons-material/CloudUploadOutlined";
 import InsertDriveFileOutlinedIcon from "@mui/icons-material/InsertDriveFileOutlined";
 import { Button } from "../../components/base/Button";
 import { Modal } from "../../components/base/Modal";
+import { isPdfFile } from "../../lib/attachmentDocument";
 
-const ACCEPT =
-	".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.rtf,.zip,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+const ACCEPT = ".pdf,application/pdf";
 
 export interface AgreementAddAttachmentsModalProps {
 	open: boolean;
@@ -33,12 +34,24 @@ export function AgreementAddAttachmentsModal({
 	}, [open]);
 
 	const addFiles = useCallback((list: FileList | File[]) => {
-		const next = Array.from(list);
-		if (next.length === 0) return;
+		const incoming = Array.from(list);
+		if (incoming.length === 0) return;
+
+		const accepted = incoming.filter(isPdfFile);
+		const rejected = incoming.length - accepted.length;
+		if (rejected > 0) {
+			toast.error(
+				rejected === 1
+					? "Only PDF files can be uploaded."
+					: `${rejected} file(s) skipped. Only PDF files can be uploaded.`
+			);
+		}
+		if (accepted.length === 0) return;
+
 		setFiles((prev) => {
 			const seen = new Set(prev.map((f) => `${f.name}-${f.size}`));
 			const merged = [...prev];
-			for (const f of next) {
+			for (const f of accepted) {
 				const key = `${f.name}-${f.size}`;
 				if (seen.has(key)) continue;
 				seen.add(key);
@@ -92,7 +105,9 @@ export function AgreementAddAttachmentsModal({
 			}
 		>
 			<div className="flex flex-col gap-4">
-				<p className="mb-0 text-sm text-neutral-600 dark:text-neutral-400">Click or drag and drop</p>
+				<p className="mb-0 text-sm text-neutral-600 dark:text-neutral-400">
+					Click or drag and drop PDF files only
+				</p>
 				<input
 					ref={inputRef}
 					type="file"
@@ -128,7 +143,7 @@ export function AgreementAddAttachmentsModal({
 					<CloudUploadOutlinedIcon className="!text-4xl text-primary-600 dark:text-primary-400" />
 					<span className="text-sm">
 						<span className="font-medium text-primary-600 dark:text-primary-400">Click to upload</span>
-						<span className="text-neutral-500 dark:text-neutral-400"> or drag and drop</span>
+						<span className="text-neutral-500 dark:text-neutral-400"> or drag and drop PDFs</span>
 					</span>
 				</button>
 
