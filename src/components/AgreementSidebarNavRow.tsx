@@ -280,7 +280,7 @@ export function AgreementSidebarNavRow({ expanded }: AgreementSidebarNavRowProps
 				ref={triggerRef}
 				role="presentation"
 				className={`flex cursor-default items-center gap-3 rounded no-underline transition-colors ${
-					expanded ? "my-1.5 px-2 py-1.5" : "my-1.5 justify-center px-2 py-1.5"
+					expanded ? "px-2 py-1.5" : "justify-center px-2 py-1.5"
 				} ${
 					isAgreementRoute
 						? "bg-white/20 text-white"

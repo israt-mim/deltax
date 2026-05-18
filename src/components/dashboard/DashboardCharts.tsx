@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
 	Area,
 	AreaChart,
@@ -16,6 +16,7 @@ import {
 import { Card } from "../base/Card";
 import { Typography } from "../base/Typography";
 import { useDarkMode } from "../../hooks/useDarkMode";
+import { getChartPrimaryColor } from "../../lib/theme";
 import type { CategoryCount, ChartSlice, MonthlyCount } from "../../lib/dashboardAggregations";
 
 type ChartCardProps = {
@@ -47,10 +48,29 @@ function ChartCard({ title, subtitle, children }: ChartCardProps) {
 
 function useChartTheme() {
 	const { isDark } = useDarkMode();
+	const [primary, setPrimary] = useState(() => getChartPrimaryColor(500));
+	const [primaryDark, setPrimaryDark] = useState(() => getChartPrimaryColor(600));
+
+	useEffect(() => {
+		const sync = () => {
+			setPrimary(getChartPrimaryColor(500));
+			setPrimaryDark(getChartPrimaryColor(600));
+		};
+		sync();
+		const observer = new MutationObserver(sync);
+		observer.observe(document.documentElement, {
+			attributes: true,
+			attributeFilter: ["data-app-theme", "class", "style"],
+		});
+		return () => observer.disconnect();
+	}, []);
+
 	return {
 		grid: isDark ? "#2d3748" : "#e5e7eb",
 		axis: isDark ? "#9ca3af" : "#6b7280",
-		stroke: isDark ? "#0077E3" : "#016DCF",
+		primary,
+		primaryDark,
+		stroke: primary,
 		dotStroke: isDark ? "#1f2937" : "#ffffff",
 	};
 }
@@ -159,7 +179,7 @@ function StatusPieChart({ data, emptyMessage = "No data yet" }: { data: ChartSli
 						isAnimationActive={false}
 					>
 						{data.map((entry) => (
-							<Cell key={entry.name} fill={entry.fill ?? "#016DCF"} />
+							<Cell key={entry.name} fill={entry.fill ?? theme.primary} />
 						))}
 					</Pie>
 					<Legend wrapperStyle={{ fontSize: 12, color: theme.axis }} />
@@ -181,7 +201,7 @@ function MonthlyBarChart({ data }: { data: MonthlyCount[] }) {
 					<CartesianGrid strokeDasharray="3 3" stroke={theme.grid} vertical={false} />
 					<XAxis dataKey="month" tick={{ fill: theme.axis, fontSize: 11 }} axisLine={false} tickLine={false} />
 					<YAxis allowDecimals={false} tick={{ fill: theme.axis, fontSize: 11 }} axisLine={false} tickLine={false} />
-					<Bar dataKey="count" name="Agreements" fill="#016DCF" radius={[4, 4, 0, 0]} activeBar={false} isAnimationActive={false} />
+					<Bar dataKey="count" name="Agreements" fill={theme.primary} radius={[4, 4, 0, 0]} activeBar={false} isAnimationActive={false} />
 				</BarChart>
 			</ResponsiveContainer>
 		</ChartSurface>
@@ -206,7 +226,7 @@ function CategoryBarChart({ data }: { data: CategoryCount[] }) {
 						axisLine={false}
 						tickLine={false}
 					/>
-					<Bar dataKey="count" name="Agreements" fill="#0054A1" radius={[0, 4, 4, 0]} activeBar={false} isAnimationActive={false} />
+					<Bar dataKey="count" name="Agreements" fill={theme.primaryDark} radius={[0, 4, 4, 0]} activeBar={false} isAnimationActive={false} />
 				</BarChart>
 			</ResponsiveContainer>
 		</ChartSurface>

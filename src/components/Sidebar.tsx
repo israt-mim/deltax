@@ -34,7 +34,7 @@ export default function Sidebar({ expanded }: SidebarProps) {
         ease: 'linear'
       }}
     >
-      <nav className="flex-1 py-3 px-2 overflow-y-auto">
+      <nav className="flex flex-1 flex-col gap-3.5 py-3 px-2 overflow-y-auto">
         {SidebarItemsBeforeAgreement.map((item) => (
           <NavLink
             key={item.label}
@@ -42,7 +42,7 @@ export default function Sidebar({ expanded }: SidebarProps) {
             end={item.href === '/'}
             title={!expanded ? item.label : undefined}
             className={({ isActive }) =>
-              `flex items-center gap-3 no-underline rounded transition-colors ${expanded ? 'py-1.5 px-2 my-1.5' : 'justify-center py-1.5 px-2 my-1.5'} ${
+              `flex items-center gap-3 no-underline rounded transition-colors ${expanded ? 'py-1.5 px-2' : 'justify-center py-1.5 px-2'} ${
                 isActive ? 'text-white bg-white/20' : 'text-white/70 hover:text-white hover:bg-white/20'
               }`
             }
@@ -61,7 +61,7 @@ export default function Sidebar({ expanded }: SidebarProps) {
             end={item.href === '/'}
             title={!expanded ? item.label : undefined}
             className={({ isActive }) =>
-              `flex items-center gap-3 no-underline rounded transition-colors ${expanded ? 'py-1.5 px-2 my-1.5' : 'justify-center py-1.5 px-2 my-1.5'} ${
+              `flex items-center gap-3 no-underline rounded transition-colors ${expanded ? 'py-1.5 px-2' : 'justify-center py-1.5 px-2'} ${
                 isActive ? 'text-white bg-white/20' : 'text-white/70 hover:text-white hover:bg-white/20'
               }`
             }

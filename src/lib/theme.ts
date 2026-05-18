@@ -168,3 +168,21 @@ export function applyAppearanceMode(mode: "light" | "dark" | "system"): void {
 	document.documentElement.classList.toggle("dark", resolveDarkMode(mode));
 	document.documentElement.dataset.appearanceMode = mode;
 }
+
+/** Read a theme CSS variable from `:root` (set by `applyAppThemeColor`). */
+export function getThemeCssColor(cssVar: string, fallback: string): string {
+	if (typeof document === "undefined") return fallback;
+	const value = getComputedStyle(document.documentElement).getPropertyValue(cssVar).trim();
+	return value || fallback;
+}
+
+const CHART_PRIMARY_FALLBACK: Record<500 | 600 | 700, string> = {
+	500: "#326080",
+	600: "#2C5572",
+	700: "#254760",
+};
+
+/** Primary brand color for charts (tracks theme picker / `primary-500`). */
+export function getChartPrimaryColor(shade: 500 | 600 | 700 = 500): string {
+	return getThemeCssColor(`--color-bluegray-${shade}`, CHART_PRIMARY_FALLBACK[shade]);
+}
