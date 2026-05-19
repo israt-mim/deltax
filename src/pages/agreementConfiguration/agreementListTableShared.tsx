@@ -1,4 +1,8 @@
+import { Dropdown } from "antd";
+import type { MenuProps } from "antd";
 import type { ColumnDef } from "@tanstack/react-table";
+import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
+import MoreVertOutlinedIcon from "@mui/icons-material/MoreVertOutlined";
 import type { AgreementConfigListItem } from "../../api";
 import { formatUsDateTime } from "../../lib/formatDateTime";
 import type { ColumnConfig, StickyColumnMeta } from "../../hooks/useColumns";
@@ -30,11 +34,14 @@ export function agreementConfigRowMatchesSearch(
 	return values.some((value) => value !== "—" && value.toLowerCase().includes(q));
 }
 
+/** User-facing agreement config status: Draft or Active only. */
+export function formatAgreementConfigStatusLabel(isActive: boolean | undefined): "Draft" | "Active" {
+	return isActive === true ? "Active" : "Draft";
+}
+
 export function agreementConfigToTableRow(item: AgreementConfigListItem): AgreementConfigTableRow {
 	const displayId = (item.displayId?.trim() || item._id).trim();
-	let statusLabel = "Draft";
-	if (item.isActive) statusLabel = "Active";
-	else if (item.isCompleted) statusLabel = "Completed";
+	const statusLabel = formatAgreementConfigStatusLabel(item.isActive);
 	const createdLabel = item.createdAt ? formatUsDateTime(item.createdAt) : "—";
 	return {
 		_id: item._id,
@@ -51,8 +58,53 @@ export function agreementConfigToTableRow(item: AgreementConfigListItem): Agreem
 const STATUS_COLORS: Record<string, string> = {
 	Active: "bg-success-100 text-success-700 dark:bg-success-900 dark:text-success-300",
 	Draft: "bg-neutral-100 text-neutral-600 dark:bg-black-600 dark:text-neutral-300",
-	Completed: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
 };
+
+export function AgreementConfigRowMenu({
+	row,
+	onDeleteRequest,
+}: {
+	row: AgreementConfigTableRow;
+	onDeleteRequest: (row: AgreementConfigTableRow) => void;
+}) {
+	const items: MenuProps["items"] = [
+		{
+			key: "delete",
+			icon: <DeleteOutlineOutlinedIcon sx={{ fontSize: 18 }} />,
+			label: "Delete",
+			danger: true,
+		},
+	];
+
+	return (
+		<div
+			className="flex items-center justify-center"
+			data-row-click-ignore
+			onClick={(e) => e.stopPropagation()}
+		>
+			<Dropdown
+				trigger={["click"]}
+				classNames={{ root: "actions-dropdown-icon" }}
+				menu={{
+					items,
+					onClick: ({ key, domEvent }) => {
+						domEvent.preventDefault();
+						domEvent.stopPropagation();
+						if (key === "delete") onDeleteRequest(row);
+					},
+				}}
+			>
+				<button
+					type="button"
+					aria-label="Agreement configuration actions"
+					className="flex rounded-md p-1.5 text-neutral-400 transition-colors hover:bg-neutral-100 dark:hover:bg-black-600"
+				>
+					<MoreVertOutlinedIcon sx={{ fontSize: 18 }} />
+				</button>
+			</Dropdown>
+		</div>
+	);
+}
 
 /** Scrollable columns — same order and labels as the full Agreements list. */
 export const agreementListScrollableColumnConfigs: ColumnConfig<AgreementConfigTableRow>[] = [

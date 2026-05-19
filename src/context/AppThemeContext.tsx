@@ -7,7 +7,7 @@ import {
 	useState,
 	type ReactNode,
 } from "react";
-import { ConfigProvider, theme as antdTheme } from "antd";
+import { App as AntdApp, ConfigProvider, theme as antdTheme } from "antd";
 import { APP_THEME_PALETTE, type AppThemeName } from "../constants/appThemes";
 import {
 	readAppThemePreferences,
@@ -102,17 +102,25 @@ export function AppThemeProvider({ children }: { children: ReactNode }) {
 			token: {
 				colorPrimary: primaryColor,
 				colorBgContainer: isDark ? "#141414" : undefined,
-				colorBgElevated: isDark ? "#141414" : undefined,
+				colorBgElevated: isDark ? "#141414" : "#ffffff",
 				colorBorder: isDark ? "#262626" : undefined,
 				colorText: isDark ? "#f5f5f5" : undefined,
 				colorTextSecondary: isDark ? "#a3a3a3" : undefined,
+				zIndexPopupBase: 2000,
+			},
+			components: {
+				Select: {
+					zIndexPopup: 2100,
+				},
 			},
 		};
 	}, [isDark, preferences.theme]);
 
 	return (
 		<ConfigProvider theme={antdThemeConfig}>
-			<AppThemeContext.Provider value={value}>{children}</AppThemeContext.Provider>
+			<AntdApp>
+				<AppThemeContext.Provider value={value}>{children}</AppThemeContext.Provider>
+			</AntdApp>
 		</ConfigProvider>
 	);
 }

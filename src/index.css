@@ -167,7 +167,7 @@ button:focus-visible {
   }
 
   .app-modal .ant-modal-container {
-    overflow: hidden;
+    overflow: visible;
     border-radius: 0.75rem;
     background-color: #ffffff !important;
     box-shadow:
@@ -315,6 +315,63 @@ button:focus-visible {
   .ant-switch.ant-switch-checked:hover:not(.ant-switch-disabled) {
     background: var(--color-bluegray-600, #2c5572) !important;
   }
+}
+
+/*
+ * Select dropdown — solid surface above modals and sibling fields.
+ * Outside @layer so these win over Ant Design CSS-in-JS.
+ */
+.app-form-select-popup,
+.ant-select-dropdown {
+  z-index: 2100 !important;
+  background-color: #ffffff !important;
+  opacity: 1 !important;
+  box-shadow:
+    0 6px 16px 0 rgba(0, 0, 0, 0.08),
+    0 3px 6px -4px rgba(0, 0, 0, 0.12),
+    0 9px 28px 8px rgba(0, 0, 0, 0.05) !important;
+}
+
+.ant-select-dropdown .rc-virtual-list,
+.ant-select-dropdown .rc-virtual-list-holder {
+  background-color: #ffffff !important;
+}
+
+.ant-select.ant-select-open {
+  position: relative;
+  z-index: 2;
+}
+
+/*
+ * Creatable/searchable Select: Ant Design hides content text while searching;
+ * the inner input must not inherit `color: transparent` (Tailwind preflight uses color: inherit).
+ */
+.ant-select .ant-select-content-has-search-value .ant-select-input,
+.ant-select.ant-select-open .ant-select-input,
+.ant-select.ant-select-focused .ant-select-input {
+  color: #171717 !important;
+  -webkit-text-fill-color: #171717 !important;
+  caret-color: #171717 !important;
+}
+
+.dark .ant-select .ant-select-content-has-search-value .ant-select-input,
+.dark .ant-select.ant-select-open .ant-select-input,
+.dark .ant-select.ant-select-focused .ant-select-input {
+  color: #f5f5f5 !important;
+  -webkit-text-fill-color: #f5f5f5 !important;
+  caret-color: #f5f5f5 !important;
+}
+
+.dark .app-form-select-popup,
+.dark .ant-select-dropdown {
+  background-color: #141414 !important;
+  border: 1px solid #262626;
+  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.32) !important;
+}
+
+.dark .ant-select-dropdown .rc-virtual-list,
+.dark .ant-select-dropdown .rc-virtual-list-holder {
+  background-color: #141414 !important;
 }
 
 /* Profile theme settings — match Theme picker and Appearance select height (32px) */

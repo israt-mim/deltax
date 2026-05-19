@@ -23,12 +23,12 @@ export type CreateFieldFormHandle = {
 	isPending: boolean;
 };
 
-function createDefaultFormState() {
+function createDefaultFormState(defaultContext?: string) {
 	return {
 		name: "",
 		group: "",
 		groupTechName: "",
-		context: "Global",
+		context: defaultContext?.trim() || "Global",
 		tags: [] as string[],
 		tooltip: "",
 		visible: true,
@@ -43,8 +43,16 @@ function createDefaultFormState() {
 	};
 }
 
-export const CreateFieldForm = forwardRef<CreateFieldFormHandle>(function CreateFieldForm(_, ref) {
-	const defaults = createDefaultFormState();
+export interface CreateFieldFormProps {
+	/** Pre-select context when creating a field from an agreement configuration workflow. */
+	defaultContext?: string;
+}
+
+export const CreateFieldForm = forwardRef<CreateFieldFormHandle, CreateFieldFormProps>(function CreateFieldForm(
+	{ defaultContext },
+	ref
+) {
+	const defaults = createDefaultFormState(defaultContext);
 	const [name, setName] = useState(defaults.name);
 	const [group, setGroup] = useState(defaults.group);
 	const [groupTechName, setGroupTechName] = useState(defaults.groupTechName);
@@ -68,7 +76,7 @@ export const CreateFieldForm = forwardRef<CreateFieldFormHandle>(function Create
 	const createFieldMutation = useCreateFieldMutation();
 
 	const reset = useCallback(() => {
-		const next = createDefaultFormState();
+		const next = createDefaultFormState(defaultContext);
 		setName(next.name);
 		setGroup(next.group);
 		setGroupTechName(next.groupTechName);
@@ -86,7 +94,7 @@ export const CreateFieldForm = forwardRef<CreateFieldFormHandle>(function Create
 		setDefaultValue(next.defaultValue);
 		setDetailsErrors({});
 		setTypeErrors({});
-	}, []);
+	}, [defaultContext]);
 
 	useEffect(() => {
 		if (dataType !== "Choice") return;

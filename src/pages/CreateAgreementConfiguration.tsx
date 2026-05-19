@@ -19,6 +19,7 @@ import { Stepper, type StepperStep } from "../components/base/Stepper";
 import { Typography } from "../components/base/Typography";
 import { FormInput } from "../components/form-input/FormInput";
 import { AddFieldsModal } from "./agreementConfiguration/AddFieldsModal";
+import { buildAgreementConfigFieldContextLabel } from "../lib/fieldContext";
 import {
 	applyLayoutSectionsToConfigureState,
 	orderDisplaySections,
@@ -470,6 +471,10 @@ const CreateAgreementConfiguration = () => {
 			open={addFieldModalOpen}
 			sectionKey={addFieldTargetSectionKey}
 			excludeFieldIds={excludeFieldIdsForAddModal}
+			agreementConfigId={id}
+			defaultFieldContext={
+				config ? buildAgreementConfigFieldContextLabel(config) ?? undefined : undefined
+			}
 			onClose={handleCloseAddFieldModal}
 			onConfirm={handleConfirmAddFields}
 		/>

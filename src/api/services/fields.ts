@@ -63,12 +63,19 @@ export interface UpdateFieldBody {
 	type?: Partial<FieldTypePayload>;
 }
 
+export interface FieldContextOption {
+	value: string;
+	label: string;
+}
+
 export interface ListFieldsParams extends BaseListQuery {
 	/** Substring search (server); also send as `search` if API accepts both `q` and `search`. */
 	group?: string;
 	context?: string;
 	fieldType?: string;
 	dataType?: string;
+	/** When set, returns Global/Generic fields plus fields for this config's category-domain-type-subtype context. */
+	agreementConfigId?: string;
 }
 
 function serializeDefaultForApi(
@@ -159,6 +166,12 @@ export async function bulkDeleteFields(ids: string[]): Promise<BulkDeleteResult>
 	return post<BulkDeleteResult>("/api/fields/bulk-delete", { ids: unique });
 }
 
+/** GET /api/fields/context-options — Global plus unique agreement config taxonomy labels. */
+export async function getFieldContextOptions(): Promise<FieldContextOption[]> {
+	const res = await get<{ data: FieldContextOption[] }>("/api/fields/context-options");
+	return res.data ?? [];
+}
+
 export async function listFields(
 	params: ListFieldsParams = {}
 ): Promise<ListResponse<FieldConfigurationApiDocument>> {
@@ -174,6 +187,7 @@ export async function listFields(
 		context: params.context,
 		fieldType: params.fieldType,
 		dataType: params.dataType,
+		agreementConfigId: params.agreementConfigId?.trim(),
 		createdAfter: params.createdAfter,
 		createdBefore: params.createdBefore,
 	});

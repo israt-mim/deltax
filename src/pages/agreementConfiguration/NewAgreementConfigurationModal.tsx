@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Tooltip } from "antd";
+import { toast } from "react-toastify";
 import cn from "classnames";
 import { Modal } from "../../components/base/Modal";
 import { Button } from "../../components/base/Button";
@@ -19,6 +19,7 @@ import {
 import { formatUserFacingError } from "../../lib/formatUserFacingError";
 
 const STEP_LABELS = ["Configuration Type", "Additional Steps"] as const;
+const CREATE_TOAST_ID = "new-agreement-config-create";
 
 function isHeaderWizardStepName(name: string | undefined): boolean {
 	return name?.trim().toLowerCase() === "header";
@@ -49,7 +50,6 @@ export const NewAgreementConfigurationModal = ({ open, onClose }: NewAgreementCo
 
 	const [additionalStepsEnabled, setAdditionalStepsEnabled] = useState(false);
 	const [selectedStepIds, setSelectedStepIds] = useState<string[]>([]);
-	const [startButtonTooltip, setStartButtonTooltip] = useState<string | null>(null);
 
 	const categoriesQuery = useAgreementCategoriesQuery({ enabled: open });
 	const domainsQuery = useAgreementDomainsQuery({ agreementCategoryId: category, enabled: open });
@@ -100,7 +100,6 @@ export const NewAgreementConfigurationModal = ({ open, onClose }: NewAgreementCo
 		setStep0Errors({});
 		setAdditionalStepsEnabled(false);
 		setSelectedStepIds([]);
-		setStartButtonTooltip(null);
 	}, []);
 
 	useEffect(() => {
@@ -127,10 +126,10 @@ export const NewAgreementConfigurationModal = ({ open, onClose }: NewAgreementCo
 	};
 
 	const handleStart = useCallback(async () => {
-		setStartButtonTooltip(null);
 		if (!headerStepIdFromCatalog) {
-			setStartButtonTooltip(
-				"The default Header step could not be loaded. Check agreement steps or try again."
+			toast.error(
+				"The default Header step could not be loaded. Check agreement steps or try again.",
+				{ toastId: CREATE_TOAST_ID }
 			);
 			return;
 		}
@@ -141,7 +140,7 @@ export const NewAgreementConfigurationModal = ({ open, onClose }: NewAgreementCo
 		} else {
 			const selected = [...new Set(selectedStepIds)].filter(isMongoObjectIdString);
 			if (selected.length === 0) {
-				setStartButtonTooltip("Select at least one step.");
+				toast.info("Select at least one step.", { toastId: CREATE_TOAST_ID });
 				return;
 			}
 			stepsPayload = [
@@ -161,7 +160,9 @@ export const NewAgreementConfigurationModal = ({ open, onClose }: NewAgreementCo
 			onClose();
 			void navigate(`/configure/agreements/create/${encodeURIComponent(created._id)}`);
 		} catch (err) {
-			setStartButtonTooltip(formatUserFacingError(err, "Could not create agreement configuration."));
+			toast.error(formatUserFacingError(err, "Could not create agreement configuration."), {
+				toastId: CREATE_TOAST_ID,
+			});
 		}
 	}, [
 		additionalStepsEnabled,
@@ -209,10 +210,7 @@ export const NewAgreementConfigurationModal = ({ open, onClose }: NewAgreementCo
 							size="md"
 							appearance="outlined"
 							status="secondary-neutral"
-							onClick={() => {
-								setStartButtonTooltip(null);
-								setActiveStep(0);
-							}}
+							onClick={() => setActiveStep(0)}
 						>
 							Back
 						</Button>
@@ -222,16 +220,7 @@ export const NewAgreementConfigurationModal = ({ open, onClose }: NewAgreementCo
 							Next
 						</Button>
 					) : (
-						<Tooltip
-							title={startButtonTooltip ?? ""}
-							open={startButtonTooltip !== null ? true : undefined}
-							onOpenChange={(visible) => {
-								if (!visible) setStartButtonTooltip(null);
-							}}
-							placement="top"
-						>
-							<span className="inline-flex">{startButton}</span>
-						</Tooltip>
+						startButton
 					)}
 				</div>
 			}
@@ -247,7 +236,6 @@ export const NewAgreementConfigurationModal = ({ open, onClose }: NewAgreementCo
 								type="button"
 								onClick={() => {
 									if (i === 0) {
-										setStartButtonTooltip(null);
 										setActiveStep(0);
 									}
 									if (i === 1 && validateStep0()) setActiveStep(1);

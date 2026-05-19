@@ -1,12 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Dropdown } from "antd";
-import type { MenuProps } from "antd";
 import { Switch } from "antd";
 import { toast } from "react-toastify";
 import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
-import MoreVertOutlinedIcon from "@mui/icons-material/MoreVertOutlined";
 import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
 import {
 	ApiError,
@@ -33,6 +30,7 @@ import {
 	type ConfigureFieldOverrides,
 } from "./agreementConfiguration/buildConfigureAgreementPayload";
 import { AddFieldsModal } from "./agreementConfiguration/AddFieldsModal";
+import { buildAgreementConfigFieldContextLabel } from "../lib/fieldContext";
 import { AddRelevantTeamsModal } from "./agreementConfiguration/AddRelevantTeamsModal";
 import {
 	AgreementRelevantTeamsPanel,
@@ -305,16 +303,6 @@ export const AgreementConfigurationDetailsPage = () => {
 				: formatUserFacingError(err, "Could not load agreement configuration.");
 		toast.error(message, { toastId: `agreement-detail-${id ?? "unknown"}` });
 	}, [configQuery.isError, configQuery.error, id]);
-
-	const overflowMenuItems: MenuProps["items"] = useMemo(
-		() => [
-			{
-				key: "edit",
-				label: "Edit configuration",
-			},
-		],
-		[]
-	);
 
 	const additionalStepSelectOptions = useMemo(() => {
 		const rows = agreementStepsCatalogQuery.data?.data ?? [];
@@ -791,7 +779,6 @@ export const AgreementConfigurationDetailsPage = () => {
 	const headerId = config.displayId?.trim() || config._id;
 	const breadcrumb = buildBreadcrumb(config);
 	const isActive = config.isActive === true;
-	const completed = config.isCompleted === true;
 	const configuredSteps =
 		config.configuredSteps?.filter((s): s is AgreementConfiguredStep => Boolean(s)) ?? [];
 
@@ -852,11 +839,6 @@ export const AgreementConfigurationDetailsPage = () => {
 									{headerId}
 								</h1>
 								<span className={statusBadgeClass(isActive)}>{isActive ? "Active" : "Draft"}</span>
-								{completed && (
-									<span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-950/80 dark:text-blue-200">
-										Completed
-									</span>
-								)}
 							</div>
 							<p className="mt-2 text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">{breadcrumb}</p>
 						</div>
@@ -877,25 +859,7 @@ export const AgreementConfigurationDetailsPage = () => {
 							/>
 							<span className="text-sm text-neutral-600 dark:text-neutral-400">Edit</span>
 						</div>
-						{isActive ? (
-							<Dropdown
-								trigger={["click"]}
-								menu={{
-									items: overflowMenuItems,
-									onClick: ({ key }) => {
-										if (key === "edit") enterHeaderEditMode();
-									},
-								}}
-							>
-								<button
-									type="button"
-									aria-label="More actions"
-									className="flex h-9 w-9 items-center justify-center rounded-md border border-neutral-200 bg-white text-neutral-500 transition-colors hover:bg-neutral-50 dark:border-black-600 dark:bg-black-800 dark:text-neutral-400 dark:hover:bg-black-700"
-								>
-									<MoreVertOutlinedIcon sx={{ fontSize: 20 }} />
-								</button>
-							</Dropdown>
-						) : (
+						{!isActive && (
 							<Button
 								type="button"
 								size="sm"
@@ -1301,6 +1265,10 @@ export const AgreementConfigurationDetailsPage = () => {
 				open={addLayoutFieldModalOpen}
 				sectionKey={addLayoutFieldSectionKey}
 				excludeFieldIds={excludeLayoutFieldIdsForModal}
+				agreementConfigId={id}
+				defaultFieldContext={
+					config ? buildAgreementConfigFieldContextLabel(config) ?? undefined : undefined
+				}
 				onClose={handleCloseLayoutAddFieldModal}
 				onConfirm={handleConfirmLayoutAddFields}
 			/>

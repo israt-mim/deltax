@@ -4,6 +4,7 @@ import {
 	createField,
 	deleteField,
 	fieldDocToRow,
+	getFieldContextOptions,
 	listFields,
 	updateField,
 	type CreateFieldBody,
@@ -26,16 +27,37 @@ export function useFieldsTotalCount(options: { sort?: string } = {}) {
 	});
 }
 
-export function useFieldsInfiniteList(options: { q: string; sort: string; enabled?: boolean }) {
+export function useFieldContextOptionsQuery(options: { enabled?: boolean } = {}) {
 	const enabled = options.enabled !== false;
+	return useQuery({
+		queryKey: [...queryKeys.fields.all, "context-options"] as const,
+		queryFn: getFieldContextOptions,
+		staleTime: 60_000,
+		enabled,
+	});
+}
+
+export function useFieldsInfiniteList(options: {
+	q: string;
+	sort: string;
+	enabled?: boolean;
+	agreementConfigId?: string;
+}) {
+	const enabled = options.enabled !== false;
+	const agreementConfigId = options.agreementConfigId?.trim() || undefined;
 	return useInfiniteQuery({
-		queryKey: [...queryKeys.fields.all, "list", { q: options.q, sort: options.sort, limit: FIELDS_PAGE_SIZE }] as const,
+		queryKey: [
+			...queryKeys.fields.all,
+			"list",
+			{ q: options.q, sort: options.sort, limit: FIELDS_PAGE_SIZE, agreementConfigId },
+		] as const,
 		queryFn: ({ pageParam }) =>
 			listFields({
 				page: pageParam,
 				limit: FIELDS_PAGE_SIZE,
 				sort: options.sort,
 				...(options.q.trim() ? { q: options.q.trim() } : {}),
+				...(agreementConfigId ? { agreementConfigId } : {}),
 			}).then((res) => ({
 				...res,
 				data: res.data.map(fieldDocToRow),

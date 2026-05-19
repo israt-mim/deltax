@@ -16,6 +16,8 @@ import { FormSelect } from "../../components/form-input/FormSelect";
 import { FormNumber } from "../../components/form-input/FormNumber";
 import { FormDatePicker } from "../../components/form-input/FormDatePicker";
 import type { FieldConfigurationApiDocument } from "../../api/services/fields";
+import { useFieldContextOptionsQuery } from "../../api/hooks/fields";
+import { GLOBAL_FIELD_CONTEXT } from "../../lib/fieldContext";
 
 export const GROUP_OPTIONS = [
 	{ value: "testGroup", label: "testGroup" },
@@ -44,11 +46,31 @@ export function groupToTechnicalName(group: string): string {
 		.replace(/_+/g, "_");
 }
 
-export const CONTEXT_OPTIONS = [
-	{ value: "Global", label: "Global" },
-	{ value: "Sales", label: "Sales - Contracts" },
-	{ value: "PublicSector", label: "Public Sector - Projects" },
-];
+/** @deprecated Use {@link useFieldContextOptionsQuery} — kept for tests/fallback. */
+export const CONTEXT_OPTIONS = [{ value: GLOBAL_FIELD_CONTEXT, label: GLOBAL_FIELD_CONTEXT }];
+
+function FieldContextSelect({
+	value,
+	onChange,
+}: {
+	value: string;
+	onChange: (v: string) => void;
+}) {
+	const optionsQuery = useFieldContextOptionsQuery();
+	const options =
+		optionsQuery.data && optionsQuery.data.length > 0 ? optionsQuery.data : CONTEXT_OPTIONS;
+
+	return (
+		<FormCreatableSelect
+			label="Context"
+			allowCreate
+			value={value}
+			onChange={(val) => onChange(String(val ?? ""))}
+			options={options}
+			placeholder="Select context or type to create"
+		/>
+	);
+}
 
 export const FIELD_TYPE_OPTIONS = [
 	{ value: "Header", label: "Header" },
@@ -271,14 +293,7 @@ export const DetailsStep = ({
 						input: "cursor-not-allowed text-neutral-600 dark:text-neutral-400",
 					}}
 				/>
-				<FormCreatableSelect
-					label="Context"
-					allowCreate
-					value={context}
-					onChange={(val) => onContextChange(String(val ?? ""))}
-					options={CONTEXT_OPTIONS}
-					placeholder="Select context or type to create"
-				/>
+				<FieldContextSelect value={context} onChange={onContextChange} />
 			</div>
 
 			<FormCreatableSelect
@@ -389,8 +404,8 @@ export const TypeStep = ({
 						}
 						onChange={(v) => setDefaultValue(v === "true")}
 						options={[
-							{ value: "true", label: "True" },
-							{ value: "false", label: "False" },
+							{ value: "true", label: "Yes" },
+							{ value: "false", label: "No" },
 						]}
 					/>
 				);

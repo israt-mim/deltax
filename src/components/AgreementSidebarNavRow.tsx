@@ -250,22 +250,16 @@ export function AgreementSidebarNavRow({ expanded }: AgreementSidebarNavRowProps
 								{hoverCategory.domains.length === 0 ? (
 									<p className="px-2 py-3 text-center text-xs text-white/70">No domains</p>
 								) : (
-									hoverCategory.domains.map((d) => {
-										const count = d.types?.length ?? 0;
-										return (
-											<button
-												key={d._id}
-												type="button"
-												className="flex w-full items-center gap-1 rounded px-2 py-1.5 text-left text-xs text-white/90 transition-colors hover:bg-white/15 hover:text-white"
-												onClick={() => handleDomainClick(hoverCategory._id, d._id)}
-											>
-												<span className="min-w-0 flex-1 truncate">{d.name}</span>
-												<span className="shrink-0 rounded bg-primary-800/80 px-1.5 py-0.5 text-[10px] tabular-nums text-white/90">
-													{count}
-												</span>
-											</button>
-										);
-									})
+									hoverCategory.domains.map((d) => (
+										<button
+											key={d._id}
+											type="button"
+											className="flex w-full items-center rounded px-2 py-1.5 text-left text-xs text-white/90 transition-colors hover:bg-white/15 hover:text-white"
+											onClick={() => handleDomainClick(hoverCategory._id, d._id)}
+										>
+											<span className="min-w-0 truncate">{d.name}</span>
+										</button>
+									))
 								)}
 							</div>
 						</div>

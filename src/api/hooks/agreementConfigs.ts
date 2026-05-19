@@ -27,6 +27,7 @@ export function useCreateAgreementConfigMutation() {
 		mutationFn: (body: CreateAgreementConfigBody) => createAgreementConfig(body),
 		onSettled: () => {
 			void queryClient.invalidateQueries({ queryKey: queryKeys.agreementConfigs.all });
+			void queryClient.invalidateQueries({ queryKey: [...queryKeys.fields.all, "context-options"] });
 		},
 	});
 }

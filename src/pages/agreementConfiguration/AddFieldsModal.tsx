@@ -60,12 +60,24 @@ export interface AddFieldsModalProps {
 	sectionKey: string | null;
 	/** Field ids already in this section — hidden from the picker. */
 	excludeFieldIds?: string[];
+	/** Limits the picker to Global fields + fields for this agreement config context. */
+	agreementConfigId?: string;
+	/** Default context when creating a new field from this modal. */
+	defaultFieldContext?: string;
 	onClose: () => void;
 	/** Called with selected field row ids (Mongo ObjectIds) and the section key. */
 	onConfirm: (fieldIds: string[], sectionKey: string) => void;
 }
 
-export const AddFieldsModal = ({ open, sectionKey, excludeFieldIds = [], onClose, onConfirm }: AddFieldsModalProps) => {
+export const AddFieldsModal = ({
+	open,
+	sectionKey,
+	excludeFieldIds = [],
+	agreementConfigId,
+	defaultFieldContext,
+	onClose,
+	onConfirm,
+}: AddFieldsModalProps) => {
 	const [view, setView] = useState<AddFieldsModalView>("pick");
 	const [searchInput, setSearchInput] = useState("");
 	const [debouncedQ, setDebouncedQ] = useState("");
@@ -87,7 +99,12 @@ export const AddFieldsModal = ({ open, sectionKey, excludeFieldIds = [], onClose
 		createFormRef.current?.reset();
 	}, [open]);
 
-	const listQuery = useFieldsInfiniteList({ q: debouncedQ, sort: "-createdAt", enabled: open && view === "pick" });
+	const listQuery = useFieldsInfiniteList({
+		q: debouncedQ,
+		sort: "-createdAt",
+		enabled: open && view === "pick",
+		agreementConfigId,
+	});
 	const columns = useColumns(addFieldsColumnConfigs);
 
 	const rows = useMemo(() => listQuery.data?.pages.flatMap((p) => p.data) ?? [], [listQuery.data]);
@@ -229,7 +246,7 @@ export const AddFieldsModal = ({ open, sectionKey, excludeFieldIds = [], onClose
 					/>
 				</div>
 			) : (
-				<CreateFieldForm ref={createFormRef} />
+				<CreateFieldForm ref={createFormRef} defaultContext={defaultFieldContext} />
 			)}
 		</Modal>
 	);

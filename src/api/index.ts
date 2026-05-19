@@ -85,12 +85,14 @@ export {
 	deleteField,
 	fieldDocToRow,
 	getFieldById,
+	getFieldContextOptions,
 	listFields,
 	updateField,
 } from "./services/fields";
 export type {
 	CreateFieldBody,
 	FieldConfigurationApiDocument,
+	FieldContextOption,
 	FieldDetails,
 	FieldTypePayload,
 	ListFieldsParams,
@@ -103,6 +105,7 @@ export {
 	useBulkDeleteFieldsMutation,
 	useCreateFieldMutation,
 	useDeleteFieldMutation,
+	useFieldContextOptionsQuery,
 	useFieldsInfiniteList,
 	useFieldsTotalCount,
 	useUpdateFieldMutation,

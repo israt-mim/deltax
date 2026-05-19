@@ -3,6 +3,7 @@ import { Select, type SelectProps } from "antd";
 import type { DefaultOptionType } from "antd/es/select";
 import cn from "classnames";
 import { FormField } from "./FormField";
+import { mergeFormSelectPopupProps } from "./formSelectPopupDefaults";
 
 const CREATE_TOKEN_PREFIX = "__create__:";
 
@@ -123,11 +124,13 @@ function CreatableSingleSelect(props: CreatableSingleProps) {
 		setSearch("");
 	};
 
+	const popupProps = mergeFormSelectPopupProps(selectRest);
+
 	return (
 		<FormField label={label} error={error} helperText={helperText} required={required} className={className}>
 			<Select
-				{...selectRest}
-				className={cn("w-full min-w-0")}
+				{...popupProps}
+				className={cn("w-full min-w-0", popupProps.className)}
 				options={mergedOptions}
 				value={value === undefined || value === null || value === "" ? undefined : value}
 				onChange={handleChange}
@@ -191,7 +194,7 @@ export const FormCreatableSelect = ({
 	return (
 		<FormField label={label} error={error} helperText={helperText} required={required} className={className}>
 			<Select
-				{...rest}
+				{...mergeFormSelectPopupProps(rest)}
 				mode={mode}
 				maxCount={resolvedMaxCount}
 				status={error ? "error" : undefined}
