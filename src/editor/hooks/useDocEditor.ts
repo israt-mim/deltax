@@ -1,4 +1,5 @@
 import { useEditor } from "@tiptap/react";
+import { useEffect } from "react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import TextAlign from "@tiptap/extension-text-align";
@@ -19,13 +20,15 @@ import Superscript from "@tiptap/extension-superscript";
 import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
 import { Table, TableRow, TableCell, TableHeader } from "@tiptap/extension-table";
+import { VariableText } from "../extensions/VariableText";
 
 export interface UseDocEditorOptions {
 	content?: string;
 	onUpdate?: (html: string, json: Record<string, unknown>) => void;
+	variables?: Record<string, string>;
 }
 
-export function useDocEditor({ content = "", onUpdate }: UseDocEditorOptions = {}) {
+export function useDocEditor({ content = "", onUpdate, variables = {} }: UseDocEditorOptions = {}) {
 	const editor = useEditor({
 		extensions: [
 			StarterKit.configure({
@@ -52,6 +55,7 @@ export function useDocEditor({ content = "", onUpdate }: UseDocEditorOptions = {
 			TableHeader,
 			CharacterCount,
 			Placeholder.configure({ placeholder: "Start typing your document…" }),
+			VariableText,
 		],
 		content,
 		onUpdate: ({ editor: e }) => {
@@ -62,8 +66,44 @@ export function useDocEditor({ content = "", onUpdate }: UseDocEditorOptions = {
 				class: "doc-editor-content",
 				spellcheck: "true",
 			},
+			transformPastedHTML(html) {
+				// Strip Word/Office conditional comments and namespace elements
+				let clean = html
+					.replace(/<!--\[if[\s\S]*?endif\]-->/gi, "")
+					.replace(/<\/?o:[^>]*>/gi, "")
+					.replace(/<\/?w:[^>]*>/gi, "")
+					.replace(/<\/?m:[^>]*>/gi, "")
+					// Remove mso-* class names but keep the element
+					.replace(/\s+class="Mso[^"]*"/gi, "")
+					// Preserve Google Docs / external spans with inline styles
+					// by keeping style attributes intact
+					.replace(/\s+lang="[^"]*"/gi, "")
+					.replace(/\s+xml:lang="[^"]*"/gi, "");
+
+				// Convert b/i/u tags that carry inline styles into styled spans
+				// so TipTap marks can pick them up
+				clean = clean
+					.replace(/<b\b([^>]*)>/gi, "<strong$1>")
+					.replace(/<\/b>/gi, "</strong>")
+					.replace(/<i\b([^>]*)>/gi, "<em$1>")
+					.replace(/<\/i>/gi, "</em>")
+					.replace(/<s\b([^>]*)>/gi, "<s$1>")
+					.replace(/<strike\b([^>]*)>/gi, "<s$1>")
+					.replace(/<\/strike>/gi, "</s>");
+
+				return clean;
+			},
+		},
+		parseOptions: {
+			preserveWhitespace: "full",
 		},
 	});
+
+	// Sync variables into extension storage whenever they change
+	useEffect(() => {
+		if (!editor) return;
+		editor.commands.setVariables(variables);
+	}, [editor, variables]);
 
 	return editor;
 }

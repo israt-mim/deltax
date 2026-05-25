@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Switch } from "antd";
 import { toast } from "react-toastify";
@@ -45,6 +45,14 @@ import {
 	type DisplaySectionRow,
 	mergeSectionFieldIds,
 } from "./agreementConfiguration/AgreementStepLayoutPanel";
+import { TemplateEditorSidebar, type TemplateEditorSidebarHandle } from "./templates/TemplateEditorSidebar";
+import { NewTemplateModal } from "./templates/NewTemplateModal";
+import { useTemplatesInfiniteList } from "../api/hooks/templates";
+import type { TemplateRow } from "../api/services/templates";
+import { UserIdentity } from "../components/UserIdentity";
+import type { ApiUserRef } from "../lib/userDisplay";
+import { formatUsDateTime } from "../lib/formatDateTime";
+import type { TemplateUserRef } from "../api/services/templates";
 import { Button } from "../components/base/Button";
 import { Card } from "../components/base/Card";
 import { CardMain } from "../components/base/CardMain";
@@ -75,6 +83,7 @@ const GENERAL_SUB_TAB_KEYS = {
 	additionalSteps: "additional-steps",
 	workflow: "workflow",
 	relevantTeams: "relevant-teams",
+	templates: "templates",
 } as const;
 
 type GeneralSubTabKey = (typeof GENERAL_SUB_TAB_KEYS)[keyof typeof GENERAL_SUB_TAB_KEYS];
@@ -207,6 +216,10 @@ export const AgreementConfigurationDetailsPage = () => {
 	const [relevantTeamIds, setRelevantTeamIds] = useState<string[]>([]);
 	const [addRelevantTeamsModalOpen, setAddRelevantTeamsModalOpen] = useState(false);
 	const [addRelevantTeamsPending, setAddRelevantTeamsPending] = useState(false);
+	const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+	const [templateSidebarWidth, setTemplateSidebarWidth] = useState(0);
+	const [newTemplateModalOpen, setNewTemplateModalOpen] = useState(false);
+	const sidebarRef = useRef<TemplateEditorSidebarHandle>(null);
 
 	const configureMutation = useConfigureAgreementConfigMutation();
 	const patchCatalogMutation = usePatchAgreementConfigCatalogMutation();
@@ -222,6 +235,27 @@ export const AgreementConfigurationDetailsPage = () => {
 		Boolean(id?.trim()) &&
 		detailTab === AGREEMENT_DETAIL_TAB_KEYS.general &&
 		generalSubTab === GENERAL_SUB_TAB_KEYS.configurationType;
+
+	const configCategoryId = configQuery.data?.agreement_category?._id;
+	const configDomainId = configQuery.data?.agreement_domain?._id;
+	const configTypeId = configQuery.data?.agreement_type?._id;
+	const configSubtypeId = configQuery.data?.agreement_subtype?._id;
+
+	const templatesListQuery = useTemplatesInfiniteList({
+		sort: "-createdAt",
+		enabled:
+			Boolean(id?.trim()) &&
+			detailTab === AGREEMENT_DETAIL_TAB_KEYS.general &&
+			generalSubTab === GENERAL_SUB_TAB_KEYS.templates,
+		category: configCategoryId,
+		domain: configDomainId,
+		type: configTypeId,
+		subtype: configSubtypeId,
+	});
+	const templateRows = useMemo(
+		() => templatesListQuery.data?.pages.flatMap((p) => p.data) ?? [],
+		[templatesListQuery.data],
+	);
 	const categoriesQuery = useAgreementCategoriesQuery({ enabled: catalogQueriesEnabled });
 	const domainsQuery = useAgreementDomainsQuery({
 		agreementCategoryId: draftCategoryId,
@@ -826,8 +860,11 @@ export const AgreementConfigurationDetailsPage = () => {
 
 	return (
 		<>
-		<CardMain className="flex min-w-0 flex-col gap-0 overflow-x-hidden !p-0">
-			<div className="min-w-0 overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-sm dark:border-black-600 dark:bg-black-800">
+		<CardMain className="relative flex min-w-0 flex-col gap-0 overflow-hidden !p-0">
+			<div
+				className="min-w-0 overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-sm transition-[padding] duration-200 dark:border-black-600 dark:bg-black-800"
+				style={selectedTemplateId ? { paddingRight: templateSidebarWidth } : undefined}
+			>
 				<div className="flex flex-col gap-4 border-b border-neutral-200 px-5 pb-5 pt-5 dark:border-black-600 sm:flex-row sm:items-start sm:justify-between sm:gap-8 sm:px-6 sm:pb-6 sm:pt-6">
 					<div className="flex min-w-0 flex-1 gap-4">
 						<div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-blue-100 bg-blue-50 dark:border-blue-900/40 dark:bg-blue-950/35">
@@ -887,7 +924,10 @@ export const AgreementConfigurationDetailsPage = () => {
 				</div>
 			</div>
 
-			<div className="min-w-0 p-4">
+			<div
+				className="min-w-0 p-4 transition-[padding] duration-200"
+				style={selectedTemplateId ? { paddingRight: templateSidebarWidth + 16 } : undefined}
+			>
 				<Card className="overflow-hidden border border-neutral-200 bg-white p-0 shadow-sm dark:border-black-600 dark:bg-black-800">
 				<div className="min-w-0 p-2">
 					{detailTab === AGREEMENT_DETAIL_TAB_KEYS.general ? (
@@ -900,6 +940,7 @@ export const AgreementConfigurationDetailsPage = () => {
 											{ key: GENERAL_SUB_TAB_KEYS.additionalSteps, label: "Additional steps" },
 											{ key: GENERAL_SUB_TAB_KEYS.workflow, label: "Workflow" },
 											{ key: GENERAL_SUB_TAB_KEYS.relevantTeams, label: "Relevant teams" },
+											{ key: GENERAL_SUB_TAB_KEYS.templates, label: "Templates" },
 										]}
 										activeKey={generalSubTab}
 										onChange={(key) => setGeneralSubTab(key as GeneralSubTabKey)}
@@ -1145,6 +1186,72 @@ export const AgreementConfigurationDetailsPage = () => {
 									/>
 								</div>
 							) : null}
+
+							{generalSubTab === GENERAL_SUB_TAB_KEYS.templates ? (
+								<div className="mt-4 flex flex-col gap-3">
+									<div className="flex items-center justify-end">
+										<Button
+											type="button"
+											size="sm"
+											onClick={() => setNewTemplateModalOpen(true)}
+										>
+											<AddOutlinedIcon sx={{ fontSize: 14 }} className="-ml-0.5 mr-0.5" />
+											New Template
+										</Button>
+									</div>
+									<div className="overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-sm dark:border-black-600 dark:bg-black-800">
+										{templatesListQuery.isPending ? (
+											<div className="flex items-center justify-center py-12 text-sm text-neutral-400">
+												Loading templates…
+											</div>
+										) : templatesListQuery.isError ? (
+											<div className="flex items-center justify-center py-12 text-sm text-error-500">
+												Could not load templates.
+											</div>
+										) : templateRows.length === 0 ? (
+											<div className="flex items-center justify-center py-12 text-sm text-neutral-400">
+												No templates found for this configuration.
+											</div>
+										) : (
+											<div className="overflow-x-auto">
+												<table className="w-full text-sm">
+													<thead>
+														<tr className="border-b border-neutral-200 dark:border-black-600">
+															{["Name","Category","Domain","Type","Subtype","Description","Created By","Created On","Updated By","Updated On"].map((col) => (
+																<th key={col} className="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">{col}</th>
+															))}
+														</tr>
+													</thead>
+													<tbody>
+														{templateRows.map((row: TemplateRow) => (
+															<tr
+																key={row.id}
+																onClick={() => setSelectedTemplateId(row.id)}
+																className="cursor-pointer border-b border-neutral-100 transition-colors hover:bg-neutral-50 dark:border-black-600 dark:hover:bg-black-700"
+															>
+																<td className="whitespace-nowrap px-4 py-3 font-medium text-neutral-800 dark:text-neutral-100">{row.name}</td>
+																<td className="whitespace-nowrap px-4 py-3 text-neutral-500 dark:text-neutral-400">{row.category || "—"}</td>
+																<td className="whitespace-nowrap px-4 py-3 text-neutral-500 dark:text-neutral-400">{row.domain || "—"}</td>
+																<td className="whitespace-nowrap px-4 py-3 text-neutral-500 dark:text-neutral-400">{row.type || "—"}</td>
+																<td className="whitespace-nowrap px-4 py-3 text-neutral-500 dark:text-neutral-400">{row.subtype || "—"}</td>
+																<td className="max-w-[200px] truncate px-4 py-3 text-neutral-500 dark:text-neutral-400">{row.description || "—"}</td>
+																<td className="whitespace-nowrap px-4 py-3">
+																	<UserIdentity user={row.createdBy as TemplateUserRef | null as ApiUserRef | null} size="sm" />
+																</td>
+																<td className="whitespace-nowrap px-4 py-3 text-neutral-500 dark:text-neutral-400">{formatUsDateTime(row.createdAt)}</td>
+																<td className="whitespace-nowrap px-4 py-3">
+																	<UserIdentity user={row.updatedBy as TemplateUserRef | null as ApiUserRef | null} size="sm" />
+																</td>
+																<td className="whitespace-nowrap px-4 py-3 text-neutral-500 dark:text-neutral-400">{formatUsDateTime(row.updatedAt)}</td>
+															</tr>
+														))}
+													</tbody>
+												</table>
+											</div>
+										)}
+									</div>
+								</div>
+							) : null}
 						</div>
 					) : (
 						<div className="flex min-w-0 max-w-full flex-col gap-4">
@@ -1212,6 +1319,11 @@ export const AgreementConfigurationDetailsPage = () => {
 												headerEditMode ? handleRemoveLayoutFieldFromSection : undefined
 											}
 											onRenameSection={headerEditMode ? handleRenameLayoutSection : undefined}
+											onAddToDocument={
+												selectedTemplateId && headerEditMode && activeConfigurationStepKey === pinnedHeaderWizardStepId
+													? (gtn) => sidebarRef.current?.insertVariable(gtn)
+													: undefined
+											}
 										/>
 									</div>
 								</>
@@ -1221,6 +1333,16 @@ export const AgreementConfigurationDetailsPage = () => {
 				</div>
 				</Card>
 			</div>
+
+			<TemplateEditorSidebar
+				ref={sidebarRef}
+				templateId={selectedTemplateId}
+				onClose={() => {
+					setSelectedTemplateId(null);
+					setTemplateSidebarWidth(0);
+				}}
+				onWidthChange={setTemplateSidebarWidth}
+			/>
 		</CardMain>
 
 			<Modal
@@ -1279,6 +1401,29 @@ export const AgreementConfigurationDetailsPage = () => {
 				excludedIds={relevantTeamIds}
 				pending={addRelevantTeamsPending || configureMutation.isPending}
 				onConfirm={(teams) => void handleConfirmAddRelevantTeams(teams)}
+			/>
+
+			<NewTemplateModal
+				open={newTemplateModalOpen}
+				onClose={() => setNewTemplateModalOpen(false)}
+				onCreated={(id) => {
+					setNewTemplateModalOpen(false);
+					setSelectedTemplateId(id);
+				}}
+				lockedCdts={
+					config
+						? {
+								categoryId: config.agreement_category._id,
+								categoryName: config.agreement_category.name,
+								domainId: config.agreement_domain._id,
+								domainName: config.agreement_domain.name,
+								typeId: config.agreement_type._id,
+								typeName: config.agreement_type.name,
+								subtypeId: config.agreement_subtype._id,
+								subtypeName: config.agreement_subtype.name,
+						  }
+						: undefined
+				}
 			/>
 		</>
 	);

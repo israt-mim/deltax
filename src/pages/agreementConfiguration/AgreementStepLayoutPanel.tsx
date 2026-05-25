@@ -22,6 +22,7 @@ import CloseOutlinedIcon from "@mui/icons-material/CloseOutlined";
 import DragIndicatorOutlinedIcon from "@mui/icons-material/DragIndicatorOutlined";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import ExpandMoreOutlinedIcon from "@mui/icons-material/ExpandMoreOutlined";
+import NoteAddOutlinedIcon from "@mui/icons-material/NoteAddOutlined";
 import cn from "classnames";
 import { getFieldById, type FieldConfigurationApiDocument } from "../../api";
 import { queryKeys } from "../../api/queryKeys";
@@ -100,6 +101,7 @@ function FieldTile({
 	isDragging,
 	onEdit,
 	onRemove,
+	onAddToDocument,
 }: {
 	fieldId: string;
 	doc: FieldConfigurationApiDocument | undefined;
@@ -110,9 +112,11 @@ function FieldTile({
 	isDragging?: boolean;
 	onEdit?: () => void;
 	onRemove?: () => void;
+	onAddToDocument?: (gtn: string) => void;
 }) {
 	const meta = getFieldCardMeta(fieldId, doc);
 	const showActions = !readOnly && (onEdit || onRemove);
+	const rightSlots = (showActions ? 2 : 0) + (onAddToDocument ? 1 : 0);
 
 	return (
 		<article
@@ -140,7 +144,7 @@ function FieldTile({
 					<DragIndicatorOutlinedIcon sx={{ fontSize: 20 }} aria-hidden />
 				</button>
 			)}
-			<div className={cn("min-w-0 flex-1 leading-tight", showActions && "pr-14")}>
+			<div className={cn("min-w-0 flex-1 leading-tight", rightSlots > 0 && "pr-14")}>
 				{loading ? (
 					<SkeletonInline className="h-3.5 w-28" />
 				) : (
@@ -157,35 +161,48 @@ function FieldTile({
 					</>
 				)}
 			</div>
-			{showActions ? (
-				<div
-					className={cn(
-						"absolute right-1.5 top-1/2 flex -translate-y-1/2 gap-1 rounded-md p-1",
-						"opacity-100 sm:opacity-0 sm:group-focus-within:opacity-100 sm:group-hover:opacity-100"
-					)}
-				>
-					{onEdit ? (
-						<button
-							type="button"
-							aria-label="Edit field"
-							className="rounded-md p-1 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800 dark:hover:bg-black-600 dark:hover:text-neutral-100"
-							onClick={onEdit}
-						>
-							<EditOutlinedIcon sx={{ fontSize: 15 }} />
-						</button>
-					) : null}
-					{onRemove ? (
-						<button
-							type="button"
-							aria-label="Remove field"
-							className="rounded-md p-1 text-neutral-500 hover:bg-error-50 hover:text-error-600 dark:hover:bg-error-950/40 dark:hover:text-error-400"
-							onClick={onRemove}
-						>
-							<CloseOutlinedIcon sx={{ fontSize: 15 }} />
-						</button>
-					) : null}
-				</div>
-			) : null}
+			<div
+				className={cn(
+					"absolute right-1.5 top-1/2 flex -translate-y-1/2 gap-1 rounded-md p-1",
+					"opacity-100 sm:opacity-0 sm:group-focus-within:opacity-100 sm:group-hover:opacity-100"
+				)}
+			>
+				{onAddToDocument ? (
+					<button
+						type="button"
+						aria-label="Add to document"
+						title="Add to document"
+						className="rounded-md p-1 text-neutral-500 hover:bg-primary-50 hover:text-primary-700 dark:hover:bg-primary-950/30 dark:hover:text-primary-400"
+						onClick={() => onAddToDocument(meta.technicalName)}
+					>
+						<NoteAddOutlinedIcon sx={{ fontSize: 15 }} />
+					</button>
+				) : null}
+				{showActions ? (
+					<>
+						{onEdit ? (
+							<button
+								type="button"
+								aria-label="Edit field"
+								className="rounded-md p-1 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800 dark:hover:bg-black-600 dark:hover:text-neutral-100"
+								onClick={onEdit}
+							>
+								<EditOutlinedIcon sx={{ fontSize: 15 }} />
+							</button>
+						) : null}
+						{onRemove ? (
+							<button
+								type="button"
+								aria-label="Remove field"
+								className="rounded-md p-1 text-neutral-500 hover:bg-error-50 hover:text-error-600 dark:hover:bg-error-950/40 dark:hover:text-error-400"
+								onClick={onRemove}
+							>
+								<CloseOutlinedIcon sx={{ fontSize: 15 }} />
+							</button>
+						) : null}
+					</>
+				) : null}
+			</div>
 		</article>
 	);
 }
@@ -198,6 +215,7 @@ export interface AgreementStepLayoutPanelProps {
 	onOpenAddField?: (sectionKey: string) => void;
 	onRemoveFieldFromSection?: (sectionKey: string, fieldId: string) => void;
 	onRenameSection?: (sectionKey: string, name: string) => void;
+	onAddToDocument?: (gtn: string) => void;
 }
 
 function SortableFieldTile({
@@ -208,6 +226,7 @@ function SortableFieldTile({
 	readOnly,
 	onEdit,
 	onRemove,
+	onAddToDocument,
 }: {
 	sectionKey: string;
 	fieldId: string;
@@ -216,6 +235,7 @@ function SortableFieldTile({
 	readOnly?: boolean;
 	onEdit?: () => void;
 	onRemove?: () => void;
+	onAddToDocument?: (gtn: string) => void;
 }) {
 	const id = fieldSortableId(sectionKey, fieldId);
 	const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
@@ -238,6 +258,7 @@ function SortableFieldTile({
 				dragHandleProps={{ ...attributes, ...listeners }}
 				onEdit={onEdit}
 				onRemove={onRemove}
+				onAddToDocument={onAddToDocument}
 			/>
 		</div>
 	);
@@ -274,6 +295,7 @@ function SortableSectionBlock({
 	onOpenAddField,
 	onRemoveFieldFromSection,
 	onEditField,
+	onAddToDocument,
 	canRenameSection,
 	sectionDragDisabled,
 }: {
@@ -294,6 +316,7 @@ function SortableSectionBlock({
 	onOpenAddField?: () => void;
 	onRemoveFieldFromSection?: (fieldId: string) => void;
 	onEditField?: (fieldId: string) => void;
+	onAddToDocument?: (gtn: string) => void;
 }) {
 	const sectionId = sectionSortableId(section.key);
 	const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
@@ -399,6 +422,7 @@ function SortableSectionBlock({
 													? undefined
 													: () => onRemoveFieldFromSection(fid)
 											}
+											onAddToDocument={onAddToDocument}
 										/>
 									);
 								})}
@@ -432,6 +456,7 @@ export function AgreementStepLayoutPanel({
 	onOpenAddField,
 	onRemoveFieldFromSection,
 	onRenameSection,
+	onAddToDocument,
 }: AgreementStepLayoutPanelProps) {
 	const [sections, setSections] = useState(displaySections);
 	const [activeDragId, setActiveDragId] = useState<string | null>(null);
@@ -648,6 +673,7 @@ export function AgreementStepLayoutPanel({
 							: undefined
 					}
 					onEditField={readOnly ? undefined : (fieldId) => setEditFieldId(fieldId)}
+					onAddToDocument={onAddToDocument}
 				/>
 			))}
 			{!readOnly && onOpenAddSection ? (

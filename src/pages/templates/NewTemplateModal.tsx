@@ -95,29 +95,43 @@ function ChooseStep({ onBlank, onTemplate }: { onBlank: () => void; onTemplate: 
 
 // ── Shared form (blank + template-form steps) ─────────────────────────────────
 
+export interface LockedCdts {
+	categoryId: string;
+	categoryName: string;
+	domainId: string;
+	domainName: string;
+	typeId: string;
+	typeName: string;
+	subtypeId: string;
+	subtypeName: string;
+}
+
+
 function DocumentFormStep({
 	form,
 	errors,
 	onChange,
 	isOpen,
+	lockedCdts,
 }: {
 	form: BlankForm;
 	errors: BlankFormErrors;
 	onChange: (patch: Partial<BlankForm>) => void;
 	isOpen: boolean;
+	lockedCdts?: LockedCdts;
 }) {
-	const categoriesQuery = useAgreementCategoriesQuery({ enabled: isOpen });
+	const categoriesQuery = useAgreementCategoriesQuery({ enabled: isOpen && !lockedCdts });
 	const domainsQuery = useAgreementDomainsQuery({
 		agreementCategoryId: form.categoryId,
-		enabled: isOpen,
+		enabled: isOpen && !lockedCdts,
 	});
 	const typesQuery = useAgreementTypesQuery({
 		agreementDomainId: form.domainId,
-		enabled: isOpen,
+		enabled: isOpen && !lockedCdts,
 	});
 	const subtypesQuery = useAgreementSubtypesQuery({
 		agreementTypeId: form.typeId,
-		enabled: isOpen,
+		enabled: isOpen && !lockedCdts,
 	});
 
 	const categoryOptions = useMemo(
@@ -149,55 +163,57 @@ function DocumentFormStep({
 				maxLength={200}
 			/>
 
-			<div className="grid grid-cols-2 gap-4">
-				<FormSelect
-					label="Category"
-					required
-					value={form.categoryId || undefined}
-					onChange={(v) => onChange({ categoryId: v as string, domainId: "", typeId: "", subtypeId: "" })}
-					options={categoryOptions}
-					placeholder="Select category"
-					loading={categoriesQuery.isPending}
-					error={errors.categoryId}
-					style={{ width: "100%" }}
-				/>
-				<FormSelect
-					label="Domain"
-					required
-					value={form.domainId || undefined}
-					onChange={(v) => onChange({ domainId: v as string, typeId: "", subtypeId: "" })}
-					options={domainOptions}
-					placeholder="Select domain"
-					disabled={!form.categoryId}
-					loading={domainsQuery.isPending}
-					error={errors.domainId}
-					style={{ width: "100%" }}
-				/>
-				<FormSelect
-					label="Type"
-					required
-					value={form.typeId || undefined}
-					onChange={(v) => onChange({ typeId: v as string, subtypeId: "" })}
-					options={typeOptions}
-					placeholder="Select type"
-					disabled={!form.domainId}
-					loading={typesQuery.isPending}
-					error={errors.typeId}
-					style={{ width: "100%" }}
-				/>
-				<FormSelect
-					label="SubType"
-					required
-					value={form.subtypeId || undefined}
-					onChange={(v) => onChange({ subtypeId: v as string })}
-					options={subtypeOptions}
-					placeholder="Select sub type"
-					disabled={!form.typeId}
-					loading={subtypesQuery.isPending}
-					error={errors.subtypeId}
-					style={{ width: "100%" }}
-				/>
-			</div>
+			{!lockedCdts && (
+				<div className="grid grid-cols-2 gap-4">
+					<FormSelect
+						label="Category"
+						required
+						value={form.categoryId || undefined}
+						onChange={(v) => onChange({ categoryId: v as string, domainId: "", typeId: "", subtypeId: "" })}
+						options={categoryOptions}
+						placeholder="Select category"
+						loading={categoriesQuery.isPending}
+						error={errors.categoryId}
+						style={{ width: "100%" }}
+					/>
+					<FormSelect
+						label="Domain"
+						required
+						value={form.domainId || undefined}
+						onChange={(v) => onChange({ domainId: v as string, typeId: "", subtypeId: "" })}
+						options={domainOptions}
+						placeholder="Select domain"
+						disabled={!form.categoryId}
+						loading={domainsQuery.isPending}
+						error={errors.domainId}
+						style={{ width: "100%" }}
+					/>
+					<FormSelect
+						label="Type"
+						required
+						value={form.typeId || undefined}
+						onChange={(v) => onChange({ typeId: v as string, subtypeId: "" })}
+						options={typeOptions}
+						placeholder="Select type"
+						disabled={!form.domainId}
+						loading={typesQuery.isPending}
+						error={errors.typeId}
+						style={{ width: "100%" }}
+					/>
+					<FormSelect
+						label="SubType"
+						required
+						value={form.subtypeId || undefined}
+						onChange={(v) => onChange({ subtypeId: v as string })}
+						options={subtypeOptions}
+						placeholder="Select sub type"
+						disabled={!form.typeId}
+						loading={subtypesQuery.isPending}
+						error={errors.subtypeId}
+						style={{ width: "100%" }}
+					/>
+				</div>
+			)}
 
 			<div className="flex flex-col gap-1">
 				<FormTextarea
@@ -344,6 +360,7 @@ interface NewTemplateModalProps {
 	open: boolean;
 	onClose: () => void;
 	onCreated: (id: string) => void;
+	lockedCdts?: LockedCdts;
 }
 
 const DEFAULT_FORM: BlankForm = {
@@ -355,11 +372,28 @@ const DEFAULT_FORM: BlankForm = {
 	description: "",
 };
 
-export function NewTemplateModal({ open, onClose, onCreated }: NewTemplateModalProps) {
+export function NewTemplateModal({ open, onClose, onCreated, lockedCdts }: NewTemplateModalProps) {
 	const [step, setStep] = useState<Step>("choose");
-	const [form, setForm] = useState<BlankForm>(DEFAULT_FORM);
+	const [form, setForm] = useState<BlankForm>(() =>
+		lockedCdts
+			? { ...DEFAULT_FORM, categoryId: lockedCdts.categoryId, domainId: lockedCdts.domainId, typeId: lockedCdts.typeId, subtypeId: lockedCdts.subtypeId }
+			: DEFAULT_FORM,
+	);
 	const [errors, setErrors] = useState<BlankFormErrors>({});
 	const [selectedTemplateId, setSelectedTemplateId] = useState("");
+
+	// Keep form CDTS in sync if lockedCdts changes while modal is open
+	useEffect(() => {
+		if (lockedCdts) {
+			setForm((prev) => ({
+				...prev,
+				categoryId: lockedCdts.categoryId,
+				domainId: lockedCdts.domainId,
+				typeId: lockedCdts.typeId,
+				subtypeId: lockedCdts.subtypeId,
+			}));
+		}
+	}, [lockedCdts]);
 
 	const createMutation = useCreateTemplateMutation();
 	const selectedDetailQuery = useTemplateDetailQuery({
@@ -579,6 +613,7 @@ export function NewTemplateModal({ open, onClose, onCreated }: NewTemplateModalP
 					errors={errors}
 					onChange={patchForm}
 					isOpen={open && (step === "blank" || step === "template-form")}
+					lockedCdts={lockedCdts}
 				/>
 			)}
 			{step === "picker" && (
