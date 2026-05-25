@@ -13,6 +13,7 @@ import { ClauseDetailPage } from "./pages/ClauseDetailPage";
 import { Login } from "./pages/Login";
 import { ForcePasswordChange } from "./pages/ForcePasswordChange";
 import { AgreementListPage } from "./pages/AgreementListPage";
+import { DocEditorPage } from "./pages/DocEditorPage";
 
 export const Routes = () => {
 	return (
@@ -41,6 +42,7 @@ export const Routes = () => {
 						<Route path="/clauses/:id" element={<ClauseDetailPage />} />
 						<Route path="/profile" element={<ProfilePage />} />
 						<Route path="/settings" element={<Settings />} />
+						<Route path="/editor" element={<DocEditorPage />} />
 					</Route>
 				</Route>
 			</Route>
