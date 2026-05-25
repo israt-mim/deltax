@@ -327,3 +327,29 @@ export {
 	usePostAgreementLineItemMutation,
 } from "./hooks/agreements";
 export type { AgreementsListFilters } from "./hooks/agreements";
+
+export {
+	createTemplate,
+	deleteTemplate,
+	getTemplateById,
+	listTemplates,
+	templateDocToRow,
+	updateTemplate,
+} from "./services/templates";
+export type {
+	CreateTemplateBody,
+	ListTemplatesParams,
+	TemplateCatalogRef,
+	TemplateListItem,
+	TemplateRow,
+	UpdateTemplateBody,
+} from "./services/templates";
+export {
+	useCreateTemplateMutation,
+	useDeleteTemplateMutation,
+	useTemplateDetailQuery,
+	useTemplatesInfiniteList,
+	useTemplatesTotalCount,
+	useUpdateTemplateMutation,
+} from "./hooks/templates";
+export type { TemplatesListFilters } from "./hooks/templates";

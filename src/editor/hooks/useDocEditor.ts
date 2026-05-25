@@ -22,7 +22,7 @@ import { Table, TableRow, TableCell, TableHeader } from "@tiptap/extension-table
 
 export interface UseDocEditorOptions {
 	content?: string;
-	onUpdate?: (html: string) => void;
+	onUpdate?: (html: string, json: Record<string, unknown>) => void;
 }
 
 export function useDocEditor({ content = "", onUpdate }: UseDocEditorOptions = {}) {
@@ -55,7 +55,7 @@ export function useDocEditor({ content = "", onUpdate }: UseDocEditorOptions = {
 		],
 		content,
 		onUpdate: ({ editor: e }) => {
-			onUpdate?.(e.getHTML());
+			onUpdate?.(e.getHTML(), e.getJSON() as Record<string, unknown>);
 		},
 		editorProps: {
 			attributes: {

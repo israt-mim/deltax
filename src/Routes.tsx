@@ -14,6 +14,8 @@ import { Login } from "./pages/Login";
 import { ForcePasswordChange } from "./pages/ForcePasswordChange";
 import { AgreementListPage } from "./pages/AgreementListPage";
 import { DocEditorPage } from "./pages/DocEditorPage";
+import { TemplatesPage } from "./pages/TemplatesPage";
+import { TemplateEditorPage } from "./pages/TemplateEditorPage";
 
 export const Routes = () => {
 	return (
@@ -37,6 +39,8 @@ export const Routes = () => {
 							<Route path="agreements/create/:id" element={<CreateAgreementConfiguration />} />
 							<Route path="agreements/:id" element={<AgreementConfigurationDetailsPage />} />
 							<Route path="agreements" element={<AgreementConfiguration />} />
+							<Route path="templates" element={<TemplatesPage />} />
+							<Route path="templates/:id/edit" element={<TemplateEditorPage />} />
 						</Route>
 						<Route path="/clauses" element={<ClausesPage />} />
 						<Route path="/clauses/:id" element={<ClauseDetailPage />} />

@@ -23,4 +23,7 @@ export const queryKeys = {
 	clauses: {
 		all: ["clauses"] as const,
 	},
+	templates: {
+		all: ["templates"] as const,
+	},
 } as const;

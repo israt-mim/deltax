@@ -7,7 +7,7 @@ import "./editor.css";
 
 export interface DocEditorProps {
 	initialContent?: string;
-	onContentChange?: (html: string) => void;
+	onContentChange?: (html: string, json: Record<string, unknown>) => void;
 	className?: string;
 }
 

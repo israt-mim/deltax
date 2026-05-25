@@ -8,6 +8,7 @@ import { Typography } from "../components/base/Typography";
 import { useColumns, type ColumnConfig } from "../hooks/useColumns";
 import { configureDashboardCards } from "../dummy-data/configure/dashboard";
 import { useAgreementConfigsInfiniteList, useAgreementConfigsTotalCount, useFieldsInfiniteList, useFieldsTotalCount } from "../api";
+import { useTemplatesTotalCount } from "../api/hooks/templates";
 import type { FieldRow } from "../schemas/fieldConfiguration";
 import {
 	agreementConfigToTableRow,
@@ -40,6 +41,7 @@ export const Configure = () => {
 	const [activeTab, setActiveTab] = useState<"fields" | "agreements">("agreements");
 
 	const fieldsTotalQuery = useFieldsTotalCount({ sort: "-createdAt" });
+	const templatesTotalQuery = useTemplatesTotalCount({ sort: "-createdAt" });
 	const fieldsListQuery = useFieldsInfiniteList({
 		q: "",
 		sort: "-createdAt",
@@ -91,18 +93,25 @@ export const Configure = () => {
 	const dashboardItems = useMemo(() => {
 		const fieldCount = fieldsTotalQuery.data;
 		const agreementCount = agreementsTotalQuery.data;
+		const templatesCount = templatesTotalQuery.data;
 		return configureDashboardCards.map((item) => ({
 			...item,
 			count:
 				item.name === "Field"
 					? formatCount(fieldCount, fieldsTotalQuery.isPending)
-					: formatCount(agreementCount, agreementsTotalQuery.isPending),
+					: item.name === "Agreement"
+					? formatCount(agreementCount, agreementsTotalQuery.isPending)
+					: item.name === "Templates"
+					? formatCount(templatesCount, templatesTotalQuery.isPending)
+					: undefined,
 		}));
 	}, [
 		fieldsTotalQuery.data,
 		fieldsTotalQuery.isPending,
 		agreementsTotalQuery.data,
 		agreementsTotalQuery.isPending,
+		templatesTotalQuery.data,
+		templatesTotalQuery.isPending,
 	]);
 
 	const fieldsInitialLoading = fieldsListQuery.isPending && fieldRows.length === 0;
@@ -157,14 +166,16 @@ export const Configure = () => {
 							>
 								{item.name}
 							</Typography>
-							<Typography
-								size="large"
-								variant="semibold"
-								appearance="custom"
-								className="text-neutral-900 dark:text-white"
-							>
-								{item.count}
-							</Typography>
+							{item.count !== undefined && (
+								<Typography
+									size="large"
+									variant="semibold"
+									appearance="custom"
+									className="text-neutral-900 dark:text-white"
+								>
+									{item.count}
+								</Typography>
+							)}
 						</div>
 					</Card>
 				))}
