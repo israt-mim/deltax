@@ -14,7 +14,7 @@ import { queryKeys } from "../queryKeys";
 
 const TEMPLATES_PAGE_SIZE = 20;
 
-export type TemplatesListFilters = Pick<ListTemplatesParams, "category" | "domain" | "type" | "subtype"> & {
+export type TemplatesListFilters = Pick<ListTemplatesParams, "category" | "domain" | "type" | "subtype" | "agreement"> & {
 	sort?: string;
 	q?: string;
 	enabled?: boolean;
@@ -41,6 +41,7 @@ export function useTemplatesInfiniteList(options: TemplatesListFilters = {}) {
 		domain: options.domain,
 		type: options.type,
 		subtype: options.subtype,
+		agreement: options.agreement,
 	};
 
 	return useInfiniteQuery({

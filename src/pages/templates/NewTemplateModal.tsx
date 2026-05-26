@@ -361,6 +361,7 @@ interface NewTemplateModalProps {
 	onClose: () => void;
 	onCreated: (id: string) => void;
 	lockedCdts?: LockedCdts;
+	agreementId?: string;
 }
 
 const DEFAULT_FORM: BlankForm = {
@@ -372,7 +373,7 @@ const DEFAULT_FORM: BlankForm = {
 	description: "",
 };
 
-export function NewTemplateModal({ open, onClose, onCreated, lockedCdts }: NewTemplateModalProps) {
+export function NewTemplateModal({ open, onClose, onCreated, lockedCdts, agreementId }: NewTemplateModalProps) {
 	const [step, setStep] = useState<Step>("choose");
 	const [form, setForm] = useState<BlankForm>(() =>
 		lockedCdts
@@ -442,6 +443,7 @@ export function NewTemplateModal({ open, onClose, onCreated, lockedCdts }: NewTe
 				agreement_domain: form.domainId,
 				agreement_type: form.typeId,
 				agreement_subtype: form.subtypeId,
+				...(agreementId ? { agreement: agreementId } : {}),
 			});
 			resetAndClose();
 			onCreated(tpl._id);
@@ -463,6 +465,7 @@ export function NewTemplateModal({ open, onClose, onCreated, lockedCdts }: NewTe
 				agreement_domain: form.domainId,
 				agreement_type: form.typeId,
 				agreement_subtype: form.subtypeId,
+				...(agreementId ? { agreement: agreementId } : {}),
 			});
 			resetAndClose();
 			onCreated(tpl._id);

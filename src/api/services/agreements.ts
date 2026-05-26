@@ -1003,3 +1003,7 @@ export async function listAgreements(
 	});
 	return get<ListResponse<AgreementListItem>>(`/api/agreements${qs}`);
 }
+
+export async function getAgreementData(id: string): Promise<Record<string, unknown>> {
+	return get<Record<string, unknown>>(`/api/agreements/${encodeURIComponent(id)}/agreement-data`);
+}

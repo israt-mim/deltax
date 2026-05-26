@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
 import ExpandMoreOutlinedIcon from "@mui/icons-material/ExpandMoreOutlined";
+import NoteAddOutlinedIcon from "@mui/icons-material/NoteAddOutlined";
 import cn from "classnames";
 import type { AgreementStepDetailsData, AgreementStepDetailsField } from "../../api";
 import { filterTagsForDisplay } from "./agreementStepDetailsValidation";
@@ -86,16 +87,17 @@ function AgreementStepFieldControl({
 	error,
 	readOnly,
 	onChange,
+	onAddToDocument,
 }: {
 	field: AgreementStepDetailsField;
 	value: unknown;
 	error?: string;
 	readOnly?: boolean;
 	onChange: (next: unknown) => void;
+	onAddToDocument?: (gtn: string) => void;
 }) {
-	if (readOnly) {
-		return <AgreementStepFieldView field={field} value={value} />;
-	}
+	const gtn = field.groupTechnicalName?.trim();
+	const canAddToDoc = Boolean(onAddToDocument && gtn);
 
 	const disabled = Boolean(field.disabled || field.locked);
 	const dataType = (field.dataType ?? "String").trim();
@@ -117,8 +119,12 @@ function AgreementStepFieldControl({
 	const helperText = field.tooltip?.trim() || undefined;
 	const required = Boolean(field.required);
 
-	if (dataType === "Boolean") {
-		return (
+	let control: React.ReactNode;
+
+	if (readOnly) {
+		control = <AgreementStepFieldView field={field} value={value} />;
+	} else if (dataType === "Boolean") {
+		control = (
 			<FormSwitch
 				label={label}
 				required={required}
@@ -128,11 +134,9 @@ function AgreementStepFieldControl({
 				onChange={(v) => onChange(v)}
 			/>
 		);
-	}
-
-	if (dataType === "Choice" || normalizeChoiceOptions(field.choiceOptions).length > 0) {
+	} else if (dataType === "Choice" || normalizeChoiceOptions(field.choiceOptions).length > 0) {
 		const opts = normalizeChoiceOptions(field.choiceOptions);
-		return (
+		control = (
 			<FormSelect
 				label={label}
 				required={required}
@@ -146,11 +150,9 @@ function AgreementStepFieldControl({
 				onChange={(v) => onChange(v ?? null)}
 			/>
 		);
-	}
-
-	if (dataType === "Date" || dataType === "DateTime") {
+	} else if (dataType === "Date" || dataType === "DateTime") {
 		const showTime = dataType === "DateTime";
-		return (
+		control = (
 			<FormDatePicker
 				label={label}
 				required={required}
@@ -170,11 +172,9 @@ function AgreementStepFieldControl({
 				}}
 			/>
 		);
-	}
-
-	if (dataType === "Currency") {
+	} else if (dataType === "Currency") {
 		const num = value == null || value === "" ? null : Number(value);
-		return (
+		control = (
 			<FormNumber
 				label={label}
 				required={required}
@@ -190,11 +190,9 @@ function AgreementStepFieldControl({
 				onChange={(v) => onChange(v ?? null)}
 			/>
 		);
-	}
-
-	if (dataType === "Number" || dataType === "Integer" || dataType === "Decimal") {
+	} else if (dataType === "Number" || dataType === "Integer" || dataType === "Decimal") {
 		const num = value == null || value === "" ? null : Number(value);
-		return (
+		control = (
 			<FormNumber
 				label={label}
 				required={required}
@@ -207,19 +205,36 @@ function AgreementStepFieldControl({
 				onChange={(v) => onChange(v ?? null)}
 			/>
 		);
+	} else {
+		control = (
+			<FormInput
+				label={label}
+				required={required}
+				helperText={helperText}
+				error={error}
+				placeholder={placeholder}
+				disabled={disabled}
+				value={value == null ? "" : String(value)}
+				onChange={(e) => onChange(e.target.value)}
+			/>
+		);
 	}
 
+	if (!canAddToDoc) return <>{control}</>;
+
 	return (
-		<FormInput
-			label={label}
-			required={required}
-			helperText={helperText}
-			error={error}
-			placeholder={placeholder}
-			disabled={disabled}
-			value={value == null ? "" : String(value)}
-			onChange={(e) => onChange(e.target.value)}
-		/>
+		<div className="group relative rounded-lg p-1 transition-all hover:ring-1 hover:ring-primary-200 dark:hover:ring-primary-800/50">
+			<div className="pr-5">{control}</div>
+			<button
+				type="button"
+				aria-label="Add to document"
+				title="Add to document"
+				className="absolute right-2 top-0 rounded p-px text-neutral-400 opacity-0 transition-opacity group-hover:opacity-100 hover:text-primary-600 dark:hover:text-primary-400"
+				onClick={() => onAddToDocument!(gtn!)}
+			>
+				<NoteAddOutlinedIcon sx={{ fontSize: 15 }} />
+			</button>
+		</div>
 	);
 }
 
@@ -232,6 +247,7 @@ export interface AgreementStepDetailsFormProps {
 	/** When true, fields are disabled (view mode). */
 	readOnly?: boolean;
 	onFieldValueChange: (fieldId: string, value: unknown) => void;
+	onAddToDocument?: (gtn: string) => void;
 }
 
 /**
@@ -245,6 +261,7 @@ export function AgreementStepDetailsForm({
 	errorsByFieldId,
 	readOnly = false,
 	onFieldValueChange,
+	onAddToDocument,
 }: AgreementStepDetailsFormProps) {
 	const [collapsedByKey, setCollapsedByKey] = useState<Record<string, boolean>>({});
 
@@ -329,7 +346,7 @@ export function AgreementStepDetailsForm({
 								{visibleFields.length === 0 ? (
 									<p className="text-sm text-neutral-500 dark:text-neutral-400">No visible fields in this section.</p>
 								) : (
-									<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+									<div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(max(220px, calc(33.333% - 11px)), 1fr))" }}>
 										{visibleFields.map((field) => (
 											<AgreementStepFieldControl
 												key={field.id}
@@ -338,6 +355,7 @@ export function AgreementStepDetailsForm({
 												error={errorsByFieldId?.[field.id]}
 												readOnly={readOnly}
 												onChange={(next) => onFieldValueChange(field.id, next)}
+												onAddToDocument={onAddToDocument}
 											/>
 										))}
 									</div>

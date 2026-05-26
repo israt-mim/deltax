@@ -16,6 +16,12 @@ export interface TemplateUserRef {
 	profilePictureUrl?: string | null;
 }
 
+export interface TemplateAgreementRef {
+	_id: string;
+	displayId?: string;
+	agreement_display_name?: string;
+}
+
 export interface TemplateListItem {
 	_id: string;
 	name: string;
@@ -26,6 +32,7 @@ export interface TemplateListItem {
 	agreement_domain: TemplateCatalogRef;
 	agreement_type: TemplateCatalogRef;
 	agreement_subtype: TemplateCatalogRef;
+	agreement?: TemplateAgreementRef | null;
 	createdBy?: TemplateUserRef;
 	updatedBy?: TemplateUserRef;
 	createdAt: string;
@@ -54,6 +61,7 @@ export interface ListTemplatesParams {
 	domain?: string;
 	type?: string;
 	subtype?: string;
+	agreement?: string;
 }
 
 export interface CreateTemplateBody {
@@ -65,6 +73,7 @@ export interface CreateTemplateBody {
 	agreement_domain: string;
 	agreement_type: string;
 	agreement_subtype: string;
+	agreement?: string;
 }
 
 export type UpdateTemplateBody = Partial<CreateTemplateBody>;
@@ -94,6 +103,7 @@ export async function listTemplates(params: ListTemplatesParams = {}): Promise<L
 		domain: params.domain,
 		type: params.type,
 		subtype: params.subtype,
+		agreement: params.agreement,
 	});
 	return get<ListResponse<TemplateListItem>>(`/api/templates${qs}`);
 }

@@ -1,10 +1,18 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import cn from "classnames";
 import { useQueryClient } from "@tanstack/react-query";
-import { useParams, useSearchParams } from "react-router-dom";
-import { Switch } from "antd";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Dropdown, Switch } from "antd";
+import type { MenuProps } from "antd";
 import { toast } from "react-toastify";
+import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
+import CloseOutlinedIcon from "@mui/icons-material/CloseOutlined";
+import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
+import DriveFileRenameOutlineOutlinedIcon from "@mui/icons-material/DriveFileRenameOutlineOutlined";
+import FullscreenExitOutlinedIcon from "@mui/icons-material/FullscreenExitOutlined";
+import FullscreenOutlinedIcon from "@mui/icons-material/FullscreenOutlined";
+import MoreVertOutlinedIcon from "@mui/icons-material/MoreVertOutlined";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import { Button } from "../components/base/Button";
 import {
@@ -31,6 +39,7 @@ import {
 	type AgreementDashboardData,
 	type AgreementDocumentStep,
 } from "../api";
+import { useAgreementDataQuery, useDeleteAgreementMutation } from "../api/hooks/agreements";
 import { formatUserFacingError } from "../lib/formatUserFacingError";
 import { Card } from "../components/base/Card";
 import { CardMain } from "../components/base/CardMain";
@@ -57,6 +66,15 @@ import {
 	canPreviewAttachment,
 } from "../lib/attachmentDocument";
 import type { AgreementAttachment } from "../api";
+import { useTemplatesInfiniteList } from "../api/hooks/templates";
+import type { TemplateRow } from "../api/services/templates";
+import { TemplateEditorSidebar, type TemplateEditorSidebarHandle } from "./templates/TemplateEditorSidebar";
+import { NewTemplateModal } from "./templates/NewTemplateModal";
+import type { LockedCdts } from "./templates/NewTemplateModal";
+import { UserIdentity } from "../components/UserIdentity";
+import type { ApiUserRef } from "../lib/userDisplay";
+import { formatUsDateTime } from "../lib/formatDateTime";
+import type { TemplateUserRef } from "../api/services/templates";
 import {
 	emptyLineItemValuesFromLayout,
 	fieldValuesArrayFromRecord,
@@ -125,6 +143,152 @@ const AGREEMENT_STATUS_BADGE_COLORS: Record<string, string> = {
 	Pending: "bg-primary-100 text-primary-700 dark:bg-primary-900/80 dark:text-primary-200",
 };
 
+function AuthoringSidebarHeader({
+	fullscreen,
+	onFullscreenToggle,
+	onClose,
+}: {
+	fullscreen: boolean;
+	onFullscreenToggle: () => void;
+	onClose: () => void;
+}) {
+	return (
+		<div className="flex shrink-0 items-center justify-between border-b border-neutral-200 px-4 py-3 dark:border-black-600">
+			<span className="text-base font-semibold text-neutral-900 dark:text-white">Authoring</span>
+			<div className="flex items-center gap-1">
+				<button
+					type="button"
+					title={fullscreen ? "Exit fullscreen" : "Fullscreen"}
+					onClick={onFullscreenToggle}
+					className="inline-flex items-center justify-center rounded p-1.5 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-800 dark:text-neutral-400 dark:hover:bg-black-600 dark:hover:text-neutral-200"
+				>
+					{fullscreen ? <FullscreenExitOutlinedIcon sx={{ fontSize: 20 }} /> : <FullscreenOutlinedIcon sx={{ fontSize: 20 }} />}
+				</button>
+				<button
+					type="button"
+					title="Close"
+					onClick={onClose}
+					className="inline-flex items-center justify-center rounded p-1.5 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-800 dark:text-neutral-400 dark:hover:bg-black-600 dark:hover:text-neutral-200"
+				>
+					<CloseOutlinedIcon sx={{ fontSize: 20 }} />
+				</button>
+			</div>
+		</div>
+	);
+}
+
+function AuthoringSidebarBody({
+	loading,
+	rows,
+	onNewDocument,
+	onSelectTemplate,
+}: {
+	loading: boolean;
+	rows: TemplateRow[];
+	onNewDocument: () => void;
+	onSelectTemplate: (id: string) => void;
+}) {
+	if (loading) {
+		return (
+			<div className="flex flex-1 items-center justify-center text-sm text-neutral-400">
+				Loading…
+			</div>
+		);
+	}
+
+	if (rows.length === 0) {
+		return (
+			<div className="flex flex-1 flex-col items-center justify-center gap-3 p-8">
+				<AuthoringEmptyIllustration />
+				<p className="mt-2 text-lg font-bold text-neutral-900 dark:text-white">No Documents Created Yet</p>
+				<p className="text-sm text-neutral-500 dark:text-neutral-400">Create your first document to get started!</p>
+				<Button
+					type="button"
+					size="md"
+					className="!rounded-full !h-auto !py-2.5"
+					onClick={onNewDocument}
+				>
+					<AddOutlinedIcon sx={{ fontSize: 16 }} />
+					New Document
+				</Button>
+			</div>
+		);
+	}
+
+	return (
+		<div className="flex flex-1 flex-col overflow-hidden">
+			<div className="flex shrink-0 items-center justify-between px-4 py-3">
+				<span className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+					{rows.length} document{rows.length !== 1 ? "s" : ""}
+				</span>
+				<Button
+					type="button"
+					size="sm"
+					className="!rounded-full !h-auto !py-2"
+					onClick={onNewDocument}
+				>
+					<AddOutlinedIcon sx={{ fontSize: 14 }} />
+					New Document
+				</Button>
+			</div>
+			<div className="flex-1 overflow-y-auto">
+				<table className="w-full text-sm">
+					<thead className="sticky top-0 bg-white dark:bg-black-800">
+						<tr className="border-b border-neutral-200 dark:border-black-600">
+							{["Name", "Description", "Created By", "Created On"].map((col) => (
+								<th key={col} className="whitespace-nowrap px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+									{col}
+								</th>
+							))}
+						</tr>
+					</thead>
+					<tbody>
+						{rows.map((row: TemplateRow) => (
+							<tr
+								key={row.id}
+								onClick={() => onSelectTemplate(row.id)}
+								className="cursor-pointer border-b border-neutral-100 transition-colors hover:bg-neutral-50 dark:border-black-600 dark:hover:bg-black-700"
+							>
+								<td className="whitespace-nowrap px-4 py-3 font-medium text-neutral-900 dark:text-neutral-100">{row.name}</td>
+								<td className="max-w-[180px] truncate px-4 py-3 text-neutral-500 dark:text-neutral-400">{row.description || "—"}</td>
+								<td className="whitespace-nowrap px-4 py-3">
+									<UserIdentity user={row.createdBy as TemplateUserRef | null as ApiUserRef | null} size="sm" />
+								</td>
+								<td className="whitespace-nowrap px-4 py-3 text-neutral-500 dark:text-neutral-400">{formatUsDateTime(row.createdAt)}</td>
+							</tr>
+						))}
+					</tbody>
+				</table>
+			</div>
+		</div>
+	);
+}
+
+function AuthoringEmptyIllustration() {
+	return (
+		<svg width="160" height="140" viewBox="0 0 160 140" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+			{/* Blob background */}
+			<ellipse cx="80" cy="82" rx="58" ry="44" className="fill-primary-100 dark:fill-primary-900/40" />
+			{/* Back document */}
+			<rect x="52" y="38" width="58" height="72" rx="4" className="fill-primary-200 dark:fill-primary-800/60" transform="rotate(-6 52 38)" />
+			{/* Front document */}
+			<rect x="50" y="34" width="60" height="76" rx="4" fill="white" className="stroke-primary-400 dark:fill-black-800 dark:stroke-primary-500" strokeWidth="1.5" />
+			{/* Document lines */}
+			<rect x="61" y="50" width="38" height="3.5" rx="1.75" className="fill-primary-300 dark:fill-primary-700" />
+			<rect x="61" y="60" width="38" height="3.5" rx="1.75" className="fill-primary-200 dark:fill-primary-800" />
+			<rect x="61" y="70" width="38" height="3.5" rx="1.75" className="fill-primary-200 dark:fill-primary-800" />
+			<rect x="61" y="80" width="28" height="3.5" rx="1.75" className="fill-primary-200 dark:fill-primary-800" />
+			<rect x="61" y="90" width="22" height="3.5" rx="1.75" className="fill-primary-200 dark:fill-primary-800" />
+			{/* Plus decorators */}
+			<text x="38" y="48" fontSize="12" className="fill-primary-300 dark:fill-primary-600" fontWeight="300">+</text>
+			<text x="126" y="68" fontSize="12" className="fill-primary-300 dark:fill-primary-600" fontWeight="300">+</text>
+			<text x="42" y="88" fontSize="10" className="fill-primary-200 dark:fill-primary-700" fontWeight="300">+</text>
+			<text x="122" y="44" fontSize="8" className="fill-primary-200 dark:fill-primary-700" fontWeight="300">·</text>
+			<text x="75" y="28" fontSize="8" className="fill-primary-200 dark:fill-primary-700" fontWeight="300">·</text>
+		</svg>
+	);
+}
+
 function agreementStatusBadgeClass(status: string): string {
 	const label = formatAgreementStatusLabel(status);
 	return cn(
@@ -137,11 +301,13 @@ function agreementStatusBadgeClass(status: string): string {
 /** `/agreements/:id` — read/edit view of one agreement using tabs for each step. */
 export default function AgreementDetailsPage() {
 	const { id: agreementIdParam } = useParams<{ id: string }>();
+	const navigate = useNavigate();
 	const [searchParams, setSearchParams] = useSearchParams();
 	const queryClient = useQueryClient();
 	const patchFieldValuesMutation = usePatchAgreementFieldValuesMutation();
 	const postLineItemMutation = usePostAgreementLineItemMutation();
 	const patchLineItemMutation = usePatchAgreementLineItemMutation();
+	const deleteMutation = useDeleteAgreementMutation();
 
 	const agreementId = agreementIdParam?.trim() ?? "";
 	const agreementIdValid = Boolean(agreementId) && isMongoObjectIdString(agreementId);
@@ -157,6 +323,13 @@ export default function AgreementDetailsPage() {
 		enabled: agreementIdValid,
 	});
 	const steps = stepsQuery.data ?? [];
+
+	const allStepsQuery = useAgreementDocumentStepsQuery({
+		agreementId,
+		enabled: agreementIdValid,
+		hideAuthoringSteps: false,
+	});
+	const allSteps = allStepsQuery.data ?? [];
 	const stepsLoading = stepsQuery.isPending;
 	const stepsError = useMemo(() => {
 		if (!stepsQuery.error) return null;
@@ -175,6 +348,14 @@ export default function AgreementDetailsPage() {
 	const [pendingTabKey, setPendingTabKey] = useState<string | null>(null);
 	const [previewAttachment, setPreviewAttachment] = useState<AgreementAttachment | null>(null);
 	const [previewSidebarWidth, setPreviewSidebarWidth] = useState(RESIZABLE_SIDEBAR_DEFAULT_WIDTH);
+	const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+	const [authoringSidebarOpen, setAuthoringSidebarOpen] = useState(false);
+	const [authoringSidebarWidth, setAuthoringSidebarWidth] = useState(0);
+	const [authoringFullscreen, setAuthoringFullscreen] = useState(false);
+	const [newAuthoringTemplateOpen, setNewAuthoringTemplateOpen] = useState(false);
+	const [selectedAuthoringTemplateId, setSelectedAuthoringTemplateId] = useState<string | null>(null);
+	const [templateEditorWidth, setTemplateEditorWidth] = useState(720);
+	const authoringEditorRef = useRef<TemplateEditorSidebarHandle>(null);
 	const tabChangeModalTitleId = useId();
 	const previewOpen = previewAttachment !== null;
 
@@ -655,6 +836,87 @@ export default function AgreementDetailsPage() {
 		]
 	);
 
+	const authoringTemplatesQuery = useTemplatesInfiniteList({
+		agreement: agreementId,
+		sort: "-createdAt",
+		enabled: authoringSidebarOpen && Boolean(agreementId),
+	});
+	const authoringTemplateRows = useMemo(
+		() => authoringTemplatesQuery.data?.pages.flatMap((p) => p.data) ?? [],
+		[authoringTemplatesQuery.data]
+	);
+
+	const authoringStep = allSteps.find(
+		(s) =>
+			s.catalogStepName?.trim().toLowerCase() === "authoring" ||
+			s.name?.trim().toLowerCase() === "authoring"
+	);
+	const hasAuthoringStep = Boolean(authoringStep);
+	const authoringTabKey = authoringStep?.id ?? "";
+
+	const agreementMenuItems: MenuProps["items"] = [
+		...(hasAuthoringStep
+			? [
+					{
+						key: "authoring",
+						icon: <DriveFileRenameOutlineOutlinedIcon sx={{ fontSize: 16 }} />,
+						label: "Authoring",
+					},
+				]
+			: []),
+		{
+			key: "delete",
+			icon: <DeleteOutlineOutlinedIcon sx={{ fontSize: 16 }} />,
+			label: "Delete",
+			danger: true,
+		},
+	];
+
+	const handleDelete = async () => {
+		if (!agreementId) return;
+		try {
+			await deleteMutation.mutateAsync(agreementId);
+			toast.success("Agreement deleted.");
+			navigate("/agreements");
+		} catch (e) {
+			toast.error(formatUserFacingError(e, "Could not delete agreement."));
+		}
+	};
+
+	const authoringLockedCdts: LockedCdts | undefined =
+		dashboard?.agreement_category && dashboard?.agreement_domain && dashboard?.agreement_type && dashboard?.agreement_subtype
+			? {
+					categoryId: dashboard.agreement_category._id,
+					categoryName: dashboard.agreement_category.name,
+					domainId: dashboard.agreement_domain._id,
+					domainName: dashboard.agreement_domain.name,
+					typeId: dashboard.agreement_type._id,
+					typeName: dashboard.agreement_type.name,
+					subtypeId: dashboard.agreement_subtype._id,
+					subtypeName: dashboard.agreement_subtype.name,
+			  }
+			: undefined;
+
+	const agreementDataQuery = useAgreementDataQuery({
+		agreementId,
+		enabled: Boolean(selectedAuthoringTemplateId),
+	});
+	const editorVariables = useMemo<Record<string, string>>(() => {
+		const raw = agreementDataQuery.data ?? {};
+		const result: Record<string, string> = {};
+		for (const [k, v] of Object.entries(raw)) {
+			if (v === null || v === undefined || v === "") continue;
+			if (typeof v === "boolean") {
+				result[k] = v ? "Yes" : "No";
+			} else if (typeof v === "number") {
+				result[k] = String(v);
+			} else {
+				result[k] = String(v);
+			}
+		}
+		return result;
+	}, [agreementDataQuery.data]);
+
 	if (!agreementId || !isMongoObjectIdString(agreementId)) {
 		return (
 			<CardMain className="flex flex-col gap-4">
@@ -683,7 +945,16 @@ export default function AgreementDetailsPage() {
 		<CardMain className="relative flex min-h-0 flex-1 flex-col gap-0 overflow-hidden !m-0 !p-0">
 			<div
 				className="flex min-h-0 flex-1 flex-col"
-				style={previewOpen ? { paddingRight: previewSidebarWidth } : undefined}
+				style={
+					previewOpen || authoringSidebarOpen || Boolean(selectedAuthoringTemplateId)
+						? {
+								paddingRight:
+									(previewOpen ? previewSidebarWidth : 0) +
+									(authoringSidebarOpen && !selectedAuthoringTemplateId ? authoringSidebarWidth : 0) +
+									(selectedAuthoringTemplateId ? templateEditorWidth : 0),
+							}
+						: undefined
+				}
 			>
 			{!isEditMode ? (
 				<div
@@ -705,7 +976,7 @@ export default function AgreementDetailsPage() {
 					</p>
 				</div>
 			) : null}
-			<Card className="flex flex-col gap-4 p-4">
+			<Card className="flex flex-col gap-4 p-4 overflow-hidden">
 				<div className="flex items-center justify-between gap-3">
 					<div className="flex min-w-0 items-center gap-3">
 						<DescriptionOutlinedIcon
@@ -759,6 +1030,27 @@ export default function AgreementDetailsPage() {
 							/>
 							<span className="text-sm text-neutral-600 dark:text-neutral-400">Edit</span>
 						</div>
+						<Dropdown
+							trigger={["click"]}
+							menu={{
+								items: agreementMenuItems,
+								onClick: ({ key, domEvent }) => {
+									domEvent.stopPropagation();
+									if (key === "delete") setDeleteConfirmOpen(true);
+									if (key === "authoring") setAuthoringSidebarOpen(true);
+								},
+							}}
+							placement="bottomRight"
+						>
+							<button
+								type="button"
+								className="inline-flex items-center justify-center rounded p-1.5 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-800 dark:text-neutral-400 dark:hover:bg-black-700 dark:hover:text-neutral-200"
+								onClick={(e) => e.stopPropagation()}
+								aria-label="More options"
+							>
+								<MoreVertOutlinedIcon sx={{ fontSize: 20 }} />
+							</button>
+						</Dropdown>
 					</div>
 				</div>
 				{tabItems.length > 0 ? (
@@ -836,6 +1128,13 @@ export default function AgreementDetailsPage() {
 									errorsByFieldId={fieldErrorsById}
 									readOnly={!isEditMode}
 									onFieldValueChange={handleFieldValueChange}
+									onAddToDocument={
+										selectedAuthoringTemplateId &&
+										(currentStep?.name?.trim().toLowerCase() === "header" ||
+											currentStep?.catalogStepName?.trim().toLowerCase() === "header")
+											? (gtn) => authoringEditorRef.current?.insertVariable(gtn)
+											: undefined
+									}
 								/>
 							)
 						) : (
@@ -920,6 +1219,109 @@ export default function AgreementDetailsPage() {
 					<AgreementAttachmentDocPreview attachment={previewAttachment} />
 				</ResizableSidebar>
 			) : null}
+
+			{/* Authoring sidebar — fullscreen mode */}
+			{authoringSidebarOpen && authoringFullscreen && !selectedAuthoringTemplateId && (
+				<div className="absolute inset-0 z-20 flex flex-col overflow-hidden bg-white dark:bg-black-800">
+					<AuthoringSidebarHeader
+						fullscreen
+						onFullscreenToggle={() => setAuthoringFullscreen(false)}
+						onClose={() => { setAuthoringSidebarOpen(false); setAuthoringSidebarWidth(0); setAuthoringFullscreen(false); }}
+					/>
+					<AuthoringSidebarBody
+						loading={authoringTemplatesQuery.isPending}
+						rows={authoringTemplateRows}
+						onNewDocument={() => setNewAuthoringTemplateOpen(true)}
+						onSelectTemplate={setSelectedAuthoringTemplateId}
+					/>
+				</div>
+			)}
+
+			{/* Authoring sidebar — resizable mode */}
+			<ResizableSidebar
+				open={authoringSidebarOpen && !authoringFullscreen && !selectedAuthoringTemplateId}
+				variant="page"
+				onClose={() => { setAuthoringSidebarOpen(false); setAuthoringSidebarWidth(0); }}
+				onWidthChange={setAuthoringSidebarWidth}
+				defaultWidth={720}
+				minWidth={480}
+				maxWidth={1000}
+			>
+				<AuthoringSidebarHeader
+					fullscreen={false}
+					onFullscreenToggle={() => setAuthoringFullscreen(true)}
+					onClose={() => { setAuthoringSidebarOpen(false); setAuthoringSidebarWidth(0); }}
+				/>
+				<AuthoringSidebarBody
+					loading={authoringTemplatesQuery.isPending}
+					rows={authoringTemplateRows}
+					onNewDocument={() => setNewAuthoringTemplateOpen(true)}
+					onSelectTemplate={setSelectedAuthoringTemplateId}
+				/>
+			</ResizableSidebar>
+
+			{/* Template editor — replaces authoring list when a template is selected */}
+			<TemplateEditorSidebar
+				ref={authoringEditorRef}
+				templateId={selectedAuthoringTemplateId}
+				onClose={() => setSelectedAuthoringTemplateId(null)}
+				onWidthChange={setTemplateEditorWidth}
+				variables={editorVariables}
+			/>
+
+			{/* New template modal — CDTS locked from agreement, agreement id sent in background */}
+			<NewTemplateModal
+				open={newAuthoringTemplateOpen}
+				onClose={() => setNewAuthoringTemplateOpen(false)}
+				onCreated={(id) => {
+					setNewAuthoringTemplateOpen(false);
+					setSelectedAuthoringTemplateId(id);
+				}}
+				lockedCdts={authoringLockedCdts}
+				agreementId={agreementId}
+			/>
+
+			<Modal
+				open={deleteConfirmOpen}
+				onCancel={() => !deleteMutation.isPending && setDeleteConfirmOpen(false)}
+				width={440}
+				header={
+					<h2 className="mb-0 text-lg font-semibold text-neutral-900 dark:text-white">
+						Delete agreement?
+					</h2>
+				}
+				footer={
+					<div className="flex justify-end gap-2">
+						<Button
+							type="button"
+							size="md"
+							appearance="outlined"
+							status="secondary-neutral"
+							onClick={() => setDeleteConfirmOpen(false)}
+							disabled={deleteMutation.isPending}
+						>
+							Cancel
+						</Button>
+						<Button
+							type="button"
+							size="md"
+							status="error"
+							loading={deleteMutation.isPending}
+							onClick={() => void handleDelete()}
+						>
+							Delete
+						</Button>
+					</div>
+				}
+			>
+				<p className="text-sm text-neutral-600 dark:text-neutral-400">
+					This will permanently delete{" "}
+					<span className="font-medium text-neutral-900 dark:text-white">
+						{headerDisplayName || headerDisplayId || "this agreement"}
+					</span>
+					. This action cannot be undone.
+				</p>
+			</Modal>
 		</CardMain>
 	);
 }

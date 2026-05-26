@@ -18,6 +18,7 @@ interface TemplateEditorSidebarProps {
 	onClose: () => void;
 	onWidthChange?: (width: number) => void;
 	onFullscreenChange?: (fullscreen: boolean) => void;
+	variables?: Record<string, string>;
 }
 
 export interface TemplateEditorSidebarHandle {
@@ -25,7 +26,7 @@ export interface TemplateEditorSidebarHandle {
 }
 
 export const TemplateEditorSidebar = forwardRef<TemplateEditorSidebarHandle, TemplateEditorSidebarProps>(
-	function TemplateEditorSidebar({ templateId, onClose, onWidthChange, onFullscreenChange }, ref) {
+	function TemplateEditorSidebar({ templateId, onClose, onWidthChange, onFullscreenChange, variables }, ref) {
 		const templateQuery = useTemplateDetailQuery({ id: templateId ?? undefined });
 		const updateMutation = useUpdateTemplateMutation();
 
@@ -166,6 +167,7 @@ export const TemplateEditorSidebar = forwardRef<TemplateEditorSidebarHandle, Tem
 				key={templateId}
 				initialContent={template?.content_html ?? ""}
 				onContentChange={handleContentChange}
+				variables={variables}
 				className="flex-1"
 			/>
 		);

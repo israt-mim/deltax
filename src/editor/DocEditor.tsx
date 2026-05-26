@@ -3,6 +3,7 @@ import { EditorContent } from "@tiptap/react";
 import { Toolbar } from "./components/Toolbar";
 import { StatusBar } from "./components/StatusBar";
 import { useDocEditor } from "./hooks/useDocEditor";
+import { VariablesContext } from "./extensions/VariablesContext";
 import "./editor.css";
 
 export interface DocEditorProps {
@@ -32,14 +33,16 @@ export const DocEditor = forwardRef<DocEditorHandle, DocEditorProps>(function Do
 	if (!editor) return null;
 
 	return (
-		<div className={`doc-editor-shell ${className}`}>
-			<Toolbar editor={editor} />
-			<div className="doc-editor-canvas" ref={canvasRef}>
-				<div className="doc-editor-page">
-					<EditorContent editor={editor} />
+		<VariablesContext.Provider value={variables ?? {}}>
+			<div className={`doc-editor-shell ${className}`}>
+				<Toolbar editor={editor} />
+				<div className="doc-editor-canvas" ref={canvasRef}>
+					<div className="doc-editor-page">
+						<EditorContent editor={editor} />
+					</div>
 				</div>
+				<StatusBar editor={editor} />
 			</div>
-			<StatusBar editor={editor} />
-		</div>
+		</VariablesContext.Provider>
 	);
 });

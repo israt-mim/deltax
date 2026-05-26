@@ -1,9 +1,10 @@
 import { NodeViewWrapper } from "@tiptap/react";
 import type { NodeViewProps } from "@tiptap/react";
+import { useVariables } from "./VariablesContext";
 
-export function VariableTextView({ node, extension }: NodeViewProps) {
+export function VariableTextView({ node }: NodeViewProps) {
+	const variables = useVariables();
 	const key = node.attrs.key as string;
-	const variables = (extension.storage.variables ?? {}) as Record<string, string>;
 	const value = Object.prototype.hasOwnProperty.call(variables, key) ? variables[key] : undefined;
 	const hasValue = value !== undefined && value !== "";
 

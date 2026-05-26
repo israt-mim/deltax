@@ -9,6 +9,7 @@ import {
 	createAgreement,
 	deleteAgreementLineItem,
 	getAgreementDashboard,
+	getAgreementData,
 	getAgreementStepDetails,
 	getAgreementSteps,
 	getAgreementTeams,
@@ -479,5 +480,15 @@ export function useDeleteAgreementLineItemMutation() {
 				invalidateAgreementStepDetailsQueries(queryClient, args.agreementId);
 			}
 		},
+	});
+}
+
+export function useAgreementDataQuery(options: { agreementId: string; enabled?: boolean }) {
+	const id = options.agreementId.trim();
+	return useQuery({
+		queryKey: [...queryKeys.agreements.all, "agreement-data", id] as const,
+		queryFn: () => getAgreementData(id),
+		enabled: options.enabled !== false && Boolean(id) && isMongoObjectIdString(id),
+		staleTime: 30_000,
 	});
 }
