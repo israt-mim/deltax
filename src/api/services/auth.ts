@@ -38,6 +38,18 @@ export async function authChangePassword(body: AuthChangePasswordBody): Promise<
 	return res.user;
 }
 
+export async function authForgotPassword(body: { email: string }): Promise<void> {
+	await post<{ message: string }>("/api/auth/forgot-password", body);
+}
+
+export async function authResetPassword(body: {
+	token: string;
+	newPassword: string;
+	confirmNewPassword: string;
+}): Promise<void> {
+	await post<{ message: string }>("/api/auth/reset-password", body);
+}
+
 export async function authLogout(): Promise<void> {
 	await post<{ message: string }>("/api/auth/logout");
 }

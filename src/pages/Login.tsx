@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
-import { Link, Navigate, useLocation, useNavigate } from "react-router";
+import { Link, Navigate, useNavigate } from "react-router";
+
 import { toast } from "react-toastify";
 import { useAuth } from "../auth/AuthContext";
 import { formatUserFacingError } from "../lib/formatUserFacingError";
@@ -67,9 +68,6 @@ function WorkflowCard() {
 export const Login = () => {
 	const { isAuthResolved, isAuthenticated, user, login } = useAuth();
 	const navigate = useNavigate();
-	const location = useLocation();
-	const from =
-		(location.state as { from?: { pathname?: string } } | null)?.from?.pathname?.trim() || "/";
 
 	const [identifier, setIdentifier] = useState("");
 	const [password, setPassword] = useState("");
@@ -90,7 +88,7 @@ export const Login = () => {
 			if (sessionUser.mustChangePassword) {
 				navigate("/change-password", { replace: true });
 			} else {
-				navigate(from, { replace: true });
+				navigate("/", { replace: true });
 			}
 		} catch (err) {
 			toast.error(formatUserFacingError(err, "Could not sign in."));
@@ -104,7 +102,7 @@ export const Login = () => {
 	}
 
 	if (isAuthenticated) {
-		return <Navigate to={user?.mustChangePassword ? "/change-password" : from} replace />;
+		return <Navigate to={user?.mustChangePassword ? "/change-password" : "/"} replace />;
 	}
 
 	return (
@@ -216,13 +214,12 @@ export const Login = () => {
 									/>
 									Remember me
 								</label>
-								<button
-									type="button"
+								<Link
+									to="/forgot-password"
 									className="text-sm font-medium text-blue-400 hover:text-blue-300"
-									onClick={() => toast.info("Password reset is not available yet.")}
 								>
 									Forgot password?
-								</button>
+								</Link>
 							</div>
 
 							<button

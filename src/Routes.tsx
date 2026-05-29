@@ -11,6 +11,8 @@ import { FieldDetailPage } from "./pages/FieldDetailPage";
 import { ClausesPage } from "./pages/ClausesPage";
 import { ClauseDetailPage } from "./pages/ClauseDetailPage";
 import { Login } from "./pages/Login";
+import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
+import { ResetPasswordPage } from "./pages/ResetPasswordPage";
 import { ForcePasswordChange } from "./pages/ForcePasswordChange";
 import { AgreementListPage } from "./pages/AgreementListPage";
 import { DocEditorPage } from "./pages/DocEditorPage";
@@ -21,6 +23,8 @@ export const Routes = () => {
 	return (
 		<ReactRoutes>
 			<Route path="/login" element={<Login />} />
+			<Route path="/forgot-password" element={<ForgotPasswordPage />} />
+			<Route path="/reset-password" element={<ResetPasswordPage />} />
 			<Route element={<RequireAuth />}>
 				<Route path="change-password" element={<ForcePasswordChange />} />
 				<Route element={<AppLayout />}>
