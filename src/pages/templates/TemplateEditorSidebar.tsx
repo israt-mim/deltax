@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState, KeyboardEvent } from "react";
 import { toast } from "react-toastify";
 import ArrowBackOutlinedIcon from "@mui/icons-material/ArrowBackOutlined";
 import FileDownloadOutlinedIcon from "@mui/icons-material/FileDownloadOutlined";
@@ -31,6 +31,9 @@ export const TemplateEditorSidebar = forwardRef<TemplateEditorSidebarHandle, Tem
 		const updateMutation = useUpdateTemplateMutation();
 
 		const [isFullscreen, setIsFullscreen] = useState(false);
+		const [isEditingName, setIsEditingName] = useState(false);
+		const [nameValue, setNameValue] = useState("");
+		const nameInputRef = useRef<HTMLInputElement>(null);
 
 		const editorRef = useRef<DocEditorHandle>(null);
 		const latestHtmlRef = useRef<string>("");
@@ -98,6 +101,31 @@ export const TemplateEditorSidebar = forwardRef<TemplateEditorSidebarHandle, Tem
 			};
 		}, [templateId]);
 
+		const startEditingName = useCallback(() => {
+			setNameValue(template?.name ?? "");
+			setIsEditingName(true);
+			setTimeout(() => nameInputRef.current?.select(), 0);
+		}, [template?.name]);
+
+		const commitNameEdit = useCallback(async () => {
+			const trimmed = nameValue.trim();
+			setIsEditingName(false);
+			if (!templateId || !trimmed || trimmed === template?.name) return;
+			try {
+				await updateMutation.mutateAsync({ id: templateId, body: { name: trimmed } });
+			} catch (e) {
+				toast.error(formatUserFacingError(e, "Could not update template name."));
+			}
+		}, [nameValue, templateId, template?.name, updateMutation]);
+
+		const handleNameKeyDown = useCallback(
+			(e: KeyboardEvent<HTMLInputElement>) => {
+				if (e.key === "Enter") void commitNameEdit();
+				if (e.key === "Escape") setIsEditingName(false);
+			},
+			[commitNameEdit],
+		);
+
 		if (!templateId) return null;
 
 		const header = (
@@ -111,9 +139,26 @@ export const TemplateEditorSidebar = forwardRef<TemplateEditorSidebarHandle, Tem
 					>
 						<ArrowBackOutlinedIcon sx={{ fontSize: 18 }} />
 					</button>
-					<span className="truncate text-sm font-medium text-neutral-800 dark:text-neutral-100">
-						{template?.name ?? "Loading…"}
-					</span>
+					{isEditingName ? (
+						<input
+							ref={nameInputRef}
+							type="text"
+							value={nameValue}
+							onChange={(e) => setNameValue(e.target.value)}
+							onBlur={() => void commitNameEdit()}
+							onKeyDown={handleNameKeyDown}
+							className="min-w-0 flex-1 truncate rounded border border-primary-400 bg-white px-1.5 py-0.5 text-sm font-medium text-neutral-800 outline-none focus:ring-1 focus:ring-primary-400 dark:bg-black-800 dark:text-neutral-100"
+						/>
+					) : (
+						<button
+							type="button"
+							title="Click to rename"
+							onClick={startEditingName}
+							className="min-w-0 truncate rounded px-1.5 py-0.5 text-left text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-100 dark:text-neutral-100 dark:hover:bg-neutral-700"
+						>
+							{template?.name ?? "Loading…"}
+						</button>
+					)}
 				</div>
 
 				<div className="flex shrink-0 items-center gap-1">

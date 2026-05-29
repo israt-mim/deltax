@@ -87,6 +87,7 @@ import {
 } from "./agreementConfiguration/agreementStepDetailsValidation";
 import { usePageBreadcrumb } from "../hooks/usePageBreadcrumb";
 import { buildAgreementBreadcrumb } from "../lib/breadcrumb";
+import { NAVBAR_HEIGHT } from "../constants/global";
 
 const AGREEMENT_DASHBOARD_TAB: AgreementDocumentStep = {
 	id: "__agreement-dashboard__",
@@ -359,6 +360,21 @@ export default function AgreementDetailsPage() {
 	const tabChangeModalTitleId = useId();
 	const previewOpen = previewAttachment !== null;
 
+	const openAuthoringSidebar = useCallback(() => {
+		setPreviewAttachment(null);
+		setAuthoringSidebarOpen(true);
+	}, []);
+
+	const handlePreviewAttachmentChange = useCallback((attachment: AgreementAttachment | null) => {
+		if (attachment !== null) {
+			setAuthoringSidebarOpen(false);
+			setAuthoringSidebarWidth(0);
+			setSelectedAuthoringTemplateId(null);
+			setAuthoringFullscreen(false);
+		}
+		setPreviewAttachment(attachment);
+	}, []);
+
 	const refreshStepDetails = useCallback(() => {
 		if (!agreementIdValid) return;
 		invalidateAgreementStepDetailsQueries(queryClient, agreementId);
@@ -510,9 +526,6 @@ export default function AgreementDetailsPage() {
 	useEffect(() => {
 		if (!currentStep || !isLineItemsWizardStepName(currentStep)) {
 			setLineItemQuery(null);
-		}
-		if (!isAgreementAttachmentsTab(currentStep)) {
-			setPreviewAttachment(null);
 		}
 		setFieldErrorsById({});
 	}, [currentStep?.id, currentStep?.name]);
@@ -942,7 +955,10 @@ export default function AgreementDetailsPage() {
 	}
 
 	return (
-		<CardMain className="relative flex min-h-0 flex-1 flex-col gap-0 overflow-hidden !m-0 !p-0">
+		<CardMain
+			className="relative flex min-h-0 flex-1 flex-col gap-0 overflow-hidden !m-0 !p-0"
+			style={{ minHeight: "unset", height: `calc(100vh - ${NAVBAR_HEIGHT}px)` }}
+		>
 			<div
 				className="flex min-h-0 flex-1 flex-col"
 				style={
@@ -976,7 +992,7 @@ export default function AgreementDetailsPage() {
 					</p>
 				</div>
 			) : null}
-			<Card className="flex flex-col gap-4 p-4 overflow-hidden">
+			<Card className="flex shrink-0 flex-col gap-4 p-4 overflow-hidden">
 				<div className="flex items-center justify-between gap-3">
 					<div className="flex min-w-0 items-center gap-3">
 						<DescriptionOutlinedIcon
@@ -1037,7 +1053,7 @@ export default function AgreementDetailsPage() {
 								onClick: ({ key, domEvent }) => {
 									domEvent.stopPropagation();
 									if (key === "delete") setDeleteConfirmOpen(true);
-									if (key === "authoring") setAuthoringSidebarOpen(true);
+									if (key === "authoring") openAuthoringSidebar();
 								},
 							}}
 							placement="bottomRight"
@@ -1092,7 +1108,7 @@ export default function AgreementDetailsPage() {
 									agreementId={agreementId}
 									readOnly={!isEditMode}
 									previewAttachmentId={previewAttachment?.id ?? null}
-									onPreviewAttachmentChange={setPreviewAttachment}
+									onPreviewAttachmentChange={handlePreviewAttachmentChange}
 								/>
 							) : isClausesWizardStepName(currentStep) ? (
 								<AgreementClausesStepPanel agreementId={agreementId} readOnly={!isEditMode} />
