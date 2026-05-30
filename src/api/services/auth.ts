@@ -42,10 +42,13 @@ export async function authForgotPassword(body: { email: string }): Promise<void>
 	await post<{ message: string }>("/api/auth/forgot-password", body);
 }
 
+export async function authValidateResetToken(token: string): Promise<void> {
+	await get<{ valid: true }>(`/api/auth/validate-reset-token?token=${encodeURIComponent(token)}`);
+}
+
 export async function authResetPassword(body: {
 	token: string;
 	newPassword: string;
-	confirmNewPassword: string;
 }): Promise<void> {
 	await post<{ message: string }>("/api/auth/reset-password", body);
 }

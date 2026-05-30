@@ -1,21 +1,26 @@
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { toast } from "react-toastify";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import VisibilityOffOutlinedIcon from "@mui/icons-material/VisibilityOffOutlined";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
-import { authResetPassword } from "../api/services/auth";
+import { authValidateResetToken, authResetPassword } from "../api/services/auth";
+import { ApiError } from "../api/client/http";
 import { formatUserFacingError } from "../lib/formatUserFacingError";
 import { Logo } from "../components/icons/logo";
+import { PageLoader } from "../components/base/PageLoader";
 
 const MIN_PASSWORD_LEN = 8;
+
+type TokenState = "validating" | "valid" | "invalid";
 
 export const ResetPasswordPage = () => {
 	const [searchParams] = useSearchParams();
 	const navigate = useNavigate();
 	const token = searchParams.get("token")?.trim() ?? "";
 
+	const [tokenState, setTokenState] = useState<TokenState>(token ? "validating" : "invalid");
 	const [newPassword, setNewPassword] = useState("");
 	const [confirmPassword, setConfirmPassword] = useState("");
 	const [showNew, setShowNew] = useState(false);
@@ -24,18 +29,35 @@ export const ResetPasswordPage = () => {
 	const [confirmError, setConfirmError] = useState<string | undefined>();
 	const [submitting, setSubmitting] = useState(false);
 
-	if (!token) {
+	useEffect(() => {
+		if (!token) return;
+		let cancelled = false;
+		authValidateResetToken(token)
+			.then(() => { if (!cancelled) setTokenState("valid"); })
+			.catch(() => { if (!cancelled) setTokenState("invalid"); });
+		return () => { cancelled = true; };
+	}, [token]);
+
+	if (tokenState === "validating") {
+		return <PageLoader variant="dark" />;
+	}
+
+	if (tokenState === "invalid") {
 		return (
 			<div className="min-h-screen bg-[#050810] text-slate-100">
 				<div className="flex min-h-screen flex-col items-center justify-center px-6 py-12 text-center">
-					<ErrorOutlineIcon sx={{ fontSize: 48 }} className="mb-4 text-red-400" />
-					<p className="text-lg font-semibold text-white">Invalid or expired link</p>
+					<ErrorOutlineIcon sx={{ fontSize: 48 }} className="mb-4 text-amber-400" />
+					<p className="text-lg font-semibold text-white">
+						{token ? "Link expired or invalid" : "Invalid reset link"}
+					</p>
 					<p className="mt-2 text-sm text-slate-400">
-						This password reset link is missing a token. Please request a new one.
+						{token
+							? "This reset link has expired or is invalid. Links are valid for 10 minutes."
+							: "This link is missing a reset token. Please request a new one."}
 					</p>
 					<Link
 						to="/forgot-password"
-						className="mt-6 text-sm font-medium text-blue-400 hover:text-blue-300"
+						className="mt-6 inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-slate-700 to-slate-800 px-5 py-2.5 text-sm font-semibold text-white ring-1 ring-white/10 transition hover:from-slate-600 hover:to-slate-700"
 					>
 						Request new link
 					</Link>
@@ -59,11 +81,15 @@ export const ResetPasswordPage = () => {
 
 		setSubmitting(true);
 		try {
-			await authResetPassword({ token, newPassword, confirmNewPassword: confirmPassword });
+			await authResetPassword({ token, newPassword });
 			toast.success("Password reset successfully. Please sign in.");
 			navigate("/login", { replace: true });
 		} catch (err) {
-			toast.error(formatUserFacingError(err, "Could not reset password. The link may have expired."));
+			if (err instanceof ApiError && err.status === 400) {
+				setTokenState("invalid");
+			} else {
+				toast.error(formatUserFacingError(err, "Could not reset password."));
+			}
 		} finally {
 			setSubmitting(false);
 		}
@@ -80,9 +106,7 @@ export const ResetPasswordPage = () => {
 						<h1 className="mt-8 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
 							Reset your password
 						</h1>
-						<p className="mt-2 text-sm text-slate-400">
-							Choose a new password for your account.
-						</p>
+						<p className="mt-2 text-sm text-slate-400">Choose a new password for your account.</p>
 					</div>
 
 					<form onSubmit={onSubmit} className="flex flex-col gap-5">
@@ -103,6 +127,7 @@ export const ResetPasswordPage = () => {
 									name="newPassword"
 									type={showNew ? "text" : "password"}
 									autoComplete="new-password"
+									autoFocus
 									placeholder="Enter a new password"
 									value={newPassword}
 									onChange={(e) => {

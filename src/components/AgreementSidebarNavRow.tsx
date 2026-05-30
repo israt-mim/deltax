@@ -9,6 +9,7 @@ import { useAppSelector } from "../store/hooks";
 const CLOSE_MS = 260;
 const FLYOUT_Z_CATEGORIES = 200;
 const FLYOUT_Z_DOMAINS = 201;
+const EMPTY_CATEGORIES: never[] = [];
 
 interface AgreementSidebarNavRowProps {
 	expanded: boolean;
@@ -17,7 +18,7 @@ interface AgreementSidebarNavRowProps {
 export function AgreementSidebarNavRow({ expanded }: AgreementSidebarNavRowProps) {
 	const navigate = useNavigate();
 	const location = useLocation();
-	const categories = useAppSelector((s) => s.agreementDetails.data?.categories ?? []);
+	const categories = useAppSelector((s) => s.agreementDetails.data?.categories ?? EMPTY_CATEGORIES);
 
 	const triggerRef = useRef<HTMLDivElement>(null);
 	const closeTimerRef = useRef<number | null>(null);
@@ -95,7 +96,7 @@ export function AgreementSidebarNavRow({ expanded }: AgreementSidebarNavRowProps
 
 	useLayoutEffect(() => {
 		updateDomainPopoverLayout();
-	}, [open, hoverCategoryId, filteredCategories, updateDomainPopoverLayout]);
+	}, [open, hoverCategoryId, updateDomainPopoverLayout]);
 
 	useEffect(() => {
 		if (!open) return;

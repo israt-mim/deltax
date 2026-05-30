@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { Link } from "react-router";
 import { toast } from "react-toastify";
 import MailOutlineIcon from "@mui/icons-material/MailOutline";
@@ -8,10 +8,19 @@ import { authForgotPassword } from "../api/services/auth";
 import { formatUserFacingError } from "../lib/formatUserFacingError";
 import { Logo } from "../components/icons/logo";
 
+const RESEND_COOLDOWN_SECONDS = 60;
+
 export const ForgotPasswordPage = () => {
 	const [email, setEmail] = useState("");
 	const [submitting, setSubmitting] = useState(false);
 	const [sent, setSent] = useState(false);
+	const [cooldown, setCooldown] = useState(0);
+
+	useEffect(() => {
+		if (cooldown <= 0) return;
+		const timer = setTimeout(() => setCooldown((c) => c - 1), 1000);
+		return () => clearTimeout(timer);
+	}, [cooldown]);
 
 	const onSubmit = async (e: FormEvent) => {
 		e.preventDefault();
@@ -24,6 +33,7 @@ export const ForgotPasswordPage = () => {
 		try {
 			await authForgotPassword({ email: trimmed });
 			setSent(true);
+			setCooldown(RESEND_COOLDOWN_SECONDS);
 		} catch (err) {
 			toast.error(formatUserFacingError(err, "Could not send reset email."));
 		} finally {
@@ -48,19 +58,32 @@ export const ForgotPasswordPage = () => {
 					</div>
 
 					{sent ? (
-						<div className="rounded-xl border border-emerald-700/40 bg-emerald-900/20 p-6 text-center">
-							<CheckCircleOutlinedIcon
-								sx={{ fontSize: 40 }}
-								className="mb-3 text-emerald-400"
-							/>
-							<p className="text-base font-semibold text-white">Check your email</p>
-							<p className="mt-2 text-sm text-slate-400">
-								If an account with that email exists, we've sent a password reset link. Check your
-								inbox (and spam folder).
+						<div className="rounded-xl border border-emerald-700/40 bg-emerald-900/20 p-6">
+							<div className="mb-4 flex items-center gap-3">
+								<CheckCircleOutlinedIcon sx={{ fontSize: 28 }} className="shrink-0 text-emerald-400" />
+								<p className="text-base font-semibold text-white">Check your email</p>
+							</div>
+							<p className="text-sm text-slate-400">
+								If <span className="font-medium text-slate-200">{email}</span> is registered, you'll
+								receive a reset link shortly. Check your inbox and spam folder.
 							</p>
+							<p className="mt-3 text-xs text-slate-500">The link expires in 10 minutes.</p>
+
+							<div className="mt-5 border-t border-white/10 pt-5">
+								<p className="mb-3 text-xs text-slate-500">Didn't get the email?</p>
+								<button
+									type="button"
+									disabled={cooldown > 0 || submitting}
+									onClick={onSubmit as unknown as React.MouseEventHandler}
+									className="w-full rounded-lg border border-slate-700/60 bg-slate-900/60 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-slate-800 disabled:pointer-events-none disabled:opacity-50"
+								>
+									{cooldown > 0 ? `Resend in ${cooldown}s` : submitting ? "Sending…" : "Resend link"}
+								</button>
+							</div>
+
 							<Link
 								to="/login"
-								className="mt-6 inline-flex items-center gap-1.5 text-sm font-medium text-blue-400 hover:text-blue-300"
+								className="mt-4 flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-200"
 							>
 								<ArrowBackOutlinedIcon sx={{ fontSize: 16 }} />
 								Back to sign in
@@ -85,6 +108,7 @@ export const ForgotPasswordPage = () => {
 										name="email"
 										type="email"
 										autoComplete="email"
+										autoFocus
 										placeholder="Enter your email address"
 										value={email}
 										onChange={(e) => setEmail(e.target.value)}
