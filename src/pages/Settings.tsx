@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router";
 import { CardMain } from "../components/base/CardMain";
 import { Title } from "../components/base/Title";
 import { usePageBreadcrumb } from "../hooks/usePageBreadcrumb";
@@ -16,19 +16,41 @@ const TAB_KEYS = {
 
 type TabKey = (typeof TAB_KEYS)[keyof typeof TAB_KEYS];
 
+const VALID_TABS = new Set<string>(Object.values(TAB_KEYS));
+
 const tabLabel = (text: string) => (
 	<span className="text-xs font-semibold uppercase tracking-wide">{text}</span>
 );
 
+function resolveTab(raw: string | null): TabKey {
+	if (raw && VALID_TABS.has(raw)) return raw as TabKey;
+	return TAB_KEYS.users;
+}
+
 export const Settings = () => {
-	const [activeTab, setActiveTab] = useState<TabKey>(TAB_KEYS.groups);
-	const [search, setSearch] = useState("");
+	const [searchParams, setSearchParams] = useSearchParams();
+	const activeTab = resolveTab(searchParams.get("tab"));
+	const search = searchParams.get("q") ?? "";
 
 	usePageBreadcrumb([crumb("Settings", "/settings")]);
 
-	useEffect(() => {
-		setSearch("");
-	}, [activeTab]);
+	const handleTabChange = (key: string) => {
+		setSearchParams((prev) => {
+			const next = new URLSearchParams(prev);
+			next.set("tab", key);
+			next.delete("q");
+			return next;
+		}, { replace: true });
+	};
+
+	const handleSearchChange = (value: string) => {
+		setSearchParams((prev) => {
+			const next = new URLSearchParams(prev);
+			if (value) next.set("q", value);
+			else next.delete("q");
+			return next;
+		}, { replace: true });
+	};
 
 	return (
 		<CardMain className="flex flex-col gap-5">
@@ -39,7 +61,7 @@ export const Settings = () => {
 					variant="underline"
 					size="sm"
 					activeKey={activeTab}
-					onChange={(k) => setActiveTab(k as TabKey)}
+					onChange={handleTabChange}
 					underlineActiveClassName="text-primary-600 dark:text-primary-300"
 					underlineIndicatorClassName="bg-primary-500 dark:bg-primary-400"
 					className="min-w-max"
@@ -51,9 +73,9 @@ export const Settings = () => {
 				/>
 			</div>
 
-			{activeTab === TAB_KEYS.users && <Users search={search} onSearchChange={setSearch} />}
-			{activeTab === TAB_KEYS.groups && <Groups search={search} onSearchChange={setSearch} />}
-			{activeTab === TAB_KEYS.teams && <Teams search={search} onSearchChange={setSearch} />}
+			{activeTab === TAB_KEYS.users && <Users search={search} onSearchChange={handleSearchChange} />}
+			{activeTab === TAB_KEYS.groups && <Groups search={search} onSearchChange={handleSearchChange} />}
+			{activeTab === TAB_KEYS.teams && <Teams search={search} onSearchChange={handleSearchChange} />}
 		</CardMain>
 	);
 };

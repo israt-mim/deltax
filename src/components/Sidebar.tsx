@@ -6,6 +6,7 @@ import { NavLink } from 'react-router-dom';
 import { EXPANDED_SIDEBAR_WIDTH, SIDEBAR_WIDTH } from '../constants/global';
 import { motion } from "framer-motion";
 import { AgreementSidebarNavRow } from './AgreementSidebarNavRow';
+import { useAuth } from '../auth/AuthContext';
 
 const SidebarItemsBeforeAgreement = [
   { icon: <HomeOutlinedIcon sx={{ fontSize: 20 }} />, label: 'Dashboard', href: '/' },
@@ -14,7 +15,6 @@ const SidebarItemsBeforeAgreement = [
 const SidebarItemsAfterAgreement = [
   { icon: <AcUnitOutlinedIcon sx={{ fontSize: 20 }} />, label: 'Clause', href: '/clauses' },
   { icon: <SettingsOutlinedIcon sx={{ fontSize: 20 }} />, label: 'Configure', href: '/configure' },
-  { icon: <AdminPanelSettingsOutlined sx={{ fontSize: 20 }} />, label: 'Settings', href: '/settings' },
 ];
 
 interface SidebarProps {
@@ -22,6 +22,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ expanded }: SidebarProps) {
+  const { user } = useAuth();
   return (
     <motion.aside
       className={`fixed top-11 left-0 bottom-0 flex flex-col bg-primary-500 border-r z-[90] overflow-hidden border-none`}
@@ -72,6 +73,22 @@ export default function Sidebar({ expanded }: SidebarProps) {
             {expanded && <span className="whitespace-nowrap text-sm">{item.label}</span>}
           </NavLink>
         ))}
+        {user?.isAdmin && (
+          <NavLink
+            to="/settings"
+            title={!expanded ? 'Settings' : undefined}
+            className={({ isActive }) =>
+              `flex items-center gap-3 no-underline rounded transition-colors ${expanded ? 'py-1.5 px-2' : 'justify-center py-1.5 px-2'} ${
+                isActive ? 'text-white bg-white/20' : 'text-white/70 hover:text-white hover:bg-white/20'
+              }`
+            }
+          >
+            <span className="flex items-center justify-center shrink-0">
+              <AdminPanelSettingsOutlined sx={{ fontSize: 20 }} />
+            </span>
+            {expanded && <span className="whitespace-nowrap text-sm">Settings</span>}
+          </NavLink>
+        )}
       </nav>
     </motion.aside>
   )

@@ -11,6 +11,7 @@ export interface AuthUser {
 	profilePictureUrl?: string | null;
 	group?: unknown;
 	teams?: unknown[];
+	isAdmin?: boolean;
 	mustChangePassword?: boolean;
 	createdAt?: string;
 	updatedAt?: string;

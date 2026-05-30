@@ -144,3 +144,14 @@ export function RequirePasswordResetComplete() {
 
 	return <Outlet />;
 }
+
+/** Blocks routes that require admin access; non-admins are redirected to home. */
+export function RequireAdmin() {
+	const { user } = useAuth();
+
+	if (!user?.isAdmin) {
+		return <Navigate to="/" replace />;
+	}
+
+	return <Outlet />;
+}

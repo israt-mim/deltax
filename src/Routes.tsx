@@ -1,5 +1,5 @@
 import { Route, Routes as ReactRoutes } from "react-router";
-import { RequireAuth, RequirePasswordResetComplete } from "./auth/AuthContext";
+import { RequireAuth, RequireAdmin, RequirePasswordResetComplete } from "./auth/AuthContext";
 import { AppLayout } from "./layouts/AppLayout";
 import { Home, Configure, Settings, ProfilePage, AgreementConfiguration, FieldConfiguration } from "./pages/index";
 import CreateFieldConfiguration from "./pages/CreateFieldConfiguration";
@@ -49,7 +49,9 @@ export const Routes = () => {
 						<Route path="/clauses" element={<ClausesPage />} />
 						<Route path="/clauses/:id" element={<ClauseDetailPage />} />
 						<Route path="/profile" element={<ProfilePage />} />
-						<Route path="/settings" element={<Settings />} />
+						<Route element={<RequireAdmin />}>
+							<Route path="/settings" element={<Settings />} />
+						</Route>
 						<Route path="/editor" element={<DocEditorPage />} />
 					</Route>
 				</Route>
