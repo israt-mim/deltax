@@ -26,6 +26,7 @@ import { useDebouncedValue } from "../lib/useDebouncedValue";
 import { usePageBreadcrumb } from "../hooks/usePageBreadcrumb";
 import { crumb } from "../lib/breadcrumb";
 import { SearchInput } from "../components/form-input/SearchInput";
+import { createStickyActionsColumn } from "../components/modules/settings/stickyActionsColumn";
 
 const fieldColumnConfigs: ColumnConfig<FieldRow>[] = [
 	{
@@ -200,17 +201,9 @@ export const FieldConfiguration = () => {
 	const isLoadingMore = listQuery.isFetchingNextPage;
 	const hasMore = Boolean(listQuery.hasNextPage);
 	const actionsColumn = useMemo(
-		() => ({
-			id: "actions",
-			header: "",
-			size: 44,
-			minSize: 44,
-			maxSize: 44,
-			enableResizing: false,
-			cell: ({ row }: { row: { original: FieldRow } }) => (
-				<FieldRowMenu field={row.original} onDeleteRequest={requestDeleteField} />
-			),
-		}),
+		() => createStickyActionsColumn<FieldRow>(
+			({ row }) => <FieldRowMenu field={row.original} onDeleteRequest={requestDeleteField} />
+		),
 		[requestDeleteField]
 	);
 

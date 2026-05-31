@@ -1,6 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import cn from "classnames";
-import { TABLE_EMPTY_CELL_CLASS, TABLE_SHELL_CLASS } from "../../constants/global";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Dropdown } from "antd";
 import type { MenuProps } from "antd";
 import { toast } from "react-toastify";
@@ -8,12 +6,15 @@ import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import MoreVertOutlinedIcon from "@mui/icons-material/MoreVertOutlined";
-import { useDeleteAgreementLineItemMutation, type AgreementStepDetailsData } from "../../api";
+import type { ColumnDef } from "@tanstack/react-table";
+import { useDeleteAgreementLineItemMutation, type AgreementStepDetailsData, type AgreementLineItemsTableRow } from "../../api";
 import { Button } from "../../components/base/Button";
 import { ConfirmModal } from "../../components/base/ConfirmModal";
 import { FloatingBar } from "../../components/base/FloatingBar";
-import { SearchInput } from "../../components/form-input/SearchInput";
+import { InfiniteTable } from "../../components/base/InfiniteTable";
 import { Skeleton } from "../../components/base/Skeleton";
+import { SearchInput } from "../../components/form-input/SearchInput";
+import { createStickyActionsColumn } from "../../components/modules/settings/stickyActionsColumn";
 import { formatUserFacingError } from "../../lib/formatUserFacingError";
 import {
 	displayLineItemCell,
@@ -24,11 +25,7 @@ import {
 } from "./agreementLineItemsUtils";
 import type { AgreementLineItemsTableColumn } from "../../api";
 
-const LINE_ITEM_TABLE_SKELETON_ROWS = 6;
 const LINE_ITEM_FALLBACK_COLUMN_COUNT = 4;
-const LINE_ITEM_TR_CLASS =
-	"border-b border-neutral-100 bg-white dark:border-black-600 dark:bg-black-800";
-const LINE_ITEM_TD_CLASS = "px-4 py-2.5 align-middle";
 
 const LOADING_PLACEHOLDER_COLUMNS: AgreementLineItemsTableColumn[] = Array.from(
 	{ length: LINE_ITEM_FALLBACK_COLUMN_COUNT },
@@ -111,7 +108,6 @@ export function AgreementLineItemsStepPanel({
 	const [checkedIds, setCheckedIds] = useState<Set<string>>(() => new Set());
 	const [deletePendingIds, setDeletePendingIds] = useState<string[] | null>(null);
 	const [isDeleting, setIsDeleting] = useState(false);
-	const selectAllRef = useRef<HTMLInputElement>(null);
 
 	const showSelection = !readOnly;
 	const showActions = !readOnly;
@@ -124,21 +120,6 @@ export function AgreementLineItemsStepPanel({
 		return filterLineItemTableRows(allRows, columns, details, tableSearch);
 	}, [allRows, columns, details, tableSearch]);
 
-	const filteredSelectableIds = useMemo(
-		() => filteredRows.map((r) => r.id).filter(isSelectableLineItemRowId),
-		[filteredRows]
-	);
-
-	const allFilteredSelected =
-		filteredSelectableIds.length > 0 && filteredSelectableIds.every((id) => checkedIds.has(id));
-	const someFilteredSelected = filteredSelectableIds.some((id) => checkedIds.has(id));
-
-	useEffect(() => {
-		const el = selectAllRef.current;
-		if (!el) return;
-		el.indeterminate = someFilteredSelected && !allFilteredSelected;
-	}, [someFilteredSelected, allFilteredSelected]);
-
 	useEffect(() => {
 		const valid = new Set(allRows.map((r) => r.id).filter(isSelectableLineItemRowId));
 		setCheckedIds((prev) => {
@@ -149,19 +130,6 @@ export function AgreementLineItemsStepPanel({
 			return next.size === prev.size && [...prev].every((id) => next.has(id)) ? prev : next;
 		});
 	}, [allRows]);
-
-	const toggleSelectAllFiltered = useCallback(() => {
-		setCheckedIds((prev) => {
-			if (allFilteredSelected) {
-				const next = new Set(prev);
-				for (const id of filteredSelectableIds) next.delete(id);
-				return next;
-			}
-			const next = new Set(prev);
-			for (const id of filteredSelectableIds) next.add(id);
-			return next;
-		});
-	}, [allFilteredSelected, filteredSelectableIds]);
 
 	const clearSelection = useCallback(() => {
 		setCheckedIds(new Set());
@@ -206,12 +174,71 @@ export function AgreementLineItemsStepPanel({
 		}
 	}, [agreementId, deleteMutation, deletePendingIds, onRefresh]);
 
+	const columnDefs = useMemo<ColumnDef<AgreementLineItemsTableRow, unknown>[]>(() => {
+		const cols = columns.length > 0 ? columns : LOADING_PLACEHOLDER_COLUMNS;
+		return cols.map((c) => ({
+			id: c.fieldId,
+			header: columns.length === 0
+				? () => <Skeleton className="h-3 w-20" />
+				: (c.label ?? c.fieldId).trim() || c.fieldId,
+			size: c.width ?? 180,
+			minSize: 80,
+			enableResizing: true,
+			cell: ({ row }: { row: { original: AgreementLineItemsTableRow } }) => {
+				if (columns.length === 0) return null;
+				const f = findFieldDefById(details, c.fieldId);
+				const shown = displayLineItemCell(f, row.original.cells[c.fieldId]);
+				return (
+					<span className="block max-w-[220px] truncate" title={shown}>
+						{shown}
+					</span>
+				);
+			},
+		}));
+	}, [columns, details]);
+
+	const actionsColumn = useMemo(
+		() =>
+			createStickyActionsColumn<AgreementLineItemsTableRow>(({ row }) => {
+				if (!isSelectableLineItemRowId(row.original.id)) return null;
+				const rowLabel = columns
+					.map((c) =>
+						displayLineItemCell(findFieldDefById(details, c.fieldId), row.original.cells[c.fieldId])
+					)
+					.filter((v) => v !== "—")
+					.join(", ");
+				return (
+					<LineItemRowMenu
+						rowLabel={rowLabel || undefined}
+						onEdit={() => onRowClick(row.original.id)}
+						onDeleteRequest={() => setDeletePendingIds([row.original.id])}
+					/>
+				);
+			}),
+		[columns, details, onRowClick]
+	);
+
+	const allColumns = useMemo(
+		() => [...columnDefs, ...(showActions ? [actionsColumn] : [])],
+		[columnDefs, showActions, actionsColumn]
+	);
+
+	const checkboxCfg = useMemo(
+		() =>
+			showSelection
+				? {
+						getRowId: (row: AgreementLineItemsTableRow) => row.id,
+						checkedIds,
+						setCheckedIds,
+						isRowSelectable: (row: AgreementLineItemsTableRow) =>
+							isSelectableLineItemRowId(row.id),
+					}
+				: undefined,
+		[showSelection, checkedIds]
+	);
+
 	const hasLayout = Boolean(details?.sections?.length && columns.length > 0);
-	const extraCols = (showSelection ? 1 : 0) + (showActions ? 1 : 0);
-	const showNoSearchResults = !loading && !errorMessage && allRows.length > 0 && filteredRows.length === 0;
-	const headerColumns = columns.length > 0 ? columns : LOADING_PLACEHOLDER_COLUMNS;
-	const headerColCount = headerColumns.length + extraCols;
-	const usePlaceholderHeaders = loading && columns.length === 0;
+	const isInitialLoading = loading && !details;
 
 	return (
 		<div className="flex flex-col gap-4">
@@ -248,188 +275,23 @@ export function AgreementLineItemsStepPanel({
 					No line item fields are configured for this agreement. Update the agreement configuration to add
 					columns here.
 				</p>
+			) : errorMessage ? (
+				<p className="text-sm text-error-600 dark:text-error-400">{errorMessage}</p>
 			) : (
-				<div className={TABLE_SHELL_CLASS}>
-					<table className="w-full min-w-[640px] border-collapse text-left text-sm">
-						<thead className="bg-neutral-50 dark:bg-black-800">
-							<tr className="border-b border-neutral-200 dark:border-black-600">
-								{showSelection ? (
-									<th className="w-12 px-3 py-2.5">
-										{!loading && filteredSelectableIds.length > 0 ? (
-											<input
-												ref={selectAllRef}
-												type="checkbox"
-												checked={allFilteredSelected}
-												onChange={() => toggleSelectAllFiltered()}
-												className="theme-checkbox"
-												aria-label="Select all line items in this list"
-											/>
-										) : null}
-									</th>
-								) : null}
-								{headerColumns.map((c) => (
-									<th
-										key={c.fieldId}
-										className="px-4 py-2.5 text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400"
-									>
-										{usePlaceholderHeaders ? (
-											<Skeleton className="h-3 w-20" />
-										) : (
-											(c.label ?? c.fieldId).trim() || c.fieldId
-										)}
-									</th>
-								))}
-								{showActions ? (
-									<th className="w-12 px-3 py-2.5 text-right text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-										<span className="sr-only">Actions</span>
-									</th>
-								) : null}
-							</tr>
-						</thead>
-						<tbody>
-							{loading ? (
-								Array.from({ length: LINE_ITEM_TABLE_SKELETON_ROWS }).map((_, ri) => (
-									<tr key={`sk-${ri}`} className={LINE_ITEM_TR_CLASS} aria-hidden>
-										{showSelection ? (
-											<td className="px-3 py-2.5">
-												<Skeleton className="h-4 w-4" />
-											</td>
-										) : null}
-										{headerColumns.map((c) => (
-											<td key={c.fieldId} className={LINE_ITEM_TD_CLASS}>
-												<Skeleton className="h-4 w-[85%] max-w-[160px]" />
-											</td>
-										))}
-										{showActions ? (
-											<td className="px-3 py-2.5">
-												<Skeleton className="ml-auto h-4 w-4" />
-											</td>
-										) : null}
-									</tr>
-								))
-							) : errorMessage ? (
-								<tr className={LINE_ITEM_TR_CLASS}>
-									<td
-										colSpan={headerColCount}
-										className={cn(TABLE_EMPTY_CELL_CLASS, "text-sm text-error-600 dark:text-error-400")}
-									>
-										{errorMessage}
-									</td>
-								</tr>
-							) : allRows.length === 0 ? (
-								<tr className={LINE_ITEM_TR_CLASS}>
-									<td
-										colSpan={headerColCount}
-										className={cn(TABLE_EMPTY_CELL_CLASS, "text-sm text-neutral-500 dark:text-neutral-400")}
-									>
-										No line items yet. Use New Line Item to add one.
-									</td>
-								</tr>
-							) : showNoSearchResults ? (
-								<tr className={LINE_ITEM_TR_CLASS}>
-									<td
-										colSpan={headerColCount}
-										className={cn(TABLE_EMPTY_CELL_CLASS, "text-sm text-neutral-500 dark:text-neutral-400")}
-									>
-										No line items match your search.
-									</td>
-								</tr>
-							) : (
-								filteredRows.map((row) => {
-								const selectable = isSelectableLineItemRowId(row.id);
-								const rowLabel = columns
-									.map((c) =>
-										displayLineItemCell(
-											findFieldDefById(details, c.fieldId),
-											row.cells[c.fieldId]
-										)
-									)
-									.filter((v) => v !== "—")
-									.join(", ");
-								return (
-									<tr
-										key={row.id}
-										role={readOnly ? undefined : "button"}
-										tabIndex={readOnly ? undefined : 0}
-										className={
-											readOnly
-												? "border-b border-neutral-100 bg-white dark:border-black-600 dark:bg-black-800"
-												: "cursor-pointer border-b border-neutral-100 bg-white hover:bg-neutral-50 dark:border-black-600 dark:bg-black-800 dark:hover:bg-black-700/50"
-										}
-										onClick={readOnly ? undefined : () => onRowClick(row.id)}
-										onKeyDown={
-											readOnly
-												? undefined
-												: (e) => {
-														if (e.key === "Enter" || e.key === " ") {
-															e.preventDefault();
-															onRowClick(row.id);
-														}
-													}
-										}
-									>
-										{showSelection ? (
-											<td
-												className="px-3 py-2.5 align-middle"
-												onClick={(e) => e.stopPropagation()}
-												onKeyDown={(e) => e.stopPropagation()}
-											>
-												{selectable ? (
-													<input
-														type="checkbox"
-														checked={checkedIds.has(row.id)}
-														onChange={() => {
-															setCheckedIds((prev) => {
-																const next = new Set(prev);
-																if (next.has(row.id)) next.delete(row.id);
-																else next.add(row.id);
-																return next;
-															});
-														}}
-														className="theme-checkbox"
-														aria-label={`Select line item${rowLabel ? `: ${rowLabel}` : ""}`}
-													/>
-												) : (
-													<span className="inline-block w-4" aria-hidden />
-												)}
-											</td>
-										) : null}
-										{columns.map((c) => {
-											const f = findFieldDefById(details, c.fieldId);
-											const cellVal = row.cells[c.fieldId];
-											const shown = displayLineItemCell(f, cellVal);
-											return (
-												<td
-													key={c.fieldId}
-													className="max-w-[220px] truncate px-4 py-2.5 text-neutral-800 dark:text-neutral-200"
-													title={shown}
-												>
-													{shown}
-												</td>
-											);
-										})}
-										{showActions ? (
-											<td
-												className="px-3 py-2.5 align-middle"
-												onClick={(e) => e.stopPropagation()}
-												onKeyDown={(e) => e.stopPropagation()}
-											>
-												{selectable ? (
-													<LineItemRowMenu
-														rowLabel={rowLabel || undefined}
-														onEdit={() => onRowClick(row.id)}
-														onDeleteRequest={() => setDeletePendingIds([row.id])}
-													/>
-												) : null}
-											</td>
-										) : null}
-									</tr>
-								);
-							})
-						)}
-						</tbody>
-					</table>
-				</div>
+				<InfiniteTable<AgreementLineItemsTableRow>
+					data={filteredRows}
+					columns={allColumns}
+					height="calc(100vh - 380px)"
+					hasMore={false}
+					isInitialLoading={isInitialLoading}
+					checkboxConfig={checkboxCfg}
+					onRowClick={readOnly ? undefined : (row) => onRowClick(row.id)}
+					emptyMessage={
+						allRows.length === 0
+							? "No line items yet. Use New Line Item to add one."
+							: "No line items match your search."
+					}
+				/>
 			)}
 
 			<ConfirmModal

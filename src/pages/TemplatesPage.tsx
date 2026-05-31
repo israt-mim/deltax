@@ -13,6 +13,7 @@ import { Card } from "../components/base/Card";
 import { Button } from "../components/base/Button";
 import { InfiniteTable } from "../components/base/InfiniteTable";
 import { ConfirmModal } from "../components/base/ConfirmModal";
+import { FloatingBar } from "../components/base/FloatingBar";
 import { SearchInput } from "../components/form-input/SearchInput";
 import { useColumns, type ColumnConfig } from "../hooks/useColumns";
 import { usePageBreadcrumb } from "../hooks/usePageBreadcrumb";
@@ -24,6 +25,7 @@ import { useDeleteTemplateMutation, useTemplatesInfiniteList } from "../api/hook
 import type { TemplateRow, TemplateUserRef } from "../api/services/templates";
 import { UserIdentity } from "../components/UserIdentity";
 import type { ApiUserRef } from "../lib/userDisplay";
+import { createStickyActionsColumn } from "../components/modules/settings/stickyActionsColumn";
 
 const templateColumnConfigs: ColumnConfig<TemplateRow>[] = [
 	{ key: "name", name: "Name", width: 200, minWidth: 140, sortable: true },
@@ -134,6 +136,7 @@ export function TemplatesPage() {
 	const debouncedSearch = useDebouncedValue(searchInput, 400);
 	const [pendingDelete, setPendingDelete] = useState<TemplateRow | null>(null);
 	const [newModalOpen, setNewModalOpen] = useState(false);
+	const [checkedIds, setCheckedIds] = useState<Set<string>>(() => new Set());
 	const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
 	const [sidebarWidth, setSidebarWidth] = useState(0);
 	const [editorFullscreen, setEditorFullscreen] = useState(false);
@@ -161,29 +164,45 @@ export function TemplatesPage() {
 		}
 	}, [listQuery.hasNextPage, listQuery.isFetchingNextPage, listQuery.fetchNextPage]);
 
+	const clearSelection = useCallback(() => setCheckedIds(new Set()), []);
+
 	const confirmDelete = useCallback(async () => {
 		if (!pendingDelete) return;
 		try {
 			await deleteMutation.mutateAsync(pendingDelete.id);
 			toast.success("Template deleted.");
+			setCheckedIds((prev) => {
+				const next = new Set(prev);
+				next.delete(pendingDelete.id);
+				return next;
+			});
 			setPendingDelete(null);
 		} catch (e) {
 			toast.error(formatUserFacingError(e, "Could not delete template."));
 		}
 	}, [deleteMutation, pendingDelete]);
 
+	const handleBulkDelete = useCallback(async () => {
+		const ids = [...checkedIds];
+		if (!ids.length) return;
+		let successCount = 0;
+		for (const id of ids) {
+			try {
+				await deleteMutation.mutateAsync(id);
+				successCount++;
+			} catch {
+				// continue deleting the rest
+			}
+		}
+		if (successCount > 0) toast.success(`${successCount} template${successCount !== 1 ? "s" : ""} deleted.`);
+		if (successCount < ids.length) toast.error(`${ids.length - successCount} template${ids.length - successCount !== 1 ? "s" : ""} could not be deleted.`);
+		clearSelection();
+	}, [checkedIds, deleteMutation, clearSelection]);
+
 	const actionsColumn = useMemo(
-		() => ({
-			id: "actions",
-			header: "",
-			size: 44,
-			minSize: 44,
-			maxSize: 44,
-			enableResizing: false,
-			cell: ({ row }: { row: { original: TemplateRow } }) => (
-				<TemplateRowMenu row={row.original} onDeleteRequest={setPendingDelete} />
-			),
-		}),
+		() => createStickyActionsColumn<TemplateRow>(
+			({ row }) => <TemplateRowMenu row={row.original} onDeleteRequest={setPendingDelete} />
+		),
 		[],
 	);
 
@@ -232,6 +251,13 @@ export function TemplatesPage() {
 						className="max-w-md"
 					/>
 
+					<FloatingBar
+						open={checkedIds.size > 0}
+						selectedCount={checkedIds.size}
+						onClearSelection={clearSelection}
+						onDelete={handleBulkDelete}
+					/>
+
 					<InfiniteTable
 						data={rows}
 						columns={[...columns, actionsColumn]}
@@ -241,6 +267,11 @@ export function TemplatesPage() {
 						isInitialLoading={isInitialLoading}
 						hasMore={Boolean(listQuery.hasNextPage)}
 						onRowClick={(row) => setSelectedTemplateId(row.id)}
+						checkboxConfig={{
+							getRowId: (row) => row.id,
+							checkedIds,
+							setCheckedIds,
+						}}
 					/>
 
 					<ConfirmModal

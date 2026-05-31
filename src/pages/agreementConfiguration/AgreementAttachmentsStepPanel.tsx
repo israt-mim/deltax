@@ -11,6 +11,7 @@ import InsertDriveFileOutlinedIcon from "@mui/icons-material/InsertDriveFileOutl
 import MoreVertOutlinedIcon from "@mui/icons-material/MoreVertOutlined";
 import { Dropdown } from "antd";
 import type { MenuProps } from "antd";
+import type { ColumnDef } from "@tanstack/react-table";
 import {
 	useAgreementAttachmentsQuery,
 	useCreateAgreementAttachmentFolderMutation,
@@ -20,16 +21,17 @@ import {
 } from "../../api";
 import { Button } from "../../components/base/Button";
 import { ConfirmModal } from "../../components/base/ConfirmModal";
+import { FloatingBar } from "../../components/base/FloatingBar";
+import { InfiniteTable } from "../../components/base/InfiniteTable";
 import { SearchInput } from "../../components/form-input/SearchInput";
 import { UserIdentity } from "../../components/UserIdentity";
-import { AgreementTeamsSkeleton } from "../../components/skeletons";
+import { createStickyActionsColumn } from "../../components/modules/settings/stickyActionsColumn";
 import { formatUserFacingError } from "../../lib/formatUserFacingError";
 import { formatUsDateTime } from "../../lib/formatDateTime";
 import {
 	canPreviewAttachment,
 	resolveAttachmentFileUrl,
 } from "../../lib/attachmentDocument";
-import { TABLE_EMPTY_CELL_CLASS, TABLE_SHELL_CLASS } from "../../constants/global";
 import { useDebouncedValue } from "../../lib/useDebouncedValue";
 import { AgreementAddAttachmentsModal } from "./AgreementAddAttachmentsModal";
 import { AgreementNewFolderModal } from "./AgreementNewFolderModal";
@@ -118,6 +120,7 @@ export function AgreementAttachmentsStepPanel({
 	const [folderModalOpen, setFolderModalOpen] = useState(false);
 	const [addModalOpen, setAddModalOpen] = useState(false);
 	const [pendingDelete, setPendingDelete] = useState<AgreementAttachment | null>(null);
+	const [checkedIds, setCheckedIds] = useState<Set<string>>(() => new Set());
 
 	useEffect(() => {
 		setFolderPath([]);
@@ -151,6 +154,25 @@ export function AgreementAttachmentsStepPanel({
 		const files = filtered.filter((a) => a.kind !== "folder");
 		return [...folders, ...files];
 	}, [filtered]);
+
+	useEffect(() => {
+		setCheckedIds(new Set());
+	}, [currentFolderId, agreementId]);
+
+	const handleBulkDelete = useCallback(async () => {
+		const ids = [...checkedIds];
+		let failed = 0;
+		for (const id of ids) {
+			try {
+				await deleteMutation.mutateAsync({ agreementId, attachmentId: id });
+			} catch {
+				failed++;
+			}
+		}
+		if (failed === 0) toast.success(`${ids.length} item${ids.length !== 1 ? "s" : ""} deleted.`);
+		else toast.error(`${failed} item${failed !== 1 ? "s" : ""} could not be deleted.`);
+		setCheckedIds(new Set());
+	}, [checkedIds, deleteMutation, agreementId]);
 
 	const navigateToFolder = useCallback(
 		(index: number) => {
@@ -243,7 +265,7 @@ export function AgreementAttachmentsStepPanel({
 		previewAttachmentId,
 	]);
 
-	const rowMenu = useCallback(
+	const rowMenuItems = useCallback(
 		(att: AgreementAttachment): MenuProps["items"] => {
 			const items: MenuProps["items"] = [];
 			if (att.kind === "file" && att.attachmentUrl) {
@@ -279,9 +301,122 @@ export function AgreementAttachmentsStepPanel({
 		[]
 	);
 
-	if (attachmentsQuery.isPending) {
-		return <AgreementTeamsSkeleton />;
-	}
+	const dataColumns = useMemo<ColumnDef<AgreementAttachment, unknown>[]>(
+		() => [
+			{
+				id: "name",
+				header: "Name",
+				size: 260,
+				minSize: 140,
+				cell: ({ row }) => {
+					const att = row.original;
+					return (
+						<div className="flex min-w-0 items-center gap-2">
+							{att.kind === "folder" ? (
+								<FolderOutlinedIcon
+									fontSize="small"
+									className={cn("shrink-0", fileIconClass("folder"))}
+								/>
+							) : (
+								<InsertDriveFileOutlinedIcon
+									fontSize="small"
+									className={cn("shrink-0", fileIconClass("file"))}
+								/>
+							)}
+							<span className="truncate font-medium">
+								{att.name?.trim() || att.originalFileName || "—"}
+							</span>
+						</div>
+					);
+				},
+			},
+			{
+				id: "createdAt",
+				header: "Created On",
+				size: 160,
+				minSize: 120,
+				cell: ({ row }) =>
+					row.original.createdAt ? formatUsDateTime(row.original.createdAt) : "—",
+			},
+			{
+				id: "createdBy",
+				header: "Created By",
+				size: 180,
+				minSize: 130,
+				cell: ({ row }) => <UserIdentity user={row.original.createdBy ?? null} />,
+			},
+			{
+				id: "modifiedBy",
+				header: "Modified By",
+				size: 180,
+				minSize: 130,
+				cell: ({ row }) => <UserIdentity user={row.original.modifiedBy ?? null} />,
+			},
+			{
+				id: "tags",
+				header: "Tags",
+				size: 160,
+				minSize: 100,
+				cell: ({ row }) => tagsLabel(row.original.tags),
+			},
+		],
+		[]
+	);
+
+	const actionsColumn = useMemo(
+		() =>
+			createStickyActionsColumn<AgreementAttachment>(({ row }) => {
+				const att = row.original;
+				const items = rowMenuItems(att);
+				if (!items || items.length === 0) return null;
+				return (
+					<Dropdown
+						menu={{ items, onClick: ({ key }) => handleRowMenuClick(att, key) }}
+						classNames={{ root: "actions-dropdown-icon" }}
+						trigger={["click"]}
+					>
+						<button
+							type="button"
+							className="inline-flex items-center justify-center rounded-md p-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-black-700"
+							aria-label="Actions"
+						>
+							<MoreVertOutlinedIcon fontSize="small" />
+						</button>
+					</Dropdown>
+				);
+			}),
+		[rowMenuItems, handleRowMenuClick]
+	);
+
+	const allColumns = useMemo(
+		() => [...dataColumns, actionsColumn],
+		[dataColumns, actionsColumn]
+	);
+
+	const checkboxCfg = useMemo(
+		() =>
+			readOnly
+				? undefined
+				: {
+						getRowId: (row: AgreementAttachment) => row.id,
+						checkedIds,
+						setCheckedIds,
+					},
+		[readOnly, checkedIds]
+	);
+
+	const getRowClassName = useCallback(
+		(att: AgreementAttachment): string => {
+			const isPreviewing = att.id === previewAttachmentId;
+			const isClickable = att.kind === "folder" || canPreviewAttachment(att);
+			if (isPreviewing) {
+				return "bg-primary-50/80 dark:bg-primary-950/30" + (isClickable ? " hover:bg-primary-100/60 dark:hover:bg-primary-900/40" : "");
+			}
+			if (isClickable) return "bg-white dark:bg-black-800 hover:bg-neutral-50 dark:hover:bg-black-700/60";
+			return "bg-white dark:bg-black-800";
+		},
+		[previewAttachmentId]
+	);
 
 	if (attachmentsQuery.isError) {
 		return (
@@ -334,108 +469,29 @@ export function AgreementAttachmentsStepPanel({
 				) : null}
 			</div>
 
-			<div className={cn(TABLE_SHELL_CLASS, "overflow-x-auto")}>
-				<table className="min-w-full text-left text-sm">
-					<thead className="bg-neutral-50 text-neutral-600 dark:bg-black-900 dark:text-neutral-300">
-						<tr>
-							<th className="px-4 py-3 font-medium">Name</th>
-							<th className="px-4 py-3 font-medium">Created On</th>
-							<th className="px-4 py-3 font-medium">Created By</th>
-							<th className="px-4 py-3 font-medium">Modified By</th>
-							<th className="px-4 py-3 font-medium">Tags</th>
-							<th className="w-12 px-4 py-3" />
-						</tr>
-					</thead>
-					<tbody className="divide-y divide-neutral-200 dark:divide-black-600">
-						{sorted.length === 0 ? (
-							<tr className="bg-white dark:bg-black-800">
-								<td
-									colSpan={6}
-									className={cn(TABLE_EMPTY_CELL_CLASS, "text-sm text-neutral-500 dark:text-neutral-400")}
-								>
-									{debouncedSearch.trim()
-										? "No attachments match your search."
-										: "No attachments yet. Create a folder or upload PDF files."}
-								</td>
-							</tr>
-						) : (
-							sorted.map((att) => {
-								const isPreviewing = previewAttachmentId === att.id;
-								const previewable = canPreviewAttachment(att);
-								return (
-									<tr
-										key={att.id}
-										className={cn(
-											"bg-white dark:bg-black-800",
-											(att.kind === "folder" || previewable) &&
-												"cursor-pointer hover:bg-neutral-50 dark:hover:bg-black-700/60",
-											isPreviewing && "bg-primary-50/80 dark:bg-primary-950/30"
-										)}
-										onClick={() => handleRowActivate(att)}
-									>
-										<td className="px-4 py-3 text-neutral-600 dark:text-neutral-300">
-											<div className="flex min-w-0 items-center gap-2">
-												{att.kind === "folder" ? (
-													<FolderOutlinedIcon
-														fontSize="small"
-														className={cn("shrink-0", fileIconClass("folder"))}
-													/>
-												) : (
-													<InsertDriveFileOutlinedIcon
-														fontSize="small"
-														className={cn("shrink-0", fileIconClass("file"))}
-													/>
-												)}
-												<span className="truncate font-medium">
-													{att.name?.trim() || att.originalFileName || "—"}
-												</span>
-											</div>
-										</td>
-										<td className="whitespace-nowrap px-4 py-3 text-neutral-600 dark:text-neutral-300">
-											{att.createdAt ? formatUsDateTime(att.createdAt) : "—"}
-										</td>
-										<td className="px-4 py-3 text-neutral-600 dark:text-neutral-300">
-											<UserIdentity user={att.createdBy ?? null} />
-										</td>
-										<td className="px-4 py-3 text-neutral-600 dark:text-neutral-300">
-											<UserIdentity user={att.modifiedBy ?? null} />
-										</td>
-										<td className="max-w-[160px] truncate px-4 py-3 text-neutral-600 dark:text-neutral-300">
-											{tagsLabel(att.tags)}
-										</td>
-										<td
-											className="px-4 py-3 text-right"
-											data-row-click-ignore
-											onClick={(e) => e.stopPropagation()}
-										>
-											<div className="flex justify-end">
-												{(rowMenu(att)?.length ?? 0) > 0 ? (
-													<Dropdown
-														menu={{
-															items: rowMenu(att),
-															onClick: ({ key }) => handleRowMenuClick(att, key),
-														}}
-														classNames={{ root: "actions-dropdown-icon" }}
-														trigger={["click"]}
-													>
-														<button
-															type="button"
-															className="inline-flex items-center justify-center rounded-md p-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-black-700"
-															aria-label="Actions"
-														>
-															<MoreVertOutlinedIcon fontSize="small" />
-														</button>
-													</Dropdown>
-												) : null}
-											</div>
-										</td>
-									</tr>
-								);
-							})
-						)}
-					</tbody>
-				</table>
-			</div>
+			<FloatingBar
+				open={checkedIds.size > 0}
+				selectedCount={checkedIds.size}
+				onClearSelection={() => setCheckedIds(new Set())}
+				onDelete={() => void handleBulkDelete()}
+				deletePending={deleteMutation.isPending}
+			/>
+
+			<InfiniteTable<AgreementAttachment>
+				data={sorted}
+				columns={allColumns}
+				height="calc(100vh - 380px)"
+				hasMore={false}
+				isInitialLoading={attachmentsQuery.isPending}
+				checkboxConfig={checkboxCfg}
+				onRowClick={(att) => handleRowActivate(att)}
+				getRowClassName={getRowClassName}
+				emptyMessage={
+					debouncedSearch.trim()
+						? "No attachments match your search."
+						: "No attachments yet. Create a folder or upload PDF files."
+				}
+			/>
 
 			<AgreementNewFolderModal
 				open={folderModalOpen}
@@ -462,8 +518,8 @@ export function AgreementAttachmentsStepPanel({
 			>
 				<p className="mb-0 text-neutral-700 dark:text-neutral-300">
 					{pendingDelete?.kind === "folder"
-						? `Delete folder “${pendingDelete.name}” and everything inside it?`
-						: `Delete “${pendingDelete?.name?.trim() || pendingDelete?.originalFileName || "this file"}”?`}
+						? `Delete folder "${pendingDelete.name}" and everything inside it?`
+						: `Delete "${pendingDelete?.name?.trim() || pendingDelete?.originalFileName || "this file"}"?`}
 				</p>
 			</ConfirmModal>
 		</div>

@@ -55,6 +55,11 @@ export interface InfiniteTableProps<TData> {
 	onRowClick?: (row: TData, event: ReactMouseEvent<HTMLTableRowElement>) => void;
 	/** Optional empty-state text rendered inside table body when there are no rows. */
 	emptyMessage?: string;
+	/**
+	 * Optional per-row className. Return value replaces the default bg/hover background classes.
+	 * Return null/undefined to use default row styling.
+	 */
+	getRowClassName?: (row: TData) => string | null | undefined;
 }
 
 function getStickyMeta(col: { columnDef: { meta?: unknown } }): StickyColumnMeta | null {
@@ -85,6 +90,8 @@ export interface InfiniteTableCheckboxConfig<TData> {
 	getRowId: (row: TData) => string;
 	checkedIds: ReadonlySet<string> | readonly string[];
 	setCheckedIds: (ids: Set<string>) => void;
+	/** If provided, only rows returning `true` receive a checkbox. Select-all respects this filter. */
+	isRowSelectable?: (row: TData) => boolean;
 }
 
 function SelectAllCheckboxHeader<TData>({
@@ -92,14 +99,19 @@ function SelectAllCheckboxHeader<TData>({
 	getRowId,
 	checkedIds,
 	setCheckedIds,
+	isRowSelectable,
 }: {
 	data: TData[];
 	getRowId: (row: TData) => string;
 	checkedIds: ReadonlySet<string> | readonly string[];
 	setCheckedIds: (ids: Set<string>) => void;
+	isRowSelectable?: (row: TData) => boolean;
 }) {
 	const inputRef = useRef<HTMLInputElement>(null);
-	const rowIds = useMemo(() => data.map(getRowId), [data, getRowId]);
+	const rowIds = useMemo(() => {
+		const rows = isRowSelectable ? data.filter(isRowSelectable) : data;
+		return rows.map(getRowId);
+	}, [data, getRowId, isRowSelectable]);
 	const allChecked = rowIds.length > 0 && rowIds.every((id) => idsHas(checkedIds, id));
 	const someChecked = rowIds.some((id) => idsHas(checkedIds, id));
 	const indeterminate = someChecked && !allChecked;
@@ -148,6 +160,7 @@ export function InfiniteTable<TData>({
 	checkboxConfig,
 	onRowClick,
 	emptyMessage,
+	getRowClassName,
 }: InfiniteTableProps<TData>) {
 	const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -166,7 +179,7 @@ export function InfiniteTable<TData>({
 
 	const checkboxColumn: ColumnDef<TData, unknown> | null = useMemo(() => {
 		if (!checkboxConfig) return null;
-		const { getRowId, checkedIds, setCheckedIds } = checkboxConfig;
+		const { getRowId, checkedIds, setCheckedIds, isRowSelectable } = checkboxConfig;
 		const stickyMeta: StickyColumnMeta = {
 			isSticky: true,
 			stickyRight: 0,
@@ -187,25 +200,31 @@ export function InfiniteTable<TData>({
 					getRowId={getRowId}
 					checkedIds={checkedIds}
 					setCheckedIds={setCheckedIds}
+					isRowSelectable={isRowSelectable}
 				/>
 			),
-			cell: ({ row }) => (
-				<div data-row-click-ignore className="flex w-full min-w-0 items-center justify-center">
-					<input
-						type="checkbox"
-						className="infinite-table-checkbox"
-						checked={idsHas(checkedIds, getRowId(row.original))}
-						onChange={() => {
-							const id = getRowId(row.original);
-							const next = toIdSet(checkedIds);
-							if (next.has(id)) next.delete(id);
-							else next.add(id);
-							setCheckedIds(next);
-						}}
-						aria-label={`Select row ${getRowId(row.original)}`}
-					/>
-				</div>
-			),
+			cell: ({ row }) => {
+				if (isRowSelectable && !isRowSelectable(row.original)) {
+					return <div className="flex w-full min-w-0 items-center justify-center"><span className="inline-block h-4 w-4" /></div>;
+				}
+				return (
+					<div data-row-click-ignore className="flex w-full min-w-0 items-center justify-center">
+						<input
+							type="checkbox"
+							className="infinite-table-checkbox"
+							checked={idsHas(checkedIds, getRowId(row.original))}
+							onChange={() => {
+								const id = getRowId(row.original);
+								const next = toIdSet(checkedIds);
+								if (next.has(id)) next.delete(id);
+								else next.add(id);
+								setCheckedIds(next);
+							}}
+							aria-label={`Select row ${getRowId(row.original)}`}
+						/>
+					</div>
+				);
+			},
 		};
 	}, [checkboxConfig, data]);
 
@@ -475,12 +494,14 @@ export function InfiniteTable<TData>({
 										);
 									}
 									const row = rows[virtualRow.index];
+									const customCls = getRowClassName ? getRowClassName(row.original) : null;
 									return (
 										<tr
 											key={row.id}
 											className={cn(
-												"group bg-white dark:bg-black-800 hover:bg-neutral-50 dark:hover:bg-black-700 transition-colors",
-												onRowClick && "cursor-pointer"
+												"group transition-colors",
+												onRowClick && "cursor-pointer",
+												customCls ?? "bg-white dark:bg-black-800 hover:bg-neutral-50 dark:hover:bg-black-700"
 											)}
 											style={{ height: rowHeight }}
 											onClick={onRowClick ? (e) => handleRowClick(row.original, e) : undefined}

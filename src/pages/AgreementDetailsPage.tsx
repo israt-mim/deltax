@@ -15,6 +15,9 @@ import FullscreenOutlinedIcon from "@mui/icons-material/FullscreenOutlined";
 import MoreVertOutlinedIcon from "@mui/icons-material/MoreVertOutlined";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import { Button } from "../components/base/Button";
+import { ConfirmModal } from "../components/base/ConfirmModal";
+import { FloatingBar } from "../components/base/FloatingBar";
+import { createStickyActionsColumn } from "../components/modules/settings/stickyActionsColumn";
 import {
 	agreementStepDetailsOfQuery,
 	agreementStepEditorHideWizardNav,
@@ -66,9 +69,11 @@ import {
 	canPreviewAttachment,
 } from "../lib/attachmentDocument";
 import type { AgreementAttachment } from "../api";
-import { useTemplatesInfiniteList } from "../api/hooks/templates";
+import { useDeleteTemplateMutation, useTemplatesInfiniteList } from "../api/hooks/templates";
 import type { TemplateRow } from "../api/services/templates";
 import { TemplateEditorSidebar, type TemplateEditorSidebarHandle } from "./templates/TemplateEditorSidebar";
+import { InfiniteTable } from "../components/base/InfiniteTable";
+import type { ColumnDef } from "@tanstack/react-table";
 import { NewTemplateModal } from "./templates/NewTemplateModal";
 import type { LockedCdts } from "./templates/NewTemplateModal";
 import { UserIdentity } from "../components/UserIdentity";
@@ -144,6 +149,54 @@ const AGREEMENT_STATUS_BADGE_COLORS: Record<string, string> = {
 	Pending: "bg-primary-100 text-primary-700 dark:bg-primary-900/80 dark:text-primary-200",
 };
 
+const AUTHORING_SIDEBAR_COLUMNS: ColumnDef<TemplateRow, unknown>[] = [
+	{
+		id: "name",
+		header: "Name",
+		size: 200,
+		minSize: 120,
+		cell: ({ row }) => (
+			<span className="block truncate font-medium text-neutral-900 dark:text-neutral-100">
+				{row.original.name}
+			</span>
+		),
+	},
+	{
+		id: "description",
+		header: "Description",
+		size: 180,
+		minSize: 100,
+		cell: ({ row }) => (
+			<span className="block max-w-[180px] truncate text-neutral-500 dark:text-neutral-400">
+				{row.original.description || "—"}
+			</span>
+		),
+	},
+	{
+		id: "createdBy",
+		header: "Created By",
+		size: 150,
+		minSize: 100,
+		cell: ({ row }) => (
+			<UserIdentity
+				user={row.original.createdBy as TemplateUserRef | null as ApiUserRef | null}
+				size="sm"
+			/>
+		),
+	},
+	{
+		id: "createdAt",
+		header: "Created On",
+		size: 150,
+		minSize: 110,
+		cell: ({ row }) => (
+			<span className="text-neutral-500 dark:text-neutral-400">
+				{formatUsDateTime(row.original.createdAt)}
+			</span>
+		),
+	},
+];
+
 function AuthoringSidebarHeader({
 	fullscreen,
 	onFullscreenToggle,
@@ -189,6 +242,92 @@ function AuthoringSidebarBody({
 	onNewDocument: () => void;
 	onSelectTemplate: (id: string) => void;
 }) {
+	const deleteTemplateMutation = useDeleteTemplateMutation();
+	const [checkedIds, setCheckedIds] = useState<Set<string>>(() => new Set());
+	const [pendingDelete, setPendingDelete] = useState<TemplateRow | null>(null);
+
+	const clearSelection = useCallback(() => setCheckedIds(new Set()), []);
+
+	const handleBulkDelete = useCallback(async () => {
+		const ids = [...checkedIds];
+		let failed = 0;
+		for (const id of ids) {
+			try {
+				await deleteTemplateMutation.mutateAsync(id);
+			} catch {
+				failed++;
+			}
+		}
+		if (failed === 0) toast.success(`${ids.length} document${ids.length !== 1 ? "s" : ""} deleted.`);
+		else toast.error(`${failed} document${failed !== 1 ? "s" : ""} could not be deleted.`);
+		clearSelection();
+	}, [checkedIds, deleteTemplateMutation, clearSelection]);
+
+	const handleConfirmDelete = useCallback(async () => {
+		if (!pendingDelete) return;
+		try {
+			await deleteTemplateMutation.mutateAsync(pendingDelete.id);
+			toast.success("Document deleted.");
+			setCheckedIds((prev) => {
+				const next = new Set(prev);
+				next.delete(pendingDelete.id);
+				return next;
+			});
+			setPendingDelete(null);
+		} catch (e) {
+			toast.error(formatUserFacingError(e, "Could not delete document."));
+		}
+	}, [deleteTemplateMutation, pendingDelete]);
+
+	const actionsColumn = useMemo(
+		() =>
+			createStickyActionsColumn<TemplateRow>(({ row }) => {
+				const items: import("antd").MenuProps["items"] = [
+					{
+						key: "open",
+						icon: <DescriptionOutlinedIcon sx={{ fontSize: 18 }} />,
+						label: "Open",
+					},
+					{
+						key: "delete",
+						icon: <DeleteOutlineOutlinedIcon sx={{ fontSize: 18 }} />,
+						label: "Delete",
+						danger: true,
+					},
+				];
+				return (
+					<div
+						className="flex items-center justify-center"
+						data-row-click-ignore
+						onClick={(e) => e.stopPropagation()}
+					>
+						<Dropdown
+							trigger={["click"]}
+							classNames={{ root: "actions-dropdown-icon" }}
+							menu={{
+								items,
+								onClick: ({ key, domEvent }) => {
+									domEvent.preventDefault();
+									domEvent.stopPropagation();
+									if (key === "open") onSelectTemplate(row.original.id);
+									if (key === "delete") setPendingDelete(row.original);
+								},
+							}}
+						>
+							<button
+								type="button"
+								aria-label="Document actions"
+								className="flex rounded-md p-1.5 text-neutral-400 transition-colors hover:bg-neutral-100 dark:hover:bg-black-600"
+							>
+								<MoreVertOutlinedIcon sx={{ fontSize: 18 }} />
+							</button>
+						</Dropdown>
+					</div>
+				);
+			}),
+		[onSelectTemplate]
+	);
+
 	if (loading) {
 		return (
 			<div className="flex flex-1 items-center justify-center text-sm text-neutral-400">
@@ -217,8 +356,8 @@ function AuthoringSidebarBody({
 	}
 
 	return (
-		<div className="flex flex-1 flex-col overflow-hidden">
-			<div className="flex shrink-0 items-center justify-between px-4 py-3">
+		<div className="flex flex-1 flex-col gap-3 overflow-hidden p-4">
+			<div className="flex shrink-0 items-center justify-between">
 				<span className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
 					{rows.length} document{rows.length !== 1 ? "s" : ""}
 				</span>
@@ -232,35 +371,45 @@ function AuthoringSidebarBody({
 					New Document
 				</Button>
 			</div>
-			<div className="flex-1 overflow-y-auto">
-				<table className="w-full text-sm">
-					<thead className="sticky top-0 bg-white dark:bg-black-800">
-						<tr className="border-b border-neutral-200 dark:border-black-600">
-							{["Name", "Description", "Created By", "Created On"].map((col) => (
-								<th key={col} className="whitespace-nowrap px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-									{col}
-								</th>
-							))}
-						</tr>
-					</thead>
-					<tbody>
-						{rows.map((row: TemplateRow) => (
-							<tr
-								key={row.id}
-								onClick={() => onSelectTemplate(row.id)}
-								className="cursor-pointer border-b border-neutral-100 transition-colors hover:bg-neutral-50 dark:border-black-600 dark:hover:bg-black-700"
-							>
-								<td className="whitespace-nowrap px-4 py-3 font-medium text-neutral-900 dark:text-neutral-100">{row.name}</td>
-								<td className="max-w-[180px] truncate px-4 py-3 text-neutral-500 dark:text-neutral-400">{row.description || "—"}</td>
-								<td className="whitespace-nowrap px-4 py-3">
-									<UserIdentity user={row.createdBy as TemplateUserRef | null as ApiUserRef | null} size="sm" />
-								</td>
-								<td className="whitespace-nowrap px-4 py-3 text-neutral-500 dark:text-neutral-400">{formatUsDateTime(row.createdAt)}</td>
-							</tr>
-						))}
-					</tbody>
-				</table>
-			</div>
+
+			<FloatingBar
+				open={checkedIds.size > 0}
+				selectedCount={checkedIds.size}
+				onClearSelection={clearSelection}
+				onDelete={() => void handleBulkDelete()}
+				deletePending={deleteTemplateMutation.isPending}
+			/>
+
+			<InfiniteTable<TemplateRow>
+				data={rows}
+				columns={[...AUTHORING_SIDEBAR_COLUMNS, actionsColumn]}
+				height={`calc(100vh - ${NAVBAR_HEIGHT}px - 180px)`}
+				hasMore={false}
+				onRowClick={(row) => onSelectTemplate(row.id)}
+				checkboxConfig={{
+					getRowId: (row) => row.id,
+					checkedIds,
+					setCheckedIds,
+				}}
+			/>
+
+			<ConfirmModal
+				open={pendingDelete !== null}
+				onClose={() => setPendingDelete(null)}
+				title="Delete this document?"
+				confirmLabel="Delete"
+				cancelLabel="Cancel"
+				confirmDanger
+				pending={deleteTemplateMutation.isPending}
+				onConfirm={() => void handleConfirmDelete()}
+			>
+				<p className="mb-0 text-neutral-700 dark:text-neutral-300">
+					<span className="font-medium text-neutral-900 dark:text-neutral-100">
+						{pendingDelete?.name ? `"${pendingDelete.name}"` : "This document"}
+					</span>{" "}
+					will be permanently removed. This cannot be undone.
+				</p>
+			</ConfirmModal>
 		</div>
 	);
 }
