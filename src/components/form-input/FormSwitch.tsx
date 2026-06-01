@@ -11,6 +11,6 @@ export interface FormSwitchProps extends SwitchProps {
 
 export const FormSwitch = ({ label, error, helperText, required, className, ...rest }: FormSwitchProps) => (
 	<FormField label={label} error={error} helperText={helperText} required={required} className={className}>
-		<Switch {...rest} />
+		<Switch {...rest} className="w-4" />
 	</FormField>
 );

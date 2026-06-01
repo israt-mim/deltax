@@ -17,7 +17,6 @@ import {
 	type AgreementConfigTableRow,
 } from "./agreementConfiguration/agreementListTableShared";
 import { Tabs } from "../components/base/Tabs";
-import { formatUserFacingError } from "../lib/formatUserFacingError";
 import { usePageBreadcrumb } from "../hooks/usePageBreadcrumb";
 import { crumb } from "../lib/breadcrumb";
 
@@ -121,37 +120,11 @@ export const Configure = () => {
 		<CardMain className="flex flex-col gap-3">
 			<Title>Configuration</Title>
 
-			{fieldsListQuery.isError && activeTab === "fields" && (
-				<p className="text-sm text-error-500">
-					{formatUserFacingError(fieldsListQuery.error, "Could not load fields.")}{" "}
-					<button
-						type="button"
-						className="font-medium text-primary-600 underline dark:text-primary-400"
-						onClick={() => void fieldsListQuery.refetch()}
-					>
-						Retry
-					</button>
-				</p>
-			)}
-
-			{agreementsListQuery.isError && activeTab === "agreements" && (
-				<p className="text-sm text-error-500">
-					{formatUserFacingError(agreementsListQuery.error, "Could not load agreements.")}{" "}
-					<button
-						type="button"
-						className="font-medium text-primary-600 underline dark:text-primary-400"
-						onClick={() => void agreementsListQuery.refetch()}
-					>
-						Retry
-					</button>
-				</p>
-			)}
-
 			<div className="flex flex-wrap gap-3 items-center">
 				{dashboardItems.map((item) => (
 					<Card
 						key={item.name}
-						className="cursor-pointer max-w-60 flex flex-row gap-3 transition-all hover:shadow-200 hover:scale-[1.02]"
+						className={`cursor-pointer max-w-60 flex flex-row gap-3 transition-all hover:shadow-200 hover:scale-[1.02]`}
 						onClick={() => void navigate(item.to)}
 					>
 						<div className="flex items-center justify-center rounded-lg border border-primary-100 bg-primary-50 p-2 dark:border-black-500 dark:bg-black-700">
@@ -194,7 +167,7 @@ export const Configure = () => {
 
 					<button
 						type="button"
-						className="text-sm text-primary-500 cursor-pointer bg-transparent border-0 p-0 font-inherit"
+						className={`text-sm text-primary-500 cursor-pointer bg-transparent border-0 p-0 font-inherit`}
 						onClick={handleViewAll}
 					>
 						View All

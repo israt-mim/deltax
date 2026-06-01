@@ -151,7 +151,7 @@ export function AgreementDashboardPanel({
 			<section className="rounded-lg border border-neutral-200 bg-white p-4 dark:border-black-600 dark:bg-black-800">
 				<div className="mb-3 flex items-center justify-between gap-3">
 					<h3 className="mb-0 text-sm font-semibold uppercase tracking-wide text-neutral-700 dark:text-neutral-200">
-						Status
+						Current Status
 					</h3>
 				</div>
 				{dashboardLoading ? (
@@ -172,7 +172,6 @@ export function AgreementDashboardPanel({
 					<MetaItem label="Display ID">
 						{dashboard?.displayId?.trim() || "—"}
 					</MetaItem>
-					<MetaUserItem label="Owner" user={dashboard?.createdBy ?? null} />
 					<MetaUserItem label="Created By" user={dashboard?.createdBy ?? null} />
 					<MetaItem label="Created On">
 						{dashboard?.createdAt ? formatUsDateTime(dashboard.createdAt) : "—"}

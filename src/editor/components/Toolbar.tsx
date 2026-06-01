@@ -28,6 +28,8 @@ import HorizontalRuleOutlinedIcon from "@mui/icons-material/HorizontalRuleOutlin
 import CodeOutlinedIcon from "@mui/icons-material/CodeOutlined";
 import ArrowDropDownOutlinedIcon from "@mui/icons-material/ArrowDropDownOutlined";
 import MoreVertOutlinedIcon from "@mui/icons-material/MoreVertOutlined";
+import DrawOutlinedIcon from "@mui/icons-material/DrawOutlined";
+import { SignatureInsertModal } from "./SignatureInsertModal";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -182,14 +184,16 @@ export function Toolbar({ editor }: { editor: Editor }) {
 	const [showTablePicker, setShowTablePicker] = useState(false);
 	const [showLineHeight,  setShowLineHeight]  = useState(false);
 	const [hoveredCell,     setHoveredCell]     = useState<[number, number]>([0, 0]);
-	const [showOverflow,    setShowOverflow]    = useState(false);
-	const imageInputRef = useRef<HTMLInputElement>(null);
+	const [showOverflow,       setShowOverflow]       = useState(false);
+	const [showSignatureModal, setShowSignatureModal] = useState(false);
+	const imageInputRef    = useRef<HTMLInputElement>(null);
 	const overflowPanelRef = useRef<HTMLDivElement>(null);
+	const toolbarRootRef   = useRef<HTMLDivElement>(null);
 
-	// Close overflow when clicking outside
+	// Close overflow when clicking outside the toolbar
 	useEffect(() => {
 		const handler = (e: MouseEvent) => {
-			if (overflowPanelRef.current && !overflowPanelRef.current.contains(e.target as Node)) {
+			if (toolbarRootRef.current && !toolbarRootRef.current.contains(e.target as Node)) {
 				setShowOverflow(false);
 			}
 		};
@@ -558,6 +562,15 @@ export function Toolbar({ editor }: { editor: Editor }) {
 		},
 		{ key: "sep-9", isSep: true, el: <Sep /> },
 
+		// ── Signature block
+		{
+			key: "signature",
+			el: <TBtn title="Insert signature block" active={showSignatureModal} onClick={() => setShowSignatureModal(true)}>
+				<DrawOutlinedIcon sx={{ fontSize: 18 }} />
+			</TBtn>,
+		},
+		{ key: "sep-10", isSep: true, el: <Sep /> },
+
 		// ── Clear formatting
 		{
 			key: "clear",
@@ -570,6 +583,7 @@ export function Toolbar({ editor }: { editor: Editor }) {
 		editor, activeHeading, fontSizeInput,
 		showTextColors, showHighlight, showLinkInput, linkUrl,
 		showTablePicker, showLineHeight, hoveredCell,
+		showSignatureModal,
 		applyHeading, applyFontSize, insertLink, insertImage, insertTable,
 	]);
 
@@ -590,7 +604,7 @@ export function Toolbar({ editor }: { editor: Editor }) {
 	// ── Render ────────────────────────────────────────────────────────────────
 
 	return (
-		<div className="flex items-center border-b border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-900">
+		<div ref={toolbarRootRef} className="relative flex items-center border-b border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-900">
 
 			{/*
 			  * Items container: flex-1 + overflow-hidden.
@@ -618,29 +632,37 @@ export function Toolbar({ editor }: { editor: Editor }) {
 			<div
 				ref={overflowPanelRef}
 				className={[
-					"relative shrink-0 py-1 pr-2",
+					"shrink-0 py-1 pr-2",
 					hasOverflow ? "" : "pointer-events-none opacity-0",
 				].join(" ")}
 			>
 				<TBtn title="More options" active={showOverflow} onClick={() => setShowOverflow((v) => !v)}>
 					<MoreVertOutlinedIcon sx={{ fontSize: 18 }} />
 				</TBtn>
-
-				{showOverflow && hasOverflow && (
-					<div
-						className="absolute right-0 top-full z-50 mt-1 flex flex-wrap items-center gap-0.5 rounded-lg border border-neutral-200 bg-white p-1.5 shadow-xl dark:border-neutral-700 dark:bg-neutral-900"
-						style={{ minWidth: 200, maxWidth: 320 }}
-					>
-						{items.slice(overflowStart).map(({ key, el, isSep }) =>
-							isSep ? null : (
-								<div key={key} className="flex shrink-0 items-center">
-									{el}
-								</div>
-							)
-						)}
-					</div>
-				)}
 			</div>
+
+			{/* Overflow panel — full toolbar width, anchored to toolbar bottom */}
+			{showOverflow && hasOverflow && (
+				<div className="absolute left-0 right-0 top-full z-50 flex flex-wrap items-center gap-0.5 border-b border-neutral-200 bg-white px-2 py-1.5 shadow-md dark:border-neutral-700 dark:bg-neutral-900">
+					{items.slice(overflowStart).map(({ key, el, isSep }) =>
+						isSep ? null : (
+							<div key={key} className="flex shrink-0 items-center">
+								{el}
+							</div>
+						)
+					)}
+				</div>
+			)}
+
+			{showSignatureModal && (
+				<SignatureInsertModal
+					onClose={() => setShowSignatureModal(false)}
+					onInsert={(src) => {
+						editor.chain().focus().insertSignatureBlock({ src }).run();
+						setShowSignatureModal(false);
+					}}
+				/>
+			)}
 		</div>
 	);
 }

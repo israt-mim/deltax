@@ -21,6 +21,7 @@ import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
 import { Table, TableRow, TableCell, TableHeader } from "@tiptap/extension-table";
 import { VariableText } from "../extensions/VariableText";
+import { SignatureBlock } from "../extensions/SignatureBlock";
 
 export interface UseDocEditorOptions {
 	content?: string;
@@ -56,6 +57,7 @@ export function useDocEditor({ content = "", onUpdate, variables = {} }: UseDocE
 			CharacterCount,
 			Placeholder.configure({ placeholder: "Start typing your document…" }),
 			VariableText,
+			SignatureBlock,
 		],
 		content,
 		onUpdate: ({ editor: e }) => {
