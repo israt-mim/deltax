@@ -68,6 +68,19 @@ export interface FieldContextOption {
 	label: string;
 }
 
+export interface FieldGroupApiItem {
+	_id: string;
+	name: string;
+	technicalName: string;
+	createdAt: string;
+	updatedAt: string;
+}
+
+export async function getFieldGroups(): Promise<FieldGroupApiItem[]> {
+	const res = await get<{ data: FieldGroupApiItem[] }>("/api/fields/groups");
+	return res.data ?? [];
+}
+
 export interface ListFieldsParams extends BaseListQuery {
 	/** Substring search (server); also send as `search` if API accepts both `q` and `search`. */
 	group?: string;

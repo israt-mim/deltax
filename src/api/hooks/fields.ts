@@ -5,11 +5,15 @@ import {
 	deleteField,
 	fieldDocToRow,
 	getFieldContextOptions,
+	getFieldGroups,
 	listFields,
 	updateField,
 	type CreateFieldBody,
+	type FieldGroupApiItem,
 	type UpdateFieldBody,
 } from "../services/fields";
+
+export type { FieldGroupApiItem };
 import { queryKeys } from "../queryKeys";
 
 const FIELDS_PAGE_SIZE = 30;
@@ -32,6 +36,16 @@ export function useFieldContextOptionsQuery(options: { enabled?: boolean } = {})
 	return useQuery({
 		queryKey: [...queryKeys.fields.all, "context-options"] as const,
 		queryFn: getFieldContextOptions,
+		staleTime: 60_000,
+		enabled,
+	});
+}
+
+export function useFieldGroupsQuery(options: { enabled?: boolean } = {}) {
+	const enabled = options.enabled !== false;
+	return useQuery({
+		queryKey: [...queryKeys.fields.all, "groups"] as const,
+		queryFn: getFieldGroups,
 		staleTime: 60_000,
 		enabled,
 	});

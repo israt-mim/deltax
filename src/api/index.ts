@@ -86,6 +86,7 @@ export {
 	fieldDocToRow,
 	getFieldById,
 	getFieldContextOptions,
+	getFieldGroups,
 	listFields,
 	updateField,
 } from "./services/fields";
@@ -93,6 +94,7 @@ export type {
 	CreateFieldBody,
 	FieldConfigurationApiDocument,
 	FieldContextOption,
+	FieldGroupApiItem,
 	FieldDetails,
 	FieldTypePayload,
 	ListFieldsParams,
@@ -106,6 +108,7 @@ export {
 	useCreateFieldMutation,
 	useDeleteFieldMutation,
 	useFieldContextOptionsQuery,
+	useFieldGroupsQuery,
 	useFieldsInfiniteList,
 	useFieldsTotalCount,
 	useUpdateFieldMutation,

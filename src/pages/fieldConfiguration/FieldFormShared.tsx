@@ -16,7 +16,7 @@ import { FormSelect } from "../../components/form-input/FormSelect";
 import { FormNumber } from "../../components/form-input/FormNumber";
 import { FormDatePicker } from "../../components/form-input/FormDatePicker";
 import type { FieldConfigurationApiDocument } from "../../api/services/fields";
-import { useFieldContextOptionsQuery } from "../../api/hooks/fields";
+import { useFieldContextOptionsQuery, useFieldGroupsQuery } from "../../api/hooks/fields";
 import { GLOBAL_FIELD_CONTEXT } from "../../lib/fieldContext";
 
 export const GROUP_OPTIONS = [
@@ -68,6 +68,43 @@ function FieldContextSelect({
 			onChange={(val) => onChange(String(val ?? ""))}
 			options={options}
 			placeholder="Select context or type to create"
+		/>
+	);
+}
+
+function FieldGroupSelect({
+	value,
+	onChange,
+	error,
+}: {
+	value: string;
+	onChange: (name: string, techName: string) => void;
+	error?: string;
+}) {
+	const groupsQuery = useFieldGroupsQuery();
+	const options =
+		groupsQuery.data && groupsQuery.data.length > 0
+			? groupsQuery.data.map((g) => ({ value: g.name, label: g.name }))
+			: GROUP_OPTIONS;
+
+	const techNameMap = new Map(
+		(groupsQuery.data ?? []).map((g) => [g.name, g.technicalName])
+	);
+
+	return (
+		<FormCreatableSelect
+			label="Group"
+			required
+			allowCreate
+			value={value}
+			onChange={(val) => {
+				const name = String(val ?? "");
+				const techName = techNameMap.get(name) ?? groupToTechnicalName(name);
+				onChange(name, techName);
+			}}
+			options={options}
+			placeholder="Select group"
+			error={error}
 		/>
 	);
 }
@@ -269,18 +306,12 @@ export const DetailsStep = ({
 					placeholder="Enter name"
 					error={errors?.name}
 				/>
-				<FormCreatableSelect
-					label="Group"
-					required
-					allowCreate
+				<FieldGroupSelect
 					value={group}
-					onChange={(val) => {
-						const nextGroup = String(val ?? "");
-						onGroupChange(nextGroup);
-						onGroupTechNameChange(groupToTechnicalName(nextGroup));
+					onChange={(name, techName) => {
+						onGroupChange(name);
+						onGroupTechNameChange(techName);
 					}}
-					options={GROUP_OPTIONS}
-					placeholder="Select group"
 					error={errors?.group}
 				/>
 				<FormInput
