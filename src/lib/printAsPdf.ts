@@ -1,3 +1,13 @@
+// Inline SVG matching the app's Logo component (viewBox 0 0 100 40)
+const LOGO_HEADER = `
+<div style="display:flex;align-items:center;justify-content:flex-end;padding-bottom:14px;margin-bottom:28px;border-bottom:2px solid #e8eaed;">
+  <svg width="140" height="56" viewBox="0 0 100 40" xmlns="http://www.w3.org/2000/svg">
+    <text x="0" y="31" font-family="Pacifico, cursive" font-size="40" fill="#326080">δ</text>
+    <text x="22" y="31" font-family="Arial, sans-serif" font-size="30" fill="#326080">elta</text>
+    <text x="70" y="32" font-family="Arial, sans-serif" font-weight="600" font-size="30" fill="#CC5500">X</text>
+  </svg>
+</div>`;
+
 const PRINT_STYLES = `
   @page { margin: 1in; }
   *, *::before, *::after { box-sizing: border-box; }
@@ -69,9 +79,10 @@ export function printAsPdf(name: string, contentHtml: string) {
 <head>
   <meta charset="utf-8" />
   <title>${name}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet" />
   <style>${PRINT_STYLES}</style>
 </head>
-<body>${contentHtml}</body>
+<body>${LOGO_HEADER}${contentHtml}</body>
 </html>`);
   doc.close();
 

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { NAVBAR_HEIGHT } from "../constants/global";
 import { useParams } from "react-router-dom";
 import { Switch } from "antd";
 import { toast } from "react-toastify";
@@ -860,9 +861,9 @@ export const AgreementConfigurationDetailsPage = () => {
 
 	return (
 		<>
-		<CardMain className="relative flex min-w-0 flex-col gap-0 overflow-hidden !p-0">
+		<CardMain className="relative flex min-w-0 flex-col gap-0 overflow-hidden !p-0" style={{ height: `calc(100vh - ${NAVBAR_HEIGHT}px)` }}>
 			<div
-				className="min-w-0 overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-sm transition-[padding] duration-200 dark:border-black-600 dark:bg-black-800"
+				className="min-w-0 shrink-0 overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-sm transition-[padding] duration-200 dark:border-black-600 dark:bg-black-800"
 				style={selectedTemplateId ? { paddingRight: templateSidebarWidth } : undefined}
 			>
 				<div className="flex flex-col gap-4 border-b border-neutral-200 px-5 pb-5 pt-5 dark:border-black-600 sm:flex-row sm:items-start sm:justify-between sm:gap-8 sm:px-6 sm:pb-6 sm:pt-6">
@@ -925,7 +926,7 @@ export const AgreementConfigurationDetailsPage = () => {
 			</div>
 
 			<div
-				className="min-w-0 p-4 transition-[padding] duration-200"
+				className="min-w-0 flex-1 overflow-y-auto p-4 transition-[padding] duration-200"
 				style={selectedTemplateId ? { paddingRight: templateSidebarWidth + 16 } : undefined}
 			>
 				<Card className="overflow-hidden border border-neutral-200 bg-white p-0 shadow-sm dark:border-black-600 dark:bg-black-800">
