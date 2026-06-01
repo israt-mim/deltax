@@ -14,6 +14,7 @@ export interface AgreementLineItemEditorViewProps {
 	onCancel: () => void;
 	onSave: (values: Record<string, unknown>) => void | Promise<void>;
 	savePending?: boolean;
+	readOnly?: boolean;
 }
 
 export function AgreementLineItemEditorView({
@@ -23,6 +24,7 @@ export function AgreementLineItemEditorView({
 	onCancel,
 	onSave,
 	savePending = false,
+	readOnly = false,
 }: AgreementLineItemEditorViewProps) {
 	const mergedInitial = useMemo(() => {
 		if (!details?.sections?.length) return { ...initialValuesByFieldId };
@@ -69,7 +71,7 @@ export function AgreementLineItemEditorView({
 		return <AgreementLineItemEditorSkeleton />;
 	}
 
-	const title = mode === "create" ? "New Line Item" : "Edit Line Item";
+	const title = readOnly ? "Line Item Details" : mode === "create" ? "New Line Item" : "Edit Line Item";
 
 	return (
 		<div className="flex min-h-0 flex-1 flex-col gap-4">
@@ -85,29 +87,31 @@ export function AgreementLineItemEditorView({
 					</button>
 					<h2 className="truncate text-lg font-semibold text-neutral-900 dark:text-white">{title}</h2>
 				</div>
-				<div className="flex shrink-0 flex-wrap items-center gap-2">
-					<Button
-						type="button"
-						size="md"
-						appearance="outlined"
-						status="secondary-neutral"
-						onClick={onCancel}
-						disabled={savePending}
-					>
-						Cancel
-					</Button>
-					<Button
-						type="button"
-						size="md"
-						appearance="filled"
-						status="primary"
-						loading={savePending}
-						disabled={savePending}
-						onClick={() => void handleSave()}
-					>
-						{mode === "create" ? "Add" : "Save"}
-					</Button>
-				</div>
+				{!readOnly && (
+					<div className="flex shrink-0 flex-wrap items-center gap-2">
+						<Button
+							type="button"
+							size="md"
+							appearance="outlined"
+							status="secondary-neutral"
+							onClick={onCancel}
+							disabled={savePending}
+						>
+							Cancel
+						</Button>
+						<Button
+							type="button"
+							size="md"
+							appearance="filled"
+							status="primary"
+							loading={savePending}
+							disabled={savePending}
+							onClick={() => void handleSave()}
+						>
+							{mode === "create" ? "Add" : "Save"}
+						</Button>
+					</div>
+				)}
 			</div>
 
 			<div className="min-h-0 flex-1 overflow-auto rounded-lg bg-neutral-50/50 px-1 py-2 dark:bg-black-900/30">
@@ -117,6 +121,7 @@ export function AgreementLineItemEditorView({
 					errorMessage={null}
 					valuesByFieldId={draft}
 					errorsByFieldId={errorsByFieldId}
+					readOnly={readOnly}
 					onFieldValueChange={handleFieldChange}
 				/>
 			</div>

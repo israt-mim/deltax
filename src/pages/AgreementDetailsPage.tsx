@@ -1049,13 +1049,13 @@ export default function AgreementDetailsPage() {
 		dashboard?.agreement_category && dashboard?.agreement_domain && dashboard?.agreement_type && dashboard?.agreement_subtype
 			? {
 					categoryId: dashboard.agreement_category._id,
-					categoryName: dashboard.agreement_category.name,
+					categoryName: dashboard.agreement_category.name ?? "",
 					domainId: dashboard.agreement_domain._id,
-					domainName: dashboard.agreement_domain.name,
+					domainName: dashboard.agreement_domain.name ?? "",
 					typeId: dashboard.agreement_type._id,
-					typeName: dashboard.agreement_type.name,
+					typeName: dashboard.agreement_type.name ?? "",
 					subtypeId: dashboard.agreement_subtype._id,
-					subtypeName: dashboard.agreement_subtype.name,
+					subtypeName: dashboard.agreement_subtype.name ?? "",
 			  }
 			: undefined;
 
@@ -1262,12 +1262,13 @@ export default function AgreementDetailsPage() {
 							) : isClausesWizardStepName(currentStep) ? (
 								<AgreementClausesStepPanel agreementId={agreementId} readOnly={!isEditMode} />
 							) : isLineItemsWizardStepName(currentStep) ? (
-								lineItemQuery && isEditMode ? (
+								lineItemQuery ? (
 									<AgreementLineItemEditorView
 										key={`${lineItemQuery}-${stepDetailsQuery.dataUpdatedAt}`}
 										details={stepDetails}
 										mode={lineItemEditorMode}
 										initialValuesByFieldId={lineItemEditorInitialValues}
+										readOnly={!isEditMode}
 										onCancel={() => setLineItemQuery(null)}
 										onSave={(v) => void handleLineItemSave(v)}
 										savePending={postLineItemMutation.isPending || patchLineItemMutation.isPending}
@@ -1470,7 +1471,9 @@ export default function AgreementDetailsPage() {
 						<Button
 							type="button"
 							size="md"
-							status="error"
+							appearance="filled"
+							status="primary"
+							className="!bg-error-600 !hover:bg-error-700 dark:!bg-error-500"
 							loading={deleteMutation.isPending}
 							onClick={() => void handleDelete()}
 						>

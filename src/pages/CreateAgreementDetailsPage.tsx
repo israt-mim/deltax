@@ -407,11 +407,16 @@ export default function CreateAgreementDetailsPage() {
 			} else {
 				toast.success("Agreement discarded.");
 			}
-			void navigate("/agreements");
+			const categoryId = dashboard?.agreement_category?._id;
+			const domainId = dashboard?.agreement_domain?._id;
+			const target = categoryId && domainId
+				? `/agreements/${encodeURIComponent(categoryId)}/${encodeURIComponent(domainId)}`
+				: "/agreements";
+			void navigate(target);
 		} catch (e) {
 			toast.error(formatUserFacingError(e, "Could not discard this agreement."));
 		}
-	}, [agreementId, deleteAgreementMutation, navigate]);
+	}, [agreementId, dashboard?.agreement_category?._id, dashboard?.agreement_domain?._id, deleteAgreementMutation, navigate]);
 
 	const handlePrimaryAction = useCallback(async () => {
 		if (hideLineItemsWizardNav) {
@@ -426,10 +431,17 @@ export default function CreateAgreementDetailsPage() {
 		const saved = await persistCurrentStepFieldValues();
 		if (!saved) return;
 		toast.success("Agreement wizard completed.");
-		void navigate("/agreements");
+		const categoryId = dashboard?.agreement_category?._id;
+		const domainId = dashboard?.agreement_domain?._id;
+		const target = categoryId && domainId
+			? `/agreements/${encodeURIComponent(categoryId)}/${encodeURIComponent(domainId)}`
+			: "/agreements";
+		void navigate(target);
 	}, [
 		activeStepIndex,
 		assertCurrentStepValid,
+		dashboard?.agreement_category?._id,
+		dashboard?.agreement_domain?._id,
 		goToStepIndex,
 		hideLineItemsWizardNav,
 		isLastStep,

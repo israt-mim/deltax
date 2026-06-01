@@ -285,7 +285,7 @@ export function AgreementLineItemsStepPanel({
 					hasMore={false}
 					isInitialLoading={isInitialLoading}
 					checkboxConfig={checkboxCfg}
-					onRowClick={readOnly ? undefined : (row) => onRowClick(row.id)}
+					onRowClick={(row) => onRowClick(row.id)}
 					emptyMessage={
 						allRows.length === 0
 							? "No line items yet. Use New Line Item to add one."
