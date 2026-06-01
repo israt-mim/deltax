@@ -524,10 +524,6 @@ button:focus-visible {
   }
 
   .data-table-empty-cell {
-    min-height: 354px;
-    vertical-align: middle;
-    text-align: center;
-    padding-left: 1rem;
-    padding-right: 1rem;
+    vertical-align: top;
   }
 }

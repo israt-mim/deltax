@@ -128,24 +128,21 @@ function AddAgreementTeamMembersModal({
 	);
 
 	const candidateUsers = useMemo(() => {
-		const byId = new Map<string, AgreementTeamUser>();
-		for (const member of currentMembers) {
-			byId.set(userId(member), member);
-		}
-		for (const row of availableRows) {
-			byId.set(row.id, rowToAgreementUser(row));
-		}
-		return [...byId.values()].sort((a, b) => userDisplayName(a).localeCompare(userDisplayName(b)));
-	}, [availableRows, currentMembers]);
+		const currentIdSet = new Set(currentMemberIds);
+		return availableRows
+			.filter((row) => !currentIdSet.has(row.id))
+			.map(rowToAgreementUser)
+			.sort((a, b) => userDisplayName(a).localeCompare(userDisplayName(b)));
+	}, [availableRows, currentMemberIds]);
 
 	const wasOpenRef = useRef(false);
 	useEffect(() => {
 		if (open && !wasOpenRef.current) {
 			setSearch("");
-			setSelectedIds(new Set(currentMemberIds));
+			setSelectedIds(new Set());
 		}
 		wasOpenRef.current = open;
-	}, [currentMemberIds, open]);
+	}, [open]);
 
 	const memberColumns = useMemo((): ColumnDef<AgreementTeamUser, unknown>[] => {
 		return [
@@ -182,15 +179,13 @@ function AddAgreementTeamMembersModal({
 	}, [usersQuery.hasNextPage, usersQuery.isFetchingNextPage, usersQuery.fetchNextPage]);
 
 	const handleSave = useCallback(async () => {
-		const original = new Set(currentMemberIds);
-		const add = [...selectedIds].filter((id) => !original.has(id));
-		const remove = currentMemberIds.filter((id) => !selectedIds.has(id));
-		if (add.length === 0 && remove.length === 0) {
+		const add = [...selectedIds];
+		if (add.length === 0) {
 			onClose();
 			return;
 		}
-		await Promise.resolve(onSave(add, remove));
-	}, [currentMemberIds, onClose, onSave, selectedIds]);
+		await Promise.resolve(onSave(add, []));
+	}, [onClose, onSave, selectedIds]);
 
 	return (
 		<Modal
