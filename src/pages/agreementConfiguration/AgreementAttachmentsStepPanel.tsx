@@ -370,19 +370,21 @@ export function AgreementAttachmentsStepPanel({
 				const items = rowMenuItems(att);
 				if (!items || items.length === 0) return null;
 				return (
-					<Dropdown
-						menu={{ items, onClick: ({ key }) => handleRowMenuClick(att, key) }}
-						classNames={{ root: "actions-dropdown-icon" }}
-						trigger={["click"]}
-					>
-						<button
-							type="button"
-							className="inline-flex items-center justify-center rounded-md p-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-black-700"
-							aria-label="Actions"
+					<div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+						<Dropdown
+							menu={{ items, onClick: ({ key }) => handleRowMenuClick(att, key) }}
+							classNames={{ root: "actions-dropdown-icon" }}
+							trigger={["click"]}
 						>
-							<MoreVertOutlinedIcon fontSize="small" />
-						</button>
-					</Dropdown>
+							<button
+								type="button"
+								className="inline-flex items-center justify-center rounded-md p-2 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-black-700"
+								aria-label="Actions"
+							>
+								<MoreVertOutlinedIcon fontSize="small" />
+							</button>
+						</Dropdown>
+					</div>
 				);
 			}),
 		[rowMenuItems, handleRowMenuClick]
