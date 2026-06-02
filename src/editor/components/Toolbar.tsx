@@ -86,12 +86,12 @@ function Sep() {
 	return <span className="mx-0.5 h-5 w-px shrink-0 bg-neutral-200 dark:bg-neutral-700" aria-hidden />;
 }
 
-function ColorPalette({ colors, onSelect, onClose }: {
-	colors: string[]; onSelect: (c: string) => void; onClose: () => void;
+function ColorPalette({ colors, onSelect, onClose, anchorLeft = 0 }: {
+	colors: string[]; onSelect: (c: string) => void; onClose: () => void; anchorLeft?: number;
 }) {
 	return (
 		<div className="absolute z-[60] mt-1 rounded-lg border border-neutral-200 bg-white p-2 shadow-xl dark:border-neutral-700 dark:bg-neutral-800"
-			style={{ top: "100%", left: 0, minWidth: 160 }}>
+			style={{ top: "100%", left: anchorLeft, minWidth: 160 }}>
 			<div className="grid grid-cols-7 gap-1">
 				{colors.map((c) => (
 					<button key={c} type="button" title={c}
@@ -189,12 +189,16 @@ export function Toolbar({ editor }: { editor: Editor }) {
 	const imageInputRef    = useRef<HTMLInputElement>(null);
 	const overflowPanelRef = useRef<HTMLDivElement>(null);
 	const toolbarRootRef   = useRef<HTMLDivElement>(null);
+	const textColorBtnRef  = useRef<HTMLDivElement>(null);
+	const highlightBtnRef  = useRef<HTMLDivElement>(null);
 
 	// Close overflow when clicking outside the toolbar
 	useEffect(() => {
 		const handler = (e: MouseEvent) => {
 			if (toolbarRootRef.current && !toolbarRootRef.current.contains(e.target as Node)) {
 				setShowOverflow(false);
+				setShowTextColors(false);
+				setShowHighlight(false);
 			}
 		};
 		document.addEventListener("mousedown", handler);
@@ -353,7 +357,7 @@ export function Toolbar({ editor }: { editor: Editor }) {
 		// ── Colors
 		{
 			key: "text-color",
-			el: <div className="relative shrink-0">
+			el: <div ref={textColorBtnRef} className="shrink-0">
 				<TBtn title="Text color" active={showTextColors}
 					onClick={() => { setShowTextColors((v) => !v); setShowHighlight(false); }}>
 					<span className="flex flex-col items-center leading-none">
@@ -362,16 +366,11 @@ export function Toolbar({ editor }: { editor: Editor }) {
 							style={{ backgroundColor: editor.getAttributes("textStyle").color || "#000000" }} />
 					</span>
 				</TBtn>
-				{showTextColors && (
-					<ColorPalette colors={TEXT_COLORS}
-						onSelect={(c) => editor.chain().focus().setColor(c).run()}
-						onClose={() => setShowTextColors(false)} />
-				)}
 			</div>,
 		},
 		{
 			key: "highlight",
-			el: <div className="relative shrink-0">
+			el: <div ref={highlightBtnRef} className="shrink-0">
 				<TBtn title="Highlight color" active={showHighlight}
 					onClick={() => { setShowHighlight((v) => !v); setShowTextColors(false); }}>
 					<span className="flex flex-col items-center leading-none">
@@ -380,11 +379,6 @@ export function Toolbar({ editor }: { editor: Editor }) {
 							style={{ backgroundColor: editor.getAttributes("highlight").color || "#ffff00" }} />
 					</span>
 				</TBtn>
-				{showHighlight && (
-					<ColorPalette colors={HIGHLIGHT_COLORS}
-						onSelect={(c) => editor.chain().focus().toggleHighlight({ color: c }).run()}
-						onClose={() => setShowHighlight(false)} />
-				)}
 			</div>,
 		},
 		{ key: "sep-5", isSep: true, el: <Sep /> },
@@ -660,6 +654,31 @@ export function Toolbar({ editor }: { editor: Editor }) {
 						)
 					)}
 				</div>
+			)}
+
+			{showTextColors && (
+				<ColorPalette
+					colors={TEXT_COLORS}
+					anchorLeft={
+						textColorBtnRef.current && toolbarRootRef.current
+							? textColorBtnRef.current.getBoundingClientRect().left - toolbarRootRef.current.getBoundingClientRect().left
+							: 0
+					}
+					onSelect={(c) => editor.chain().focus().setColor(c).run()}
+					onClose={() => setShowTextColors(false)}
+				/>
+			)}
+			{showHighlight && (
+				<ColorPalette
+					colors={HIGHLIGHT_COLORS}
+					anchorLeft={
+						highlightBtnRef.current && toolbarRootRef.current
+							? highlightBtnRef.current.getBoundingClientRect().left - toolbarRootRef.current.getBoundingClientRect().left
+							: 0
+					}
+					onSelect={(c) => editor.chain().focus().toggleHighlight({ color: c }).run()}
+					onClose={() => setShowHighlight(false)}
+				/>
 			)}
 
 			{showSignatureModal && (
