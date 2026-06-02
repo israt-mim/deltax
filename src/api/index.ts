@@ -328,6 +328,7 @@ export {
 	usePatchAgreementLineItemMutation,
 	usePatchAgreementTeamMembersMutation,
 	usePostAgreementLineItemMutation,
+	useUpdateAgreementDisplayNameMutation,
 } from "./hooks/agreements";
 export type { AgreementsListFilters } from "./hooks/agreements";
 

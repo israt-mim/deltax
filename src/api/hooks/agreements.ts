@@ -23,6 +23,7 @@ import {
 	listAgreementClauses,
 	listAgreements,
 	patchAgreementClauses,
+	patchAgreementDisplayName,
 	patchAgreementFieldValues,
 	patchAgreementLineItem,
 	patchAgreementTeamMembers,
@@ -462,6 +463,22 @@ export function usePatchAgreementLineItemMutation() {
 				});
 				invalidateAgreementStepDetailsQueries(queryClient, args.agreementId);
 			}
+		},
+	});
+}
+
+export function useUpdateAgreementDisplayNameMutation() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (args: { agreementId: string; displayName: string }) =>
+			patchAgreementDisplayName(args.agreementId, args.displayName),
+		onSettled: (_data, _err, args) => {
+			if (args?.agreementId) {
+				void queryClient.invalidateQueries({
+					queryKey: [...queryKeys.agreements.all, "dashboard", args.agreementId] as const,
+				});
+			}
+			void queryClient.invalidateQueries({ queryKey: queryKeys.agreements.all });
 		},
 	});
 }

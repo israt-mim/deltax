@@ -42,7 +42,7 @@ import {
 	type AgreementDashboardData,
 	type AgreementDocumentStep,
 } from "../api";
-import { useAgreementDataQuery, useDeleteAgreementMutation } from "../api/hooks/agreements";
+import { useAgreementDataQuery, useDeleteAgreementMutation, useUpdateAgreementDisplayNameMutation } from "../api/hooks/agreements";
 import { formatUserFacingError } from "../lib/formatUserFacingError";
 import { Card } from "../components/base/Card";
 import { CardMain } from "../components/base/CardMain";
@@ -458,6 +458,7 @@ export default function AgreementDetailsPage() {
 	const postLineItemMutation = usePostAgreementLineItemMutation();
 	const patchLineItemMutation = usePatchAgreementLineItemMutation();
 	const deleteMutation = useDeleteAgreementMutation();
+	const updateDisplayNameMutation = useUpdateAgreementDisplayNameMutation();
 
 	const agreementId = agreementIdParam?.trim() ?? "";
 	const agreementIdValid = Boolean(agreementId) && isMongoObjectIdString(agreementId);
@@ -487,6 +488,10 @@ export default function AgreementDetailsPage() {
 		if (!isMongoObjectIdString(agreementId)) return "Invalid agreement id.";
 		return formatUserFacingError(stepsQuery.error, "Could not load agreement steps.");
 	}, [agreementId, stepsQuery.error]);
+
+	const [isEditingName, setIsEditingName] = useState(false);
+	const [nameValue, setNameValue] = useState("");
+	const nameInputRef = useRef<HTMLInputElement>(null);
 
 	const [activeTabKey, setActiveTabKey] = useState("");
 	const prevAgreementIdRef = useRef(agreementId);
@@ -1034,6 +1039,32 @@ export default function AgreementDetailsPage() {
 		},
 	];
 
+	const startEditingName = useCallback(() => {
+		setNameValue(dashboard?.agreement_display_name ?? "");
+		setIsEditingName(true);
+		setTimeout(() => nameInputRef.current?.select(), 0);
+	}, [dashboard?.agreement_display_name]);
+
+	const commitNameEdit = useCallback(async () => {
+		const trimmed = nameValue.trim();
+		setIsEditingName(false);
+		if (!agreementId || !trimmed || trimmed === dashboard?.agreement_display_name) return;
+		try {
+			await updateDisplayNameMutation.mutateAsync({ agreementId, displayName: trimmed });
+			toast.success("Agreement name updated.");
+		} catch (e) {
+			toast.error(formatUserFacingError(e, "Could not update agreement name."));
+		}
+	}, [agreementId, dashboard?.agreement_display_name, nameValue, updateDisplayNameMutation]);
+
+	const handleNameKeyDown = useCallback(
+		(e: React.KeyboardEvent<HTMLInputElement>) => {
+			if (e.key === "Enter") void commitNameEdit();
+			if (e.key === "Escape") setIsEditingName(false);
+		},
+		[commitNameEdit]
+	);
+
 	const handleDelete = async () => {
 		if (!agreementId) return;
 		try {
@@ -1150,9 +1181,29 @@ export default function AgreementDetailsPage() {
 						/>
 						<div className="flex min-w-0 flex-col gap-0.5">
 							<div className="flex min-w-0 flex-wrap items-center gap-2">
-								<span className="truncate text-lg font-semibold text-neutral-900 dark:text-white">
-									{headerDisplayName}
-								</span>
+								{isEditingName ? (
+									<input
+										ref={nameInputRef}
+										type="text"
+										value={nameValue}
+										onChange={(e) => setNameValue(e.target.value)}
+										onBlur={() => void commitNameEdit()}
+										onKeyDown={handleNameKeyDown}
+										className="min-w-0 flex-1 rounded border border-primary-400 bg-white px-2 py-0.5 text-lg font-semibold text-neutral-900 outline-none focus:ring-1 focus:ring-primary-400 dark:bg-black-800 dark:text-white"
+									/>
+								) : (
+									<button
+										type="button"
+										title={isEditMode ? "Click to rename" : undefined}
+										onClick={isEditMode ? startEditingName : undefined}
+										className={cn(
+											"truncate text-lg font-semibold text-neutral-900 dark:text-white",
+											isEditMode && "rounded px-1 hover:bg-neutral-100 dark:hover:bg-black-700 cursor-text"
+										)}
+									>
+										{headerDisplayName}
+									</button>
+								)}
 								{dashboard?.status ? (
 									<span className={agreementStatusBadgeClass(dashboard.status)}>
 										{formatAgreementStatusLabel(dashboard.status)}

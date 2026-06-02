@@ -67,6 +67,26 @@ const PRINT_STYLES = `
   sub { vertical-align: sub; font-size: 0.75em; }
 `;
 
+/**
+ * Replaces variable spans (<span data-variable-key="key">) with their plain-text values.
+ * Spans with no matching value are removed entirely so unfilled placeholders don't appear.
+ */
+export function resolveVariablesInHtml(html: string, variables: Record<string, string>): string {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, "text/html");
+  const spans = doc.querySelectorAll<HTMLElement>("[data-variable-key]");
+  spans.forEach((span) => {
+    const key = span.getAttribute("data-variable-key") ?? "";
+    const value = Object.prototype.hasOwnProperty.call(variables, key) ? variables[key] : undefined;
+    if (value !== undefined && value !== "") {
+      span.parentNode?.replaceChild(doc.createTextNode(value), span);
+    } else {
+      span.parentNode?.removeChild(span);
+    }
+  });
+  return doc.body.innerHTML;
+}
+
 export function printAsPdf(name: string, contentHtml: string) {
   const iframe = document.createElement("iframe");
   iframe.style.cssText = "position:fixed;width:1px;height:1px;border:none;left:-9999px;top:-9999px;visibility:hidden;";

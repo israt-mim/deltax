@@ -9,7 +9,7 @@ import { ResizableSidebar } from "../../components/base/ResizableSidebar";
 import { DocEditor, type DocEditorHandle } from "../../editor";
 import { useTemplateDetailQuery, useUpdateTemplateMutation } from "../../api/hooks/templates";
 import { formatUserFacingError } from "../../lib/formatUserFacingError";
-import { printAsPdf } from "../../lib/printAsPdf";
+import { printAsPdf, resolveVariablesInHtml } from "../../lib/printAsPdf";
 
 const AUTOSAVE_DELAY_MS = 1500;
 
@@ -165,7 +165,11 @@ export const TemplateEditorSidebar = forwardRef<TemplateEditorSidebarHandle, Tem
 					<button
 						type="button"
 						title="Download as PDF"
-						onClick={() => printAsPdf(template?.name ?? "Template", latestHtmlRef.current || (template?.content_html ?? ""))}
+						onClick={() => {
+						const raw = latestHtmlRef.current || (template?.content_html ?? "");
+						const resolved = resolveVariablesInHtml(raw, variables ?? {});
+						printAsPdf(template?.name ?? "Template", resolved);
+					}}
 						className="inline-flex items-center justify-center rounded p-1.5 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-neutral-200"
 					>
 						<FileDownloadOutlinedIcon sx={{ fontSize: 18 }} />

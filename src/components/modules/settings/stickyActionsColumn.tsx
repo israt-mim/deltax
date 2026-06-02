@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import type { CellContext, ColumnDef } from "@tanstack/react-table";
-import MoreVertOutlinedIcon from "@mui/icons-material/MoreVertOutlined";
 import type { StickyColumnMeta } from "../../../hooks/useColumns";
 
 const stickyActionsMeta: StickyColumnMeta = {
@@ -22,12 +21,6 @@ export function createStickyActionsColumn<T>(
 		maxSize: 44,
 		enableResizing: false,
 		meta: stickyActionsMeta,
-		cell:
-			renderCell ??
-			(() => (
-				<div className="flex items-center justify-center">
-					<MoreVertOutlinedIcon sx={{ fontSize: 18 }} className="text-neutral-400" />
-				</div>
-			)),
+		cell: renderCell ?? (() => null),
 	};
 }

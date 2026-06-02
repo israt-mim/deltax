@@ -120,7 +120,7 @@ export function TemplateEditorPage() {
 					</button>
 					<span className="h-4 w-px bg-neutral-200 dark:bg-neutral-700" />
 					<span className="max-w-xs truncate text-sm font-medium text-neutral-800 dark:text-neutral-100">
-						{template.name}
+						{template?.name}
 					</span>
 				</div>
 
@@ -141,7 +141,7 @@ export function TemplateEditorPage() {
 			</div>
 
 			<DocEditor
-				initialContent={template.content_html ?? ""}
+				initialContent={template?.content_html ?? ""}
 				onContentChange={handleContentChange}
 				className="flex-1"
 			/>

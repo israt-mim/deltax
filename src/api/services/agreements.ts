@@ -758,6 +758,22 @@ export interface PatchAgreementClausesResponse {
 	clauses?: AgreementClauseBrief[];
 }
 
+export interface PatchAgreementDisplayNameResponse {
+	_id: string;
+	agreement_display_name: string;
+}
+
+/** PATCH /api/agreements/:id/display-name */
+export async function patchAgreementDisplayName(
+	agreementId: string,
+	displayName: string
+): Promise<PatchAgreementDisplayNameResponse> {
+	return patch<PatchAgreementDisplayNameResponse>(
+		`/api/agreements/${encodeURIComponent(agreementId)}/display-name`,
+		{ agreement_display_name: displayName }
+	);
+}
+
 /** PATCH /api/agreements/:id/clauses — ordered clause refs on the agreement. */
 export async function patchAgreementClauses(
 	agreementId: string,
