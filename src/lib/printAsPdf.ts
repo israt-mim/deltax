@@ -28,6 +28,12 @@ const PRINT_STYLES = `
   h6 { font-size: 0.67em; font-weight: 700; margin: 2.33em 0; }
   ul, ol { padding-left: 1.5em; margin: 0.5em 0; }
   li { margin: 0.2em 0; }
+  ul:not([data-type="taskList"]) { list-style-type: disc; }
+  ul:not([data-type="taskList"]) ul:not([data-type="taskList"]) { list-style-type: circle; }
+  ul:not([data-type="taskList"]) ul:not([data-type="taskList"]) ul:not([data-type="taskList"]) { list-style-type: square; }
+  ol { list-style-type: decimal; }
+  ol ol { list-style-type: lower-alpha; }
+  ol ol ol { list-style-type: lower-roman; }
   ul[data-type="taskList"] { list-style: none; padding-left: 0; }
   ul[data-type="taskList"] li { display: flex; align-items: flex-start; gap: 6px; }
   ul[data-type="taskList"] li > label { flex-shrink: 0; margin-top: 2px; }

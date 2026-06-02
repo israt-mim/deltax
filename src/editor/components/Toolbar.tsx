@@ -494,13 +494,21 @@ export function Toolbar({ editor }: { editor: Editor }) {
 		},
 		{
 			key: "indent-decrease",
-			el: <TBtn title="Decrease indent" onClick={() => editor.chain().focus().liftListItem("listItem").run()}>
+			el: <TBtn title="Decrease indent" onClick={() => {
+				if (!editor.chain().focus().liftListItem("listItem").run()) {
+					editor.chain().focus().liftListItem("taskItem").run();
+				}
+			}}>
 				<FormatIndentDecreaseOutlinedIcon sx={{ fontSize: 18 }} />
 			</TBtn>,
 		},
 		{
 			key: "indent-increase",
-			el: <TBtn title="Increase indent" onClick={() => editor.chain().focus().sinkListItem("listItem").run()}>
+			el: <TBtn title="Increase indent" onClick={() => {
+				if (!editor.chain().focus().sinkListItem("listItem").run()) {
+					editor.chain().focus().sinkListItem("taskItem").run();
+				}
+			}}>
 				<FormatIndentIncreaseOutlinedIcon sx={{ fontSize: 18 }} />
 			</TBtn>,
 		},

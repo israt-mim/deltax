@@ -62,6 +62,26 @@
 
 .doc-editor-content li { margin: 0.2em 0; }
 
+/* Restore list markers stripped by Tailwind preflight */
+.doc-editor-content ul:not([data-type="taskList"]) {
+	list-style-type: disc;
+}
+.doc-editor-content ul:not([data-type="taskList"]) ul:not([data-type="taskList"]) {
+	list-style-type: circle;
+}
+.doc-editor-content ul:not([data-type="taskList"]) ul:not([data-type="taskList"]) ul:not([data-type="taskList"]) {
+	list-style-type: square;
+}
+.doc-editor-content ol {
+	list-style-type: decimal;
+}
+.doc-editor-content ol ol {
+	list-style-type: lower-alpha;
+}
+.doc-editor-content ol ol ol {
+	list-style-type: lower-roman;
+}
+
 .doc-editor-content ul[data-type="taskList"] {
 	list-style: none;
 	padding-left: 0;
