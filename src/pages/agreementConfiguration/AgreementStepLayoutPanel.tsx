@@ -215,6 +215,7 @@ export interface AgreementStepLayoutPanelProps {
 	onOpenAddField?: (sectionKey: string) => void;
 	onRemoveFieldFromSection?: (sectionKey: string, fieldId: string) => void;
 	onRenameSection?: (sectionKey: string, name: string) => void;
+	onDeleteSection?: (sectionKey: string) => void;
 	onAddToDocument?: (gtn: string) => void;
 }
 
@@ -296,6 +297,7 @@ function SortableSectionBlock({
 	onRemoveFieldFromSection,
 	onEditField,
 	onAddToDocument,
+	onDelete,
 	canRenameSection,
 	sectionDragDisabled,
 }: {
@@ -317,6 +319,7 @@ function SortableSectionBlock({
 	onRemoveFieldFromSection?: (fieldId: string) => void;
 	onEditField?: (fieldId: string) => void;
 	onAddToDocument?: (gtn: string) => void;
+	onDelete?: () => void;
 }) {
 	const sectionId = sectionSortableId(section.key);
 	const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
@@ -385,6 +388,16 @@ function SortableSectionBlock({
 							onClick={onStartRename}
 						>
 							<EditOutlinedIcon sx={{ fontSize: 18 }} />
+						</button>
+					) : null}
+					{!readOnly && onDelete && !isEditingTitle ? (
+						<button
+							type="button"
+							aria-label="Remove section"
+							className="shrink-0 rounded p-1 text-neutral-500 transition-colors hover:bg-error-50 hover:text-error-600 dark:hover:bg-error-950/40 dark:hover:text-error-400"
+							onClick={onDelete}
+						>
+							<CloseOutlinedIcon sx={{ fontSize: 18 }} />
 						</button>
 					) : null}
 				</div>
@@ -456,6 +469,7 @@ export function AgreementStepLayoutPanel({
 	onOpenAddField,
 	onRemoveFieldFromSection,
 	onRenameSection,
+	onDeleteSection,
 	onAddToDocument,
 }: AgreementStepLayoutPanelProps) {
 	const [sections, setSections] = useState(displaySections);
@@ -516,6 +530,13 @@ export function AgreementStepLayoutPanel({
 	const cancelRename = () => {
 		setEditingSectionKey(null);
 		setEditingSectionName("");
+	};
+
+	const handleDeleteSection = (sectionKey: string) => {
+		const next = sections.filter((s) => s.key !== sectionKey);
+		setSections(next);
+		onSectionsChange?.(next);
+		onDeleteSection?.(sectionKey);
 	};
 
 	const commitSections = (next: DisplaySectionRow[]) => {
@@ -674,6 +695,7 @@ export function AgreementStepLayoutPanel({
 					}
 					onEditField={readOnly ? undefined : (fieldId) => setEditFieldId(fieldId)}
 					onAddToDocument={onAddToDocument}
+					onDelete={onDeleteSection ? () => handleDeleteSection(section.key) : undefined}
 				/>
 			))}
 			{!readOnly && onOpenAddSection ? (

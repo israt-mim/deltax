@@ -153,11 +153,13 @@ const CreateAgreementConfiguration = () => {
 
 	const panelSections = useMemo(
 		() =>
-			orderedDisplaySections.map((s) => ({
-				...s,
-				name: fieldOverrides.sectionNameBySectionKey?.[s.key] ?? s.name,
-				fields: mergeSectionFieldIds(s, fieldOverrides),
-			})),
+			orderedDisplaySections
+				.filter((s) => !(fieldOverrides.deletedSectionKeys ?? []).includes(s.key))
+				.map((s) => ({
+					...s,
+					name: fieldOverrides.sectionNameBySectionKey?.[s.key] ?? s.name,
+					fields: mergeSectionFieldIds(s, fieldOverrides),
+				})),
 		[orderedDisplaySections, fieldOverrides]
 	);
 
@@ -259,6 +261,20 @@ const CreateAgreementConfiguration = () => {
 			},
 		}));
 	}, []);
+
+	const handleDeleteSection = useCallback((sectionKey: string) => {
+		setFieldOverrides((p) => ({
+			...p,
+			deletedSectionKeys: [...new Set([...(p.deletedSectionKeys ?? []), sectionKey])],
+		}));
+		if (sectionKey.startsWith("draft-") && activeWizardStep) {
+			const draftId = sectionKey.slice("draft-".length);
+			setDraftSectionsByStepId((p) => ({
+				...p,
+				[activeWizardStep._id]: (p[activeWizardStep._id] ?? []).filter((d) => d.id !== draftId),
+			}));
+		}
+	}, [activeWizardStep]);
 
 	const handleCompleteConfigure = useCallback(async () => {
 		if (!config || !id?.trim()) return;
@@ -364,6 +380,7 @@ const CreateAgreementConfiguration = () => {
 						onOpenAddField={handleOpenAddField}
 						onRemoveFieldFromSection={handleRemoveFieldFromSection}
 						onRenameSection={handleRenameSection}
+						onDeleteSection={handleDeleteSection}
 					/>
 				) : (
 					<p className="text-sm text-neutral-500 dark:text-neutral-400">No steps on this configuration.</p>

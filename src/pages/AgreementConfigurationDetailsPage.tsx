@@ -718,6 +718,23 @@ export const AgreementConfigurationDetailsPage = () => {
 		}));
 	}, []);
 
+	const handleDeleteLayoutSection = useCallback((sectionKey: string) => {
+		setLayoutFieldOverrides((p) => ({
+			...p,
+			deletedSectionKeys: [...new Set([...(p.deletedSectionKeys ?? []), sectionKey])],
+		}));
+		if (sectionKey.startsWith("draft-")) {
+			const draftId = sectionKey.slice("draft-".length);
+			const stepId = resolveConfigurationTabStepId(configQuery.data, configurationStepSubTabKey);
+			if (stepId) {
+				setDraftSectionsByStepId((p) => ({
+					...p,
+					[stepId]: (p[stepId] ?? []).filter((d) => d.id !== draftId),
+				}));
+			}
+		}
+	}, [configQuery.data, configurationStepSubTabKey]);
+
 	const handleLayoutSectionsChange = useCallback(
 		(sections: DisplaySectionRow[], baseRows: DisplaySectionRow[], stepId: string) => {
 			applyLayoutSectionsToConfigureState(
@@ -848,11 +865,13 @@ export const AgreementConfigurationDetailsPage = () => {
 		activeConfigurationStepKey,
 		layoutFieldOverrides
 	);
-	const panelSectionsForConfigurationTab = orderedDisplaySectionsForConfigurationTab.map((s) => ({
-		...s,
-		name: layoutFieldOverrides.sectionNameBySectionKey?.[s.key] ?? s.name,
-		fields: mergeSectionFieldIds(s, layoutFieldOverrides),
-	}));
+	const panelSectionsForConfigurationTab = orderedDisplaySectionsForConfigurationTab
+		.filter((s) => !(layoutFieldOverrides.deletedSectionKeys ?? []).includes(s.key))
+		.map((s) => ({
+			...s,
+			name: layoutFieldOverrides.sectionNameBySectionKey?.[s.key] ?? s.name,
+			fields: mergeSectionFieldIds(s, layoutFieldOverrides),
+		}));
 	const configurationSubTabItems: TabItem[] = configurationTabWizardSteps.map((s) => ({
 		key: s._id,
 		label: s.name?.trim() || "Untitled step",
@@ -1320,6 +1339,7 @@ export const AgreementConfigurationDetailsPage = () => {
 												headerEditMode ? handleRemoveLayoutFieldFromSection : undefined
 											}
 											onRenameSection={headerEditMode ? handleRenameLayoutSection : undefined}
+											onDeleteSection={headerEditMode ? handleDeleteLayoutSection : undefined}
 											onAddToDocument={
 												selectedTemplateId && headerEditMode && activeConfigurationStepKey === pinnedHeaderWizardStepId
 													? (gtn) => sidebarRef.current?.insertVariable(gtn)

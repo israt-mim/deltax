@@ -12,6 +12,8 @@ export type ConfigureFieldOverrides = {
 	sectionOrderByStepId?: Record<string, string[]>;
 	/** Per section row key, ordered field ids (drag-and-drop layout). */
 	fieldOrderBySectionKey?: Record<string, string[]>;
+	/** Section row keys that have been deleted by the user. */
+	deletedSectionKeys?: string[];
 };
 
 function mergeFieldsForSectionKey(
@@ -48,20 +50,16 @@ function buildSectionRowsForAgreementStep(
 
 	const rows: Array<{ key: string; name: string; fields: string[] }> = [];
 
+	const deletedKeys = new Set(overrides.deletedSectionKeys ?? []);
+
 	apiSections.forEach((s, i) => {
-		rows.push({
-			key: `api-${stepId}-${i}`,
-			name: s.name,
-			fields: [...(s.fields ?? [])],
-		});
+		const key = `api-${stepId}-${i}`;
+		if (!deletedKeys.has(key)) rows.push({ key, name: s.name, fields: [...(s.fields ?? [])] });
 	});
 
 	for (const d of draftsByStepId[stepId] ?? []) {
-		rows.push({
-			key: `draft-${d.id}`,
-			name: d.name,
-			fields: [...d.fields],
-		});
+		const key = `draft-${d.id}`;
+		if (!deletedKeys.has(key)) rows.push({ key, name: d.name, fields: [...d.fields] });
 	}
 
 	const order = overrides.sectionOrderByStepId?.[stepId];
